@@ -1,0 +1,17 @@
+# Backups (can contain old secrets)
+backups/
+
+# Secrets / Environment files
+.env
+.envrc
+secrets/
+env.secrets.sh
+secrets.sh
+*.key
+*.pem
+*.token
+
+# OS / Editor
+.DS_Store
+*.swp
+*~
