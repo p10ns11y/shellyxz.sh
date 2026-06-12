@@ -2,6 +2,16 @@
 
 Clean, portable, and low-maintenance shell configuration that works across **bash**, **zsh**, and **fish**.
 
+## Audience
+
+**This is for advanced users only.** You should already be comfortable fixing a broken shell environment and recovering a system when things go wrong.
+
+Shell config touches `PATH`, login files, and tool initialization. A bad edit can leave new terminals unusable — wrong `PATH`, syntax errors on `source`, or broken hooks — so the very tools you normally use to fix things (`git`, `nvim`, `mise`, your editor, even `cd`) may not be available in that session.
+
+Before changing anything here, know how you would recover without relying on a working interactive shell: a root/rescue TTY, a minimal `bash --norc`, booting from another user, restoring from `backups/*/revert.sh`, or fixing dotfiles from a graphical file manager or SSH session that does not load your broken rc.
+
+If that sounds stressful, use a simpler, distribution-default setup instead.
+
 ## Philosophy
 
 - **Minimal duplication** across shells
@@ -119,6 +129,7 @@ source ~/.bashrc
 - Run `~/.config/shell/bin/migrate.sh` when you want to re-apply or update the base setup
 - The `backups/` folder contains timestamped backups + a `revert.sh`
 - Everything important lives under `~/.config/shell/` and is git tracked
+- See [shell.md](shell.md) for the full load-order reference and gotchas
 
 ## Notes
 
