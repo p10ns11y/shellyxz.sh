@@ -33,6 +33,7 @@ echo "==================================================================="
 echo ""
 log "Backup location: $BACKUP_DIR"
 log "Config dir     : $CONFIG_DIR"
+log "Script will be installed to: $CONFIG_DIR/bin/migrate.sh"
 echo ""
 
 # =============================================================================
@@ -58,16 +59,19 @@ backup_file "$HOME/.zprofile"
 backup_file "$HOME/.zshenv"
 backup_file "$HOME/.config/starship.toml"
 
-# Create revert script
-cat > "$BACKUP_DIR/revert.sh" << 'REVERT_EOF'
+# Create revert script (fixed - uses absolute backup paths)
+cat > "$BACKUP_DIR/revert.sh" << REVERT_EOF
 #!/usr/bin/env bash
-echo "Reverting dotfiles from this backup..."
-cp -a .bashrc "$HOME/.bashrc" 2>/dev/null || true
-cp -a .zshrc "$HOME/.zshrc" 2>/dev/null || true
-cp -a .zprofile "$HOME/.zprofile" 2>/dev/null || true
-cp -a .zshenv "$HOME/.zshenv" 2>/dev/null || true
-cp -a starship.toml "$HOME/.config/starship.toml" 2>/dev/null || true
-echo "Revert complete. You may need to restart your shell."
+BACKUP_DIR="\$(dirname "\$(realpath "\$0")")"
+echo "Reverting dotfiles from backup: \$BACKUP_DIR"
+cp -a "\$BACKUP_DIR/.bashrc" "$HOME/.bashrc" 2>/dev/null || true
+cp -a "\$BACKUP_DIR/.zshrc" "$HOME/.zshrc" 2>/dev/null || true
+cp -a "\$BACKUP_DIR/.zprofile" "$HOME/.zprofile" 2>/dev/null || true
+cp -a "\$BACKUP_DIR/.zshenv" "$HOME/.zshenv" 2>/dev/null || true
+cp -a "\$BACKUP_DIR/.bash_profile" "$HOME/.bash_profile" 2>/dev/null || true
+cp -a "\$BACKUP_DIR/.profile" "$HOME/.profile" 2>/dev/null || true
+cp -a "\$BACKUP_DIR/starship.toml" "$HOME/.config/starship.toml" 2>/dev/null || true
+echo "Revert complete. Restart your terminal to see changes."
 REVERT_EOF
 chmod +x "$BACKUP_DIR/revert.sh"
 
@@ -84,6 +88,24 @@ mkdir -p "$CONFIG_DIR"/{backups,completions}
 if [[ ! -d "$CONFIG_DIR/.git" ]]; then
     (cd "$CONFIG_DIR" && git init -q)
     log "Initialized git repo in $CONFIG_DIR"
+fi
+
+# =============================================================================
+# Self-install script into bin/ (so it's git tracked inside ~/.config/shell/)
+# =============================================================================
+log "Installing script into ~/.config/shell/bin/ for git tracking..."
+
+mkdir -p "$CONFIG_DIR/bin"
+
+SCRIPT_SRC="$(realpath "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
+TARGET_SCRIPT="$CONFIG_DIR/bin/migrate.sh"
+
+if [[ "$SCRIPT_SRC" != "$TARGET_SCRIPT" ]]; then
+    cp "$SCRIPT_SRC" "$TARGET_SCRIPT"
+    chmod +x "$TARGET_SCRIPT"
+    log "Script installed to: $TARGET_SCRIPT"
+else
+    log "Script already located inside target directory"
 fi
 
 # =============================================================================
@@ -239,7 +261,10 @@ cat > "$HOME/.zshrc" << 'ZSHRC_EOF'
 # 1. Portable environment (PATH, exports)
 source "$HOME/.config/shell/env.sh"
 
-# 2. Omarchy base layer (your personal aliases + functions)
+# 2. Direnv (must come early)
+eval "$(direnv hook zsh)"
+
+# 3. Omarchy base layer (your personal aliases + functions)
 # We source the modular parts directly for better control
 if [[ -f "$HOME/.local/share/omarchy/default/bash/envs" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/envs"
@@ -251,10 +276,10 @@ if [[ -f "$HOME/.local/share/omarchy/default/bash/functions" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/functions"
 fi
 
-# 3. Additional aliases from our layer (non-conflicting additions)
+# 4. Additional aliases from our layer (non-conflicting additions)
 source "$HOME/.config/shell/aliases.sh"
 
-# 4. Modern tool initialization (these come AFTER Omarchy)
+# 5. Modern tool initialization (these come AFTER Omarchy)
 # mise (version manager)
 if command -v mise &>/dev/null; then
     eval "$(mise activate zsh)"
@@ -280,7 +305,7 @@ if command -v thefuck &>/dev/null; then
     eval "$(thefuck --alias)"
 fi
 
-# 5. Zsh-specific settings
+# 6. Zsh-specific settings
 setopt HIST_IGNORE_DUPS
 setopt SHARE_HISTORY
 setopt AUTO_CD
@@ -291,18 +316,18 @@ SAVEHIST=50000
 autoload -Uz compinit
 compinit -C
 
-# 6. Completions
+# 7. Completions
 if [[ -r "$HOME/.grok/completions/zsh/grok.zsh" ]]; then
     source "$HOME/.grok/completions/zsh/grok.zsh"
 fi
 
-# 7. Final customizations
+# 8. Final customizations
 alias zshconfig='$EDITOR ~/.zshrc'
 alias reload='source ~/.zshrc && echo "zshrc reloaded"'
 ZSHRC_EOF
 
 # =============================================================================
-# 8. Minimal ~/.bashrc
+# 9. Minimal ~/.bashrc
 # =============================================================================
 log "Generating minimal ~/.bashrc..."
 
@@ -314,6 +339,7 @@ cat > "$HOME/.bashrc" << 'BASHRC_EOF'
 [[ $- != *i* ]] && return
 
 source "$HOME/.config/shell/env.sh"
+eval "$(direnv hook bash)"
 source "$HOME/.config/shell/aliases.sh"
 
 # Keep sourcing Omarchy for bash too (full compatibility)
@@ -397,9 +423,12 @@ echo ""
 echo "Key files created:"
 echo "  - $CONFIG_DIR/env.sh"
 echo "  - $CONFIG_DIR/aliases.sh"
+echo "  - $CONFIG_DIR/bin/migrate.sh   ← Master script (git tracked)"
 echo "  - ~/.zshrc (clean, pure zsh + starship)"
 echo "  - ~/.bashrc (minimal)"
 echo "  - ~/.config/fish/config.fish"
 echo ""
 echo "Omarchy is respected and sourced early. Modern tools are layered on top."
+echo ""
+echo "Future runs: ~/.config/shell/bin/migrate.sh"
 echo "==================================================================="
