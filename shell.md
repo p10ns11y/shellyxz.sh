@@ -20,7 +20,7 @@ flowchart TB
         env["env.sh<br/>PATH, exports, loaders"]
         aliases["aliases.sh<br/>generic aliases + y()"]
         personal["personal.sh<br/>work shortcuts"]
-        functions["functions.sh<br/>⚠ not sourced today"]
+        functions["functions.sh<br/>custom functions"]
     end
 
     subgraph omarchy["Omarchy (~/.local/share/omarchy)"]
@@ -43,7 +43,6 @@ flowchart TB
     fishcfg --> env
 
     env --> oenvs
-    aliases --> personal
     zshrc --> oaliases
     zshrc --> ofns
     bashrc --> orc
@@ -52,11 +51,16 @@ flowchart TB
     orc --> ofns
     orc --> oinit
 
+    zshrc --> functions
+    bashrc --> functions
+    functions --> aliases
+    aliases --> personal
     zshrc --> aliases
     bashrc --> aliases
+    fishcfg --> aliases
 ```
 
-**Key idea:** `env.sh` is the portable foundation. Omarchy is your personal base layer (aliases, functions, tool hooks). `aliases.sh` adds non-conflicting extras and chains `personal.sh` at the end. **Bash and zsh integrate Omarchy differently** — do not assume one shared order.
+**Key idea:** `env.sh` is the portable foundation (including Omarchy envs). Omarchy aliases and functions load next. `functions.sh` and `aliases.sh` load after Omarchy so your overrides win. `personal.sh` chains from the tail of `aliases.sh`. **Bash and zsh integrate Omarchy differently** — modular in zsh, `rc` bundle in bash — but override semantics match.
 
 ---
 
@@ -65,10 +69,11 @@ flowchart TB
 | File | Role | Sourced by |
 |------|------|------------|
 | `env.sh` | `path_add`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
-| `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`/`n`, git shortcuts; **chains** `personal.sh` | zsh, bash |
+| `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`/`n`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
 | `personal.sh` | Work aliases (`agrepos`, `agcore`, `agproto`) | via `aliases.sh` tail only |
-| `functions.sh` | Placeholder for custom functions | **nothing today** |
-| `bin/migrate.sh` | Generates dotfiles, backups, intended load order | manual run |
+| `functions.sh` | Custom functions (placeholder today) | zsh, bash rc files |
+| `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
+| `bin/check-shell.sh` | Verifies load order, direnv hooks, reserved names | manual run |
 
 ### What `env.sh` sets up
 
@@ -129,72 +134,55 @@ flowchart TD
 
 ## zsh load order (live `~/.zshrc`)
 
-Recommended daily driver. Omarchy is sourced **modularly** (not via `rc`).
+Recommended daily driver. Omarchy is sourced **modularly** (not via `rc`). Omarchy envs load only via `env.sh` (not duplicated in `.zshrc`).
 
 ```mermaid
 flowchart TD
-    A["1. env.sh"] --> B["2. Omarchy envs"]
+    A["1. env.sh<br/>(includes Omarchy envs)"] --> B["2. direnv hook zsh"]
     B --> C["3. Omarchy aliases"]
     C --> D["4. Omarchy functions<br/>ga/gd worktrees, fns/*"]
-    D --> E["5. aliases.sh"]
-    E --> F["5a. personal.sh<br/>(chained inside aliases.sh)"]
-    F --> G["6. mise activate zsh"]
-    G --> H["7. starship init zsh"]
-    H --> I["8. zoxide init zsh"]
-    I --> J["9. fzf --zsh"]
-    J --> K["10. thefuck --alias"]
-    K --> L["11. compinit + history opts"]
-    L --> M["12. grok completions"]
-    M --> N["13. zshconfig, reload aliases"]
-
-    A -.->|"also loads Omarchy envs"| B
+    D --> E["5. functions.sh"]
+    E --> F["6. aliases.sh"]
+    F --> G["6a. personal.sh<br/>(chained inside aliases.sh)"]
+    G --> H["7. mise activate zsh"]
+    H --> I["8. starship init zsh"]
+    I --> J["9. zoxide init zsh"]
+    J --> K["10. fzf --zsh"]
+    K --> L["11. thefuck --alias"]
+    L --> M["12. compinit + history opts"]
+    M --> N["13. grok completions"]
+    N --> O["14. zshconfig, reload aliases"]
 ```
 
 | Step | File / command | Notes |
 |------|----------------|-------|
-| 1 | `env.sh` | Already sources Omarchy `envs` — step 2 duplicates that file |
+| 1 | `env.sh` | Single source for Omarchy envs |
 | 4 | Omarchy `functions` | Defines `ga()` git-worktree helper — **never alias `ga`** |
-| 5 | `aliases.sh` | `ff` = **fastfetch** (wins over Omarchy here) |
-| 6–10 | tool inits | All in `.zshrc`, not Omarchy `init` |
-
-**Intended (migrate.sh):** inserts `direnv hook zsh` after `env.sh`. Live `~/.zshrc` does **not** have direnv yet.
+| 6 | `aliases.sh` | `ff` = **fastfetch** (wins over Omarchy) |
+| 7–11 | tool inits | All in `.zshrc`, not Omarchy `init` |
 
 ---
 
-## bash load order
+## bash load order (live `~/.bashrc`)
 
-Bash uses Omarchy's monolithic `rc` bundle instead of modular parts.
-
-### Live `~/.bashrc` (current)
-
-```mermaid
-flowchart TD
-    A["1. env.sh"] --> B["2. aliases.sh + personal.sh"]
-    B --> C["3. Omarchy rc"]
-    C --> C1["envs"]
-    C1 --> C2["shell"]
-    C2 --> C3["aliases<br/>ff = fzf preview"]
-    C3 --> C4["functions<br/>ga/gd worktrees"]
-    C4 --> C5["init<br/>mise, starship, zoxide, fzf bash"]
-    C5 --> C6["completions + inputrc"]
-    C6 --> D["4. bash history opts"]
-
-    style B fill:#f9f,stroke:#333
-```
-
-The pink step is the problem: **`aliases.sh` runs before Omarchy `rc`**. Omarchy aliases loaded later can override yours — notably `ff` means **fzf** in bash but **fastfetch** in zsh.
-
-### Intended (`migrate.sh` template)
+Bash uses Omarchy's monolithic `rc` bundle instead of modular parts. Load order now matches zsh override semantics.
 
 ```mermaid
 flowchart TD
     A["1. env.sh"] --> B["2. direnv hook bash"]
-    B --> C["3. Omarchy rc<br/>(envs → aliases → functions → init)"]
-    C --> D["4. aliases.sh + personal.sh"]
-    D --> E["5. bash history opts"]
+    B --> C["3. Omarchy rc"]
+    C --> C1["envs"]
+    C1 --> C2["shell"]
+    C2 --> C3["aliases"]
+    C3 --> C4["functions<br/>ga/gd worktrees"]
+    C4 --> C5["init<br/>mise, starship, zoxide, fzf bash"]
+    C5 --> C6["completions + inputrc"]
+    C6 --> D["4. functions.sh"]
+    D --> E["5. aliases.sh + personal.sh"]
+    E --> F["6. bash history opts"]
 ```
 
-This order matches zsh semantics: Omarchy functions like `ga()` load **before** `aliases.sh`, so bash does not hit `syntax error near unexpected token '('` if someone re-adds `alias ga=`.
+Omarchy functions like `ga()` load **before** `aliases.sh`, so bash does not hit `syntax error near unexpected token '('` if someone re-adds `alias ga=`.
 
 ---
 
@@ -203,51 +191,47 @@ This order matches zsh semantics: Omarchy functions like `ga()` load **before** 
 ```mermaid
 flowchart LR
     subgraph zsh_mode["zsh — modular"]
-        z1["env.sh"] --> z2["envs"]
+        z1["env.sh"] --> z2["direnv"]
         z2 --> z3["aliases"]
         z3 --> z4["functions"]
-        z4 --> z5["aliases.sh"]
-        z5 --> z6["tool inits in .zshrc"]
+        z4 --> z5["functions.sh"]
+        z5 --> z6["aliases.sh"]
+        z6 --> z7["tool inits in .zshrc"]
     end
 
     subgraph bash_mode["bash — rc bundle"]
-        b1["env.sh"] --> b2["aliases.sh<br/>(live: wrong order)"]
+        b1["env.sh"] --> b2["direnv"]
         b2 --> b3["rc → envs, shell, aliases, functions, init"]
-        b3 --> b4["hist opts"]
+        b3 --> b4["functions.sh"]
+        b4 --> b5["aliases.sh"]
+        b5 --> b6["hist opts"]
     end
 ```
 
-| Concern | zsh | bash (live) | bash (migrate template) |
-|---------|-----|-------------|-------------------------|
-| Omarchy envs | twice (env.sh + .zshrc) | via rc | via rc |
-| `ga` worktree fn | Omarchy functions | Omarchy functions (if no `alias ga` first) | safe order |
-| `ff` | fastfetch | fzf (Omarchy wins) | fastfetch if order fixed |
-| mise / starship | `.zshrc` | Omarchy `init` inside rc | Omarchy `init` |
-| thefuck | `.zshrc` only | not loaded | not loaded |
-| direnv | missing live | missing live | after env.sh |
+| Concern | zsh | bash |
+|---------|-----|------|
+| Omarchy envs | via `env.sh` only | via `env.sh` + rc (harmless duplicate) |
+| `ga` worktree fn | Omarchy functions | Omarchy functions (safe order) |
+| `ff` | fastfetch (`aliases.sh` wins) | fastfetch (`aliases.sh` wins) |
+| mise / starship | `.zshrc` | Omarchy `init` inside rc |
+| thefuck | `.zshrc` only | not loaded |
+| direnv | after `env.sh` | after `env.sh` |
 
 ---
 
 ## Override precedence
 
-Later definitions win **within the same shell**, but bash and zsh load Omarchy at different points.
+Later definitions win **within the same shell**. Bash and zsh now share the same override semantics for the `~/.config/shell` layer.
 
 ```mermaid
 flowchart TD
-    subgraph zsh_precedence["zsh — who wins"]
+    subgraph shared_precedence["zsh and bash — who wins"]
         direction TB
-        ZO["Omarchy aliases/functions"]
-        ZA["aliases.sh + personal.sh"]
-        ZO --> ZA
-        ZA -->|"ff, gs, gc, top, df, du"| ZWINS["aliases.sh wins for those names"]
-    end
-
-    subgraph bash_precedence["bash live — who wins"]
-        direction TB
-        BA["aliases.sh + personal.sh"]
-        BO["Omarchy rc aliases/functions"]
-        BA --> BO
-        BO -->|"ff, many Omarchy aliases"| BWINS["Omarchy wins for overlapping names"]
+        O["Omarchy aliases/functions"]
+        F["functions.sh"]
+        A["aliases.sh + personal.sh"]
+        O --> F --> A
+        A -->|"ff, gs, gc, top, df, du"| WINS["aliases.sh wins for those names"]
     end
 ```
 
@@ -257,7 +241,9 @@ flowchart TD
 |------|-------|---------|--------|
 | `ga` | Omarchy `fns/worktrees` | `git worktree add` helper | `alias ga='git add'` |
 | `gd` | Omarchy `fns/worktrees` | remove worktree + branch | alias over it |
-| `ff` | **conflict** | fastfetch (zsh) vs fzf (bash live) | assume same across shells |
+| `ff` | `aliases.sh` (override) | fastfetch in all shells | assume Omarchy's fzf meaning |
+
+Use `fzf` directly or Omarchy's `eff` for file picking.
 
 ---
 
@@ -265,16 +251,16 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    F1["bass → env.sh"] --> F2["bass → Omarchy aliases only"]
-    F2 --> F3["starship / zoxide / mise (fish native)"]
-    F3 --> F4["abbr: n, lg, ff, cls"]
+    F1["bass → env.sh"] --> F2["bass → Omarchy aliases"]
+    F2 --> F3["bass → aliases.sh<br/>(chains personal.sh)"]
+    F3 --> F4["starship / zoxide / mise (fish native)"]
 
-    F5["❌ not loaded"] --- F5a["aliases.sh / personal.sh"]
-    F5 --- F5b["Omarchy functions (ga, gd)"]
+    F5["❌ not loaded"] --- F5a["Omarchy functions (ga, gd)"]
+    F5 --- F5b["functions.sh"]
     F5 --- F5c["fzf, thefuck, direnv"]
 ```
 
-Fish gets PATH/exports and some Omarchy aliases. Work shortcuts (`agrepos`, etc.) and worktree helpers are **not** available unless you add fish-native equivalents.
+Fish gets PATH/exports, Omarchy aliases, and work shortcuts via `aliases.sh` → `personal.sh`. Worktree helpers (`ga`, `gd`) need fish-native rewrites or wrappers.
 
 ---
 
@@ -282,7 +268,7 @@ Fish gets PATH/exports and some Omarchy aliases. Work shortcuts (`agrepos`, etc.
 
 | Tool | zsh | bash | fish | Where |
 |------|-----|------|------|-------|
-| direnv | migrate only | migrate only | — | hook after `env.sh` |
+| direnv | `.zshrc` | `.bashrc` | — | hook after `env.sh` |
 | mise | `.zshrc` | Omarchy `init` | `config.fish` | |
 | starship | `.zshrc` | Omarchy `init` | `config.fish` | |
 | zoxide | `.zshrc` | Omarchy `init` | `config.fish` | |
@@ -293,17 +279,19 @@ Fish gets PATH/exports and some Omarchy aliases. Work shortcuts (`agrepos`, etc.
 
 ---
 
-## Live vs `migrate.sh` drift
+## `migrate.sh` behavior
 
-Re-running `bin/migrate.sh` regenerates dotfiles. Your live configs may differ:
+Re-running `bin/migrate.sh`:
 
-| Item | Live | migrate.sh generates |
-|------|------|----------------------|
-| bash Omarchy order | aliases **before** rc | rc **before** aliases |
-| direnv | absent | hooked in bash + zsh |
-| `aliases.sh` → `personal.sh` | chained in live file | not in migrate heredoc |
+| Action | Behavior |
+|--------|----------|
+| `env.sh`, `aliases.sh`, `functions.sh` | **Preserved** if they already exist |
+| `~/.zshrc`, `~/.bashrc`, fish config | **Regenerated** from templates |
+| Dotfile backups | Written to `backups/TIMESTAMP/` with `revert.sh` |
 
-Align live dotfiles with migrate (or update migrate to match your edits) before the next migration run.
+Templates match live load order: Omarchy before `aliases.sh`, direnv hooked, `functions.sh` wired, `personal.sh` chained in generated `aliases.sh`.
+
+Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 
 ---
 
@@ -311,14 +299,17 @@ Align live dotfiles with migrate (or update migrate to match your edits) before 
 
 ```mermaid
 flowchart LR
-    edit["Edit env.sh / aliases.sh / personal.sh"] --> source["source ~/.zshrc<br/>or source ~/.bashrc"]
+    edit["Edit env.sh / aliases.sh / personal.sh"] --> check["bin/check-shell.sh"]
+    check --> source["source ~/.zshrc<br/>or source ~/.bashrc"]
     migrate["bin/migrate.sh"] --> backup["backups/TIMESTAMP/"]
     backup --> revert["revert.sh"]
     migrate --> regen["Regenerates ~/.zshrc, ~/.bashrc, fish config"]
+    regen --> check
 ```
 
 | Task | Command |
 |------|---------|
+| Verify config | `~/.config/shell/bin/check-shell.sh` |
 | Reload zsh | `source ~/.zshrc` or `reload` |
 | Reload bash | `source ~/.bashrc` |
 | Re-apply template | `~/.config/shell/bin/migrate.sh` |
@@ -328,14 +319,16 @@ flowchart LR
 
 ## Gotchas checklist
 
-- [ ] **Never alias `ga`** — Omarchy defines it as a git-worktree function; aliasing first breaks bash with a syntax error.
-- [ ] **`ff` differs by shell** on live bash (fzf) vs zsh (fastfetch) due to load order.
-- [ ] **`functions.sh` is documented but unused** — wire it into rc files or remove from README.
-- [ ] **`personal.sh` is not sourced by rc directly** — only via the tail of `aliases.sh`.
-- [ ] **Omarchy envs load twice in zsh** — harmless but redundant.
+- [x] **Never alias `ga`** — Omarchy defines it as a git-worktree function; aliasing before the function breaks bash.
+- [x] **`ff` consistent across shells** — `aliases.sh` loads after Omarchy in bash and zsh; `ff` = fastfetch everywhere.
+- [x] **`functions.sh` wired** — sourced in bash and zsh rc files after Omarchy, before `aliases.sh`.
+- [x] **`personal.sh` chained from `aliases.sh`** — not sourced directly by rc files.
+- [x] **Omarchy envs not duplicated in zsh** — only via `env.sh`.
+- [x] **direnv hooked** in bash and zsh when installed.
+- [x] **migrate preserves modules** — won't overwrite existing `env.sh` / `aliases.sh` / `functions.sh`.
 - [ ] **PATH is set in `env.sh`, Omarchy, and `~/.zprofile`** — debug with `echo $PATH` per shell.
-- [ ] **fish is partial** — no `ga`, no `personal.sh`, no `thefuck`/`fzf`.
-- [ ] **migrate overwrites** manual `~/.bashrc` / `~/.zshrc` fixes unless migrate.sh is updated first.
+- [ ] **fish is partial** — no `ga`/`gd`, no `functions.sh`, no `thefuck`/`fzf`/`direnv`.
+- [ ] **migrate still regenerates** `~/.bashrc` / `~/.zshrc` — update migrate templates before re-running if you've hand-edited rc files.
 
 ---
 
@@ -347,4 +340,6 @@ flowchart LR
 | [env.sh](env.sh) | Portable environment |
 | [aliases.sh](aliases.sh) | Shared aliases + `personal.sh` chain |
 | [personal.sh](personal.sh) | Work-specific shortcuts |
-| [bin/migrate.sh](bin/migrate.sh) | Setup script and intended dotfile templates |
+| [functions.sh](functions.sh) | Custom functions |
+| [bin/migrate.sh](bin/migrate.sh) | Setup script and dotfile templates |
+| [bin/check-shell.sh](bin/check-shell.sh) | Load-order verification |

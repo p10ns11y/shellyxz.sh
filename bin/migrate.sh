@@ -126,6 +126,9 @@ fi
 # =============================================================================
 # 4. Generate env.sh (Portable environment + PATH)
 # =============================================================================
+if [[ -f "$CONFIG_DIR/env.sh" ]]; then
+    log "Keeping existing env.sh (not overwriting)"
+else
 log "Generating env.sh (portable environment)..."
 
 cat > "$CONFIG_DIR/env.sh" << 'ENV_EOF'
@@ -187,10 +190,14 @@ fi
 [ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 ENV_EOF
+fi
 
 # =============================================================================
 # 5. Generate aliases.sh (Additions on top of Omarchy)
 # =============================================================================
+if [[ -f "$CONFIG_DIR/aliases.sh" ]]; then
+    log "Keeping existing aliases.sh (not overwriting)"
+else
 log "Generating aliases.sh..."
 
 cat > "$CONFIG_DIR/aliases.sh" << 'ALIASES_EOF'
@@ -233,11 +240,20 @@ alias n='nvim'
 # Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'
 alias gc='git commit'
+
+# Source personal/work-specific aliases last (so they can override if needed)
+if [ -f "$HOME/.config/shell/personal.sh" ]; then
+    . "$HOME/.config/shell/personal.sh"
+fi
 ALIASES_EOF
+fi
 
 # =============================================================================
 # 6. Generate functions.sh (optional extensions)
 # =============================================================================
+if [[ -f "$CONFIG_DIR/functions.sh" ]]; then
+    log "Keeping existing functions.sh (not overwriting)"
+else
 log "Generating functions.sh..."
 
 cat > "$CONFIG_DIR/functions.sh" << 'FUNCS_EOF'
@@ -245,6 +261,7 @@ cat > "$CONFIG_DIR/functions.sh" << 'FUNCS_EOF'
 # ~/.config/shell/functions.sh
 # Extra functions. Currently minimal because Omarchy covers most needs.
 FUNCS_EOF
+fi
 
 # =============================================================================
 # 7. Generate ~/.zshrc
@@ -257,17 +274,13 @@ cat > "$HOME/.zshrc" << 'ZSHRC_EOF'
 # Omarchy is treated as the personal alias/function layer.
 # This file focuses on shell-native inits + portable env.
 
-# 1. Portable environment (PATH, exports)
+# 1. Portable environment (PATH, exports; includes Omarchy envs)
 source "$HOME/.config/shell/env.sh"
 
 # 2. Direnv (must come early)
 eval "$(direnv hook zsh)"
 
-# 3. Omarchy base layer (your personal aliases + functions)
-# We source the modular parts directly for better control
-if [[ -f "$HOME/.local/share/omarchy/default/bash/envs" ]]; then
-    source "$HOME/.local/share/omarchy/default/bash/envs"
-fi
+# 3. Omarchy base layer (aliases + functions; envs already loaded via env.sh)
 if [[ -f "$HOME/.local/share/omarchy/default/bash/aliases" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/aliases"
 fi
@@ -275,7 +288,10 @@ if [[ -f "$HOME/.local/share/omarchy/default/bash/functions" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/functions"
 fi
 
-# 4. Additional aliases from our layer (non-conflicting additions)
+# 4. Custom functions, then additional aliases (non-conflicting additions)
+if [[ -f "$HOME/.config/shell/functions.sh" ]]; then
+    source "$HOME/.config/shell/functions.sh"
+fi
 source "$HOME/.config/shell/aliases.sh"
 
 # 5. Modern tool initialization (these come AFTER Omarchy)
@@ -345,6 +361,10 @@ if [[ -f "$HOME/.local/share/omarchy/default/bash/rc" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/rc"
 fi
 
+if [[ -f "$HOME/.config/shell/functions.sh" ]]; then
+    source "$HOME/.config/shell/functions.sh"
+fi
+
 source "$HOME/.config/shell/aliases.sh"
 
 # Bash-specific settings only
@@ -375,6 +395,11 @@ if test -f "$HOME/.local/share/omarchy/default/bash/aliases"
     bass source "$HOME/.local/share/omarchy/default/bash/aliases" 2>/dev/null; or true
 end
 
+# Shared aliases + personal.sh chain (loads after Omarchy so ff etc. match zsh/bash)
+if test -f "$HOME/.config/shell/aliases.sh"
+    bass source "$HOME/.config/shell/aliases.sh" 2>/dev/null; or true
+end
+
 # Starship
 if type -q starship
     starship init fish | source
@@ -390,11 +415,6 @@ if type -q mise
     mise activate fish | source
 end
 
-# Useful abbreviations
-abbr -a n nvim
-abbr -a lg lazygit
-abbr -a ff fastfetch
-abbr -a cls clear
 FISH_EOF
 
 # =============================================================================

@@ -25,12 +25,14 @@ If that sounds stressful, use a simpler, distribution-default setup instead.
 ```
 ~/.config/shell/
 ├── README.md
+├── shell.md            # Load-order reference and architecture
 ├── env.sh              # Portable PATH + environment variables
-├── aliases.sh          # Generic + commonly useful aliases
+├── aliases.sh          # Generic aliases + personal.sh chain
 ├── personal.sh         # Your work/personal specific aliases
 ├── functions.sh        # Custom functions (optional)
 ├── bin/
-│   └── migrate.sh      # Master migration / setup script
+│   ├── migrate.sh      # Master migration / setup script
+│   └── check-shell.sh  # Verify load order and guardrails
 └── backups/            # Timestamped backups + revert.sh
 ```
 
@@ -39,10 +41,11 @@ If that sounds stressful, use a simpler, distribution-default setup instead.
 | File            | Purpose                                      | Edit Frequency | Notes |
 |-----------------|----------------------------------------------|----------------|-------|
 | `env.sh`        | PATH setup, exports, environment variables   | Rarely         | Sourced by all shells |
-| `aliases.sh`    | Generic useful aliases                       | Occasionally   | Sourced by bash + zsh |
-| `personal.sh`   | Your work-specific aliases (agrepos, etc.)   | Frequently     | Your personal additions |
-| `functions.sh`  | Custom shell functions                       | Rarely         | Optional |
-| `migrate.sh`    | One-command setup / migration script         | Rarely         | Git tracked |
+| `aliases.sh`    | Generic useful aliases                       | Occasionally   | Sourced by bash, zsh, fish (via bass) |
+| `personal.sh`   | Your work-specific aliases (agrepos, etc.)   | Frequently     | Chained from `aliases.sh` tail only |
+| `functions.sh`  | Custom shell functions                       | Rarely         | Sourced by bash + zsh rc files |
+| `migrate.sh`    | One-command setup / migration script         | Rarely         | Regenerates dotfiles; preserves existing modules |
+| `check-shell.sh`| Load-order and reserved-name verification    | Never          | Run after edits or before migrate |
 
 ## Recommended Shell Usage
 
@@ -68,7 +71,7 @@ If that sounds stressful, use a simpler, distribution-default setup instead.
 **Why:**
 - Ubiquitous — available on almost every Unix-like system
 - Required for many scripts and legacy tools
-- The setup still works well because `~/.bashrc` sources the same `env.sh` and `aliases.sh`
+- Shares the same `env.sh` and `aliases.sh` layer as zsh, with Omarchy loaded via its `rc` bundle
 
 **When to use:**
 - Writing portable scripts
@@ -82,24 +85,51 @@ If that sounds stressful, use a simpler, distribution-default setup instead.
 **Why:**
 - Very user-friendly defaults (autosuggestions, syntax highlighting out of the box)
 - Clean syntax
-- However, it has different syntax for scripting, so we only do **best-effort** sourcing via `bass`
+- Best-effort parity via `bass` for `env.sh`, Omarchy aliases, and `aliases.sh`
 
 **When to use:**
 - When you want a very polished interactive shell
 - Experimentation or personal preference
 - Not recommended as your only shell (due to compatibility)
 
+**Limitations:** Omarchy worktree functions (`ga`, `gd`) and tools like `thefuck` are not available unless you add fish-native equivalents.
+
 ## How Sourcing Works
 
-1. `env.sh` is sourced first (sets up PATH and environment)
-2. Omarchy files are sourced (your personal base layer)
-3. `aliases.sh` is sourced (generic aliases)
-4. `personal.sh` is sourced last (your work-specific aliases — can override previous ones)
-5. Shell-native tools are initialized (`starship`, `mise activate`, `zoxide`, etc.)
+Load order is consistent across bash and zsh: Omarchy loads **before** your layer so its functions (like `ga`) are defined first; `aliases.sh` loads **after** so your overrides win.
+
+### zsh and bash
+
+1. `env.sh` — PATH, exports, Omarchy envs
+2. `direnv` hook (when installed)
+3. Omarchy — modular parts in zsh (`aliases`, `functions`); monolithic `rc` in bash
+4. `functions.sh` — your custom functions
+5. `aliases.sh` — generic aliases
+6. `personal.sh` — chained at the tail of `aliases.sh`
+7. Shell-native tool inits (`starship`, `mise`, `zoxide`, etc.)
+
+### fish (best-effort)
+
+1. `bass` → `env.sh`
+2. `bass` → Omarchy aliases
+3. `bass` → `aliases.sh` (includes `personal.sh`)
+4. Native fish inits for `starship`, `zoxide`, `mise`
 
 This order ensures:
-- Your personal aliases win when there are conflicts
-- Everything stays consistent across bash and zsh
+- Omarchy functions like `ga()` are never shadowed by a premature `alias ga=`
+- Your aliases (`ff`, `gs`, `top`, etc.) win over Omarchy when names overlap
+- Work shortcuts in `personal.sh` are available in bash, zsh, and fish
+
+## Reserved Names
+
+Do not alias these — Omarchy owns them as functions:
+
+| Name | Meaning |
+|------|---------|
+| `ga` | `git worktree add` helper |
+| `gd` | remove worktree + branch |
+
+`ff` is intentionally overridden to `fastfetch` in `aliases.sh` (Omarchy defines it as fzf). Use `fzf` or Omarchy's `eff` for file picking.
 
 ## How to Add New Aliases
 
@@ -109,6 +139,9 @@ This order ensures:
 ### Work / Personal Specific
 → Add to `~/.config/shell/personal.sh`
 
+### Custom Functions
+→ Add to `~/.config/shell/functions.sh`
+
 Example in `personal.sh`:
 
 ```bash
@@ -116,23 +149,24 @@ alias myproject="cd ~/Work/my-important-project"
 alias deploy="make deploy"
 ```
 
-After editing, just run:
+After editing, reload and verify:
 
 ```bash
-source ~/.zshrc
-# or
-source ~/.bashrc
+source ~/.zshrc   # or: source ~/.bashrc
+~/.config/shell/bin/check-shell.sh
 ```
 
 ## Maintenance
 
-- Run `~/.config/shell/bin/migrate.sh` when you want to re-apply or update the base setup
+- Run `~/.config/shell/bin/check-shell.sh` after editing rc files or shell modules
+- Run `~/.config/shell/bin/migrate.sh` to re-apply dotfile templates (`~/.zshrc`, `~/.bashrc`, fish config)
+- `migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
 - The `backups/` folder contains timestamped backups + a `revert.sh`
 - Everything important lives under `~/.config/shell/` and is git tracked
-- See [shell.md](shell.md) for the full load-order reference and gotchas
+- See [shell.md](shell.md) for the full load-order reference and remaining caveats
 
 ## Notes
 
 - This setup treats **Omarchy** as your personal foundation and layers modern tooling on top without fighting it.
 - The goal is **low cognitive load** — you should rarely need to edit `~/.zshrc` or `~/.bashrc` directly.
-
+- **PATH** is still built in multiple places (`env.sh`, Omarchy, `~/.zprofile`). Use `echo $PATH` per shell when debugging precedence.
