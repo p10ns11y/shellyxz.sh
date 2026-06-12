@@ -34,9 +34,8 @@ alias ff='fastfetch'
 alias lg='lazygit'
 alias n='nvim'
 
-# Git shortcuts (if Omarchy doesn't have them)
+# Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'
-alias ga='git add'
 alias gc='git commit'
 
 # Source personal/work-specific aliases last (so they can override if needed)

@@ -230,9 +230,8 @@ alias ff='fastfetch'
 alias lg='lazygit'
 alias n='nvim'
 
-# Git shortcuts (if Omarchy doesn't have them)
+# Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'
-alias ga='git add'
 alias gc='git commit'
 ALIASES_EOF
 
@@ -340,12 +339,13 @@ cat > "$HOME/.bashrc" << 'BASHRC_EOF'
 
 source "$HOME/.config/shell/env.sh"
 eval "$(direnv hook bash)"
-source "$HOME/.config/shell/aliases.sh"
 
-# Keep sourcing Omarchy for bash too (full compatibility)
+# Omarchy before aliases.sh (ga is a worktree function; aliasing it first breaks bash)
 if [[ -f "$HOME/.local/share/omarchy/default/bash/rc" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/rc"
 fi
+
+source "$HOME/.config/shell/aliases.sh"
 
 # Bash-specific settings only
 shopt -s histappend
