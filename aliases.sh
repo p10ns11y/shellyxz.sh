@@ -32,7 +32,7 @@ fi
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
-alias n='nvim'
+# n() is Omarchy's nvim wrapper — do not alias here (breaks zsh reload)
 
 # Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'

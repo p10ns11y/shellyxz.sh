@@ -50,6 +50,39 @@ check_order "$HOME/.bashrc" 'source.*omarchy/default/bash/rc' 'source.*aliases\.
 # Zsh: Omarchy functions before aliases.sh (source lines only)
 check_order "$HOME/.zshrc" 'source.*omarchy/default/bash/functions' 'source.*aliases\.sh' 'zsh Omarchy functions before aliases'
 
+# Login shell identity + current process reality check
+u="${USER:-$(id -un 2>/dev/null || whoami)}"
+login_shell="$(getent passwd "$u" 2>/dev/null | cut -d: -f7 || echo '')"
+current_proc="$(ps -p $$ -o comm= 2>/dev/null || echo "$0")"
+mismatch=0
+
+if [[ -n "$login_shell" ]]; then
+    if [[ "$login_shell" == "/usr/bin/zsh" || "$login_shell" == "/bin/zsh" ]]; then
+        ok "default login shell is zsh (passwd: $login_shell)"
+    else
+        warn "default login shell is '$login_shell' (chsh -s /usr/bin/zsh to switch)"
+    fi
+else
+    warn "could not determine login shell via getent passwd"
+fi
+
+# What is *actually* running right now (far more reliable than $SHELL)
+if [[ "$current_proc" == "zsh" || "$current_proc" == "-zsh" ]]; then
+    ok "current process is zsh (ps says: $current_proc)"
+elif [[ "$current_proc" == "bash" || "$current_proc" == "-bash" ]]; then
+    ok "current process is bash (ps says: $current_proc)"
+else
+    warn "current process reported by ps as: $current_proc (use 'echo \$0' or 'ps -p \$\$ -o comm=')"
+fi
+
+# $SHELL is frequently a lie after chsh + exec / in long-lived terminals
+if [[ "$SHELL" != "$login_shell" && -n "$login_shell" ]]; then
+    warn "\$SHELL ($SHELL) differs from passwd login shell — this is *normal* and often persists even after 'exec /usr/bin/zsh -l' because terminals export the original value and shells inherit it."
+    mismatch=1
+fi
+
+echo "  Reliable current shell check: shell_debug   (or: echo \$0; ps -p \$\$ -o comm=; echo \${ZSH_VERSION:-} \${BASH_VERSION:-})"
+
 # Direnv hooks when direnv is installed
 if command -v direnv &>/dev/null; then
     grep -q 'direnv hook bash' "$HOME/.bashrc" && ok 'direnv hooked in bash' || fail 'direnv missing from ~/.bashrc'
@@ -63,11 +96,25 @@ grep -q 'personal.sh' "$CONFIG_DIR/aliases.sh" \
     && ok 'personal.sh chained from aliases.sh' \
     || fail 'aliases.sh does not source personal.sh'
 
-# Never alias ga (ignore comment-only lines)
-if grep -R --include='*.sh' -E '^[[:space:]]*alias[[:space:]]+ga=' "$CONFIG_DIR" 2>/dev/null | grep -q .; then
-    fail 'reserved alias ga= found under ~/.config/shell'
-else
-    ok 'no alias ga= under ~/.config/shell'
+# Never alias ga or n (ignore comment-only lines)
+for reserved in ga n; do
+    if grep -R --include='*.sh' -E "^[[:space:]]*alias[[:space:]]+${reserved}=" "$CONFIG_DIR" 2>/dev/null | grep -q .; then
+        fail "reserved alias ${reserved}= found under ~/.config/shell"
+    else
+        ok "no alias ${reserved}= under ~/.config/shell"
+    fi
+done
+
+# Runtime verification that reserved names resolve to Omarchy functions in zsh
+# (catches cases where tool inits/direnv/personal set aliases after the early guard)
+if command -v zsh &>/dev/null; then
+    for r in n ga gd; do
+        if zsh -ic "type -w $r 2>/dev/null" 2>/dev/null | grep -q ': function'; then
+            ok "zsh runtime: ${r} is function (Omarchy reserved, reload-safe)"
+        else
+            warn "zsh runtime: ${r} did not resolve to function (may be aliased)"
+        fi
+    done
 fi
 
 # functions.sh wired into rc files
@@ -135,5 +182,17 @@ if [[ -f "$FISH_CFG" ]]; then
 fi
 
 echo ""
+if [[ "${mismatch:-0}" -eq 1 ]]; then
+    echo ">>> \$SHELL is a lying ghost variable. It was set by the *original* terminal/login process"
+    echo ">>> and is inherited across 'exec'. Even a successful 'exec /usr/bin/zsh -l' often leaves"
+    echo ">>> the old value in the environment. The prompt, ZSH_VERSION, and 'ps -p \$\$ -o comm=' are truth."
+    echo ">>>"
+    echo ">>> 'reload' only re-sources rc files for the *current* interpreter. It does not switch shells."
+    echo ">>>"
+    echo ">>> To replace the current process with your real default login shell:"
+    echo ">>>     exec $login_shell -l"
+    echo ">>> Then immediately run:  shell_debug   or your verification one-liner."
+    echo ""
+fi
 echo "=== summary: $errors error(s), $warnings warning(s) ==="
 [[ "$errors" -eq 0 ]]

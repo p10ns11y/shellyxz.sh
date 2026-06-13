@@ -127,7 +127,25 @@ That is why `path_debug` can differ between `zsh` and `zsh -l`: login adds `zpro
 chsh -s /usr/bin/zsh   # list options: chsh -l
 ```
 
-**Current shell** is the running process. `echo $SHELL` is the default, not the current. Use `echo $0` or `ps -p $$ -o comm=` to see what is running.
+**Current shell** is the running process.
+
+**`echo $SHELL` is frequently a lie** after `chsh`, after `exec`, or in any long-lived terminal tab.
+- It is set once by the terminal emulator / login process to the value from `/etc/passwd` (or whatever the terminal decided at tab creation time).
+- `exec new-shell` inherits the old environment variable; the new shell usually does not overwrite an existing `$SHELL`.
+- This is the "ghosty" controlling SHELL that people see even after successful `exec /usr/bin/zsh -l`.
+
+Use these instead:
+
+```bash
+shell_debug          # new helper (prints $0, ps, ZSH_VERSION/BASH_VERSION, passwd, etc.)
+echo $0
+ps -p $$ -o pid,comm,args
+echo "zsh? ${ZSH_VERSION:-no}   bash? ${BASH_VERSION:-no}"
+```
+
+`getent passwd $USER | cut -d: -f7` tells you the *default login shell*.
+
+The check script and `shell_debug` now scream about this.
 
 | Action | Command | Effect |
 |--------|---------|--------|
@@ -138,13 +156,27 @@ chsh -s /usr/bin/zsh   # list options: chsh -l
 
 Fish is **opt-in**: use `exec fish` to try it without changing `chsh`. Switch back by opening a new terminal (if zsh is default) or `exec zsh`.
 
+**After `chsh -s /usr/bin/zsh` (or any switch):** the change only affects *new* terminal sessions/logins.
+
+Your existing terminal tab keeps:
+- The old process binary until you `exec` or open a new tab.
+- The old `$SHELL` environment variable (often forever, even after `exec /usr/bin/zsh -l`).
+
+Do this to replace the current process:
+
+```bash
+exec /usr/bin/zsh -l
+```
+
+Then run `shell_debug` or the verification one-liner. The fancy prompt icon + `ZSH_VERSION` + `ps -p $$` will confirm you're in zsh. `echo $SHELL` may still show the old value — this is normal and not a bug in your chsh or config. The check script now prints a very loud explanation when this happens.
+
 ### Workflow: edit → reload → verify
 
 ```mermaid
 flowchart TD
     A["Edit ~/.config/shell/module"] --> B{"Which shell?"}
-    B -->|zsh| C["source ~/.zshrc or reload"]
-    B -->|bash| D["source ~/.bashrc"]
+    B -->|zsh| C["reload (or source ~/.zshrc)"]
+    B -->|bash| D["reload (or source ~/.bashrc)"]
     B -->|fish| E["Open new fish session"]
     C --> F["bin/check-shell.sh"]
     D --> F
@@ -174,7 +206,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | File | Role | Sourced by |
 |------|------|------------|
 | `env.sh` | `path_prepend`/`path_append`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
-| `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`/`n`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
+| `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
 | `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` | via `aliases.sh` tail only |
 | `functions.sh` | Custom functions (`path_debug`, …) | zsh, bash rc files; fish (via bass) |
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
@@ -351,6 +383,7 @@ flowchart TD
 |------|-------|---------|--------|
 | `ga` | Omarchy `fns/worktrees` | `git worktree add` helper | `alias ga='git add'` |
 | `gd` | Omarchy `fns/worktrees` | remove worktree + branch | alias over it |
+| `n` | Omarchy `aliases` | nvim wrapper function | `alias n='nvim'` (breaks zsh reload) |
 | `ff` | `aliases.sh` (override) | fastfetch in all shells | assume Omarchy's fzf meaning |
 
 Use `fzf` directly or Omarchy's `eff` for file picking.
@@ -405,6 +438,10 @@ Copy or create these in `$HOME` (templates match a typical Omarchy + portable-en
 **`~/.zshenv`** — every zsh (including scripts):
 
 ```bash
+# Truth-seeking SHELL: make $SHELL report the actual zsh binary even for
+# non-interactive zsh, zsh -c, etc. (earliest possible point).
+export SHELL=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
+
 . "$HOME/.cargo/env"
 
 # Vite+ bin (https://viteplus.dev)
@@ -478,9 +515,11 @@ flowchart LR
 
 | Task | Command |
 |------|---------|
-| Verify config | `~/.config/shell/bin/check-shell.sh` |
-| Reload zsh | `source ~/.zshrc` or `reload` |
-| Reload bash | `source ~/.bashrc` |
+| Verify config + shell identity | `~/.config/shell/bin/check-shell.sh` |
+| Debug "why is $SHELL still bash after exec/chsh" | `shell_debug` |
+| Reload current shell | `reload` (bash or zsh, depending on what you're in right now) |
+| (or manual) | `source ~/.zshrc` or `source ~/.bashrc` |
+| Replace current process with default login shell | `exec /usr/bin/zsh -l` (or the shell from `getent passwd $USER`) |
 | Re-apply template | `~/.config/shell/bin/migrate.sh` |
 | Roll back dotfiles | `~/.config/shell/backups/<timestamp>/revert.sh` |
 
@@ -515,3 +554,4 @@ flowchart LR
 | [functions.sh](functions.sh) | Custom functions |
 | [bin/migrate.sh](bin/migrate.sh) | Setup script and dotfile templates |
 | [bin/check-shell.sh](bin/check-shell.sh) | Load-order verification |
+| [docs/SHELL-env-var-behavior.md](docs/SHELL-env-var-behavior.md) | Deep dive into why `$SHELL` is often stale after `chsh` / `exec`, with Mermaid diagrams |

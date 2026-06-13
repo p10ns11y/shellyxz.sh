@@ -167,6 +167,20 @@ cat > "$CONFIG_DIR/env.sh" << 'ENV_EOF'
 # Portable environment variables and PATH setup.
 # Sourced by bash, zsh, and (partially) fish.
 
+# Make $SHELL always reflect the *current running shell* ("truth seeker").
+# By default the terminal/login process sets $SHELL once from /etc/passwd
+# and it is inherited across exec/chsh/new shells, so `echo $SHELL` lies.
+# We correct it here based on what shell is actually interpreting us right now
+# (ZSH_VERSION / BASH_VERSION are set by the real shell before we run).
+if [ -n "${ZSH_VERSION+set}" ]; then
+    _shell_bin=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
+    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+elif [ -n "${BASH_VERSION+set}" ]; then
+    _shell_bin=$(command -v bash 2>/dev/null || echo /usr/bin/bash)
+    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+fi
+unset _shell_bin
+
 # PATH helpers (deduplicated). With path_prepend, last call wins (highest priority).
 path_prepend() {
     case ":$PATH:" in
@@ -273,7 +287,7 @@ fi
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
-alias n='nvim'
+# n() is Omarchy's nvim wrapper — do not alias here (breaks zsh reload)
 
 # Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'
@@ -303,6 +317,51 @@ cat > "$CONFIG_DIR/functions.sh" << 'FUNCS_EOF'
 path_debug() {
     echo "$PATH" | tr ':' '\n' | nl -ba
 }
+
+# Shell identity diagnostics.
+# $SHELL is often stale after chsh + exec or in long-lived terminal sessions.
+# It is set by the *initial login/terminal process* and inherited; exec does not always update it.
+# Use this (or the check script) instead of trusting `echo $SHELL`.
+shell_debug() {
+    echo "=== shell identity ==="
+    echo "Invoked as (\$0):          $0"
+    echo "\$SHELL (env var):        $SHELL"
+    local login_sh
+    login_sh=$(getent passwd "${USER:-$(id -un)}" 2>/dev/null | cut -d: -f7 || echo unknown)
+    echo "Login shell (passwd):     $login_sh"
+    echo "Current process (ps):     $(ps -p $$ -o pid,comm,args 2>/dev/null || echo 'ps unavailable')"
+    echo "ZSH_VERSION:              ${ZSH_VERSION:-unset (not zsh)}"
+    echo "BASH_VERSION:             ${BASH_VERSION:-unset (not bash)}"
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        echo "You are running zsh."
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        echo "You are running bash."
+    fi
+    echo ""
+    echo "Tip: after 'exec /usr/bin/zsh -l' the prompt + ZSH_VERSION + ps will tell the truth."
+    echo "     echo \$SHELL frequently lies because it is inherited from the original terminal session."
+}
+
+# Portable reload helper for the current shell.
+# Works in bash and zsh. In zsh, ~/.zshrc overrides this with an enhanced
+# version that pre-clears 'n'/'ga'/'gd'/'reload' (and runs unfunction) before
+# re-sourcing, to prevent "defining function based on alias" errors on reload.
+reload() {
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        source "$HOME/.zshrc" && echo "zshrc reloaded"
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        source "$HOME/.bashrc" && echo "bashrc reloaded"
+        # Help people who are in the wrong shell after chsh and keep typing "reload"
+        u="${USER:-$(id -un 2>/dev/null || whoami)}"
+        login_sh="$(getent passwd "$u" 2>/dev/null | cut -d: -f7 || echo /usr/bin/zsh)"
+        if [ "$SHELL" != "$login_sh" ]; then
+            echo "Note: you are still in $SHELL. To switch this terminal to the default ($login_sh): exec $login_sh -l"
+        fi
+    else
+        echo "reload: unknown shell (no \$ZSH_VERSION or \$BASH_VERSION)"
+        return 1
+    fi
+}
 FUNCS_EOF
 fi
 
@@ -326,6 +385,16 @@ source "$HOME/.config/shell/env.sh"
 eval "$(direnv hook zsh)"
 
 # 3. Omarchy base layer (aliases + functions; envs already loaded via env.sh)
+# Defensively clear aliases for names that Omarchy defines as functions (n, ga, gd).
+# Omarchy's n() is defined inside its "aliases" file. If an `alias n=...` exists
+# (from interactive use, tool inits, direnv, old scripts, or a prior `source` that
+# reached the bottom of this file), zsh will refuse to define the function on reload:
+#   "defining function based on alias `n'"
+# This guard makes `source ~/.zshrc` (and the `reload` alias) robust.
+for _name in n ga gd reload; do
+    unalias "$_name" 2>/dev/null || true
+    unfunction "$_name" 2>/dev/null || true
+done
 if [[ -f "$HOME/.local/share/omarchy/default/bash/aliases" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/aliases"
 fi
@@ -338,6 +407,18 @@ if [[ -f "$HOME/.config/shell/functions.sh" ]]; then
     source "$HOME/.config/shell/functions.sh"
 fi
 source "$HOME/.config/shell/aliases.sh"
+
+# If sourced from a non-zsh shell (very common while debugging after chsh,
+# one-liners, or check-shell.sh from bash), stop here.
+# - Portable bits (env, Omarchy via guarded load, functions, aliases) have run.
+# - The early unalias guard already protected Omarchy's n()/ga() definitions.
+# - We deliberately skip zsh-only inits (mise/starship/fzf --zsh etc.),
+#   zsh setopts, compinit, grok zsh completions, and the zsh-specific reload()
+#   definition. This prevents defining a "reload" that claims "zshrc reloaded"
+#   while the actual process remains bash.
+if [ -z "${ZSH_VERSION:-}" ]; then
+    return 0 2>/dev/null || true
+fi
 
 # 5. Modern tool initialization (these come AFTER Omarchy)
 # mise (version manager)
@@ -383,7 +464,24 @@ fi
 
 # 8. Final customizations
 alias zshconfig='$EDITOR ~/.zshrc'
-alias reload='source ~/.zshrc && echo "zshrc reloaded"'
+
+# reload is a function (not alias) so it can pre-clear reserved names before re-sourcing.
+# This + the early + late guards in this file make repeated `reload` or `source ~/.zshrc` safe.
+# Unalias first in case a previous load left `alias reload=...` (the old definition).
+unalias reload 2>/dev/null || true
+reload() {
+    for _name in n ga gd reload; do
+        unalias "$_name" 2>/dev/null || true
+        unfunction "$_name" 2>/dev/null || true
+    done
+    source ~/.zshrc && echo "zshrc reloaded"
+}
+
+# Final safeguard after all inits: keep Omarchy function names (n/ga/gd) free of aliases.
+# Some tool inits, completions, or direnv-loaded envs can introduce aliases at runtime.
+for _name in n ga gd reload; do
+    unalias "$_name" 2>/dev/null || true
+done
 ZSHRC_EOF
 fi
 
@@ -436,6 +534,9 @@ cat > "$FISH_CONFIG" << 'FISH_EOF'
 # Managed by ~/.config/shell/bin/migrate.sh
 # ~/.config/fish/config.fish
 # Decent parity with bash/zsh setup
+
+# Truth-seeking SHELL for fish
+set -gx SHELL (command -v fish 2>/dev/null; or echo /usr/bin/fish)
 
 # Source portable env where possible (fish syntax is different)
 if test -f "$HOME/.config/shell/env.sh"

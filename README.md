@@ -126,6 +126,10 @@ The rc/profile files in `$HOME` are **not** the source of truth. They only wire 
 chsh -s /usr/bin/zsh    # or /usr/bin/bash, /usr/bin/fish
 ```
 
+After `chsh`, **open a new terminal** (or `exec /usr/bin/zsh -l` in the current one).
+
+**`$SHELL` will often still lie** even after a successful `exec`. It is inherited from when the terminal tab was originally created. Use `shell_debug`, `echo $0`, `ps -p $$ -o comm=`, or re-run `check-shell.sh` — those tell the truth. The check script now prints an explicit explanation + the exact `exec` command when it sees the mismatch.
+
 **Try another shell temporarily** (leaves default unchanged):
 
 ```bash
@@ -139,7 +143,7 @@ exit          # leave a subshell and return to the parent shell
 
 ```bash
 bash -lc 'echo $SHELL; alias ff'
-zsh -ic 'reload'
+zsh -ic 'reload'   # or bash -ic 'reload' (now works in both)
 ```
 
 Check what is actually running: `echo $0` or `ps -p $$ -o comm=`. `$SHELL` is only your *login default*, not the current process.
@@ -155,7 +159,7 @@ flowchart LR
 ```
 
 1. **Change aliases, PATH, exports** → edit `~/.config/shell/`, not rc files.
-2. **Reload** → `source ~/.zshrc` (or `reload` in zsh) or open a new terminal.
+2. **Reload** → `reload` (works in both bash and zsh; sources the right rc file) or `source ~/.zshrc` / `source ~/.bashrc`, or open a new terminal.
 3. **Verify** → `~/.config/shell/bin/check-shell.sh`.
 4. **Re-apply rc templates** → `bin/migrate.sh` (only touches managed `~/.zshrc` / `~/.bashrc` / fish config).
 
@@ -260,6 +264,7 @@ Do not alias these — Omarchy owns them as functions:
 |------|---------|
 | `ga` | `git worktree add` helper |
 | `gd` | remove worktree + branch |
+| `n` | nvim wrapper (`n` with no args opens `.`) |
 
 `ff` is intentionally overridden to `fastfetch` in `aliases.sh` (Omarchy defines it as fzf). Use `fzf` or Omarchy's `eff` for file picking.
 
@@ -308,7 +313,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `source ~/.zshrc` errors on direnv | direnv not installed | `pacman -S direnv` (or your package manager) |
-| `check-shell.sh` reports reserved-name violation | `alias ga=` or `alias gd=` added | Remove from `aliases.sh` / `personal.sh` |
+| `check-shell.sh` reports reserved-name violation | `alias ga=`, `alias gd=`, or `alias n=` added | Remove from `aliases.sh` / `personal.sh` |
 | Hand-edited rc not updating | migrate skips non-managed files | `bin/migrate.sh --force-rc` |
 | Fish missing aliases/PATH | bass not installed | Install bass plugin; or use zsh/bash |
 | `ga`/`gd` missing | Omarchy not at `~/.local/share/omarchy` | Install/sync Omarchy |

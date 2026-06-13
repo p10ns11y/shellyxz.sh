@@ -3,6 +3,20 @@
 # Portable environment variables and PATH setup.
 # Sourced by bash, zsh, and (partially) fish.
 
+# Make $SHELL always reflect the *current running shell* ("truth seeker").
+# By default the terminal/login process sets $SHELL once from /etc/passwd
+# and it is inherited across exec/chsh/new shells, so `echo $SHELL` lies.
+# We correct it here based on what shell is actually interpreting us right now
+# (ZSH_VERSION / BASH_VERSION are set by the real shell before we run).
+if [ -n "${ZSH_VERSION+set}" ]; then
+    _shell_bin=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
+    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+elif [ -n "${BASH_VERSION+set}" ]; then
+    _shell_bin=$(command -v bash 2>/dev/null || echo /usr/bin/bash)
+    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+fi
+unset _shell_bin
+
 # PATH helpers (deduplicated). With path_prepend, last call wins (highest priority).
 path_prepend() {
     case ":$PATH:" in
