@@ -521,6 +521,11 @@ if [ -z "${ZSH_VERSION:-}" ]; then
 fi
 
 # 5. Modern tool initialization (these come AFTER Omarchy)
+# Mamba (conda-compatible env manager)
+if command -v mamba &>/dev/null; then
+    eval "$(mamba shell hook --shell zsh)"
+fi
+
 # mise (version manager)
 if command -v mise &>/dev/null; then
     eval "$(mise activate zsh)"
@@ -615,6 +620,11 @@ fi
 
 source "$HOME/.config/shell/aliases.sh"
 
+# Mamba (conda-compatible env manager)
+if command -v mamba &>/dev/null; then
+    eval "$(mamba shell hook --shell bash)"
+fi
+
 # Bash-specific settings only
 shopt -s histappend
 HISTCONTROL=ignoreboth
@@ -673,6 +683,11 @@ end
 # zoxide
 if type -q zoxide
     zoxide init fish | source
+end
+
+# Mamba (conda-compatible env manager)
+if type -q mamba
+    mamba shell hook --shell fish | source
 end
 
 # mise
