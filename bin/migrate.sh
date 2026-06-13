@@ -422,6 +422,7 @@ shell_debug() {
     login_sh=$(getent passwd "${USER:-$(id -un)}" 2>/dev/null | cut -d: -f7 || echo unknown)
     echo "Login shell (passwd):     $login_sh"
     echo "Current process (ps):     $(ps -p $$ -o pid,comm,args 2>/dev/null || echo 'ps unavailable')"
+    echo "TERM_PROGRAM:             ${TERM_PROGRAM:-unset}"
     echo "ZSH_VERSION:              ${ZSH_VERSION:-unset (not zsh)}"
     echo "BASH_VERSION:             ${BASH_VERSION:-unset (not bash)}"
     if [ -n "${ZSH_VERSION:-}" ]; then
@@ -476,8 +477,12 @@ cat > "$HOME/.zshrc" << 'ZSHRC_EOF'
 # 1. Portable environment (PATH, exports; includes Omarchy envs)
 source "$HOME/.config/shell/env.sh"
 
-# 2. Direnv (must come early)
-eval "$(direnv hook zsh)"
+# 2. Direnv (must come early; use the right hook if .zshrc is sourced from bash)
+if [ -n "${ZSH_VERSION:-}" ]; then
+    eval "$(direnv hook zsh)"
+elif [ -n "${BASH_VERSION:-}" ]; then
+    eval "$(direnv hook bash)"
+fi
 
 # 3. Omarchy base layer (aliases + functions; envs already loaded via env.sh)
 # Defensively clear aliases for names that Omarchy defines as functions (n, ga, gd).

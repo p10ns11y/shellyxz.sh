@@ -20,6 +20,7 @@ shell_debug() {
     login_sh=$(getent passwd "${USER:-$(id -un)}" 2>/dev/null | cut -d: -f7 || echo unknown)
     echo "Login shell (passwd):     $login_sh"
     echo "Current process (ps):     $(ps -p $$ -o pid,comm,args 2>/dev/null || echo 'ps unavailable')"
+    echo "TERM_PROGRAM:             ${TERM_PROGRAM:-unset}"
     echo "ZSH_VERSION:              ${ZSH_VERSION:-unset (not zsh)}"
     echo "BASH_VERSION:             ${BASH_VERSION:-unset (not bash)}"
     if [ -n "${ZSH_VERSION:-}" ]; then

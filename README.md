@@ -162,7 +162,7 @@ The rc/profile files in `$HOME` are **not** the source of truth. They only wire 
 chsh -s /usr/bin/zsh    # or /usr/bin/bash, /usr/bin/fish
 ```
 
-After `chsh`, **open a new terminal** (or `exec /usr/bin/zsh -l` in the current one).
+After `chsh`, **log out and back in** (or `exec /usr/bin/zsh -l` in the current tab). Ghostty uses your login shell from passwd; with `gtk-single-instance`, run `killall ghostty` after `chsh` so new windows pick it up (closing windows is not enough). Do not edit `~/.config/ghostty/config` for shell choice — Omarchy maintains it.
 
 **`$SHELL` before config loads** is often stale (inherited from when the terminal tab opened). After `source ~/.zshrc`, `shell_truth_seeker` in `env.sh` sets `$SHELL` to the live interpreter by default. Use `shell_debug`, `echo $0`, or `ps -p $$` when debugging — see [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md).
 

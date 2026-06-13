@@ -1,0 +1,146 @@
+# =============================================================================
+# Starship Configuration - Optimized + Contextual (2026)
+# =============================================================================
+
+add_newline = true
+command_timeout = 600
+scan_timeout = 30
+
+# =============================================================================
+# PROMPT FORMAT (Clean 2-line style)
+# =============================================================================
+format = """
+$directory\
+$git_branch\
+$git_status\
+$python\
+$nodejs\
+$rust\
+$c\
+$docker_context\
+$line_break\
+$character"""
+
+right_format = """
+$cmd_duration\
+$jobs\
+$time"""
+
+# =============================================================================
+# CHARACTER
+# =============================================================================
+[character]
+success_symbol = "[❯](bold cyan)"
+error_symbol = "[✗](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+# =============================================================================
+# DIRECTORY
+# =============================================================================
+[directory]
+truncation_length = 3
+truncation_symbol = "…/"
+style = "bold cyan"
+repo_root_style = "bold cyan"
+repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style)"
+read_only = " 󰌾"
+
+# =============================================================================
+# GIT
+# =============================================================================
+[git_branch]
+symbol = " "
+format = "[$symbol$branch]($style) "
+style = "italic cyan"
+
+[git_status]
+format = '[$all_status$ahead_behind]($style)'
+style = "cyan"
+conflicted = " "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕⇡${ahead_count}⇣${behind_count} "
+untracked = "? "
+modified = " "
+stashed = "≡ "
+
+# =============================================================================
+# LANGUAGES & TOOLS (Rich Contextual Detection)
+# =============================================================================
+
+[python]
+format = '[$symbol$version(\($virtualenv\) )]($style) '
+version_format = "v${raw}"
+style = "bold yellow"
+symbol = " "
+detect_env_vars = ["VIRTUAL_ENV", "CONDA_DEFAULT_ENV"]
+detect_extensions = ["py", "ipynb"]
+detect_files = [
+    "requirements.txt",
+    ".python-version",
+    "pyproject.toml",
+    "Pipfile",
+    "tox.ini",
+    "setup.py",
+    "uv.lock"
+]
+detect_folders = [".venv", "venv", ".direnv"]
+
+[nodejs]
+format = "[$symbol$version]($style) "
+version_format = "v${raw}"
+style = "bold green"
+symbol = " "
+detect_files = ["package.json", ".node-version", ".nvmrc", "pnpm-lock.yaml", "yarn.lock"]
+detect_extensions = ["js", "mjs", "cjs", "ts", "mts", "cts", "tsx"]
+
+[rust]
+format = "[$symbol$version]($style) "
+version_format = "v${raw}"
+style = "bold red"
+symbol = " "
+detect_files = ["Cargo.toml"]
+detect_extensions = ["rs"]
+
+[c]
+format = "[$symbol$version]($style) "
+version_format = "v${raw}"
+style = "bold blue"
+symbol = " "
+detect_extensions = ["c", "h", "cpp", "cc", "cxx", "c++", "hpp", "hh", "hxx"]
+detect_files = ["CMakeLists.txt", "meson.build", "Makefile", "compile_commands.json"]
+
+[docker_context]
+format = "[$symbol$context]($style) "
+symbol = " "
+style = "blue bold"
+only_with_files = true
+detect_files = ["Dockerfile", "docker-compose.yml", "compose.yaml"]
+
+# =============================================================================
+# SYSTEM MODULES
+# =============================================================================
+[cmd_duration]
+format = "[$duration]($style) "
+style = "yellow"
+min_time = 2000
+
+[jobs]
+format = "[$symbol$number]($style) "
+symbol = " "
+style = "blue"
+number_threshold = 1
+
+[time]
+format = "[$time]($style) "
+style = "dimmed white"
+time_format = "%H:%M"
+
+[battery]
+full_symbol = "󰁹 "
+charging_symbol = "󰂄 "
+discharging_symbol = "󰂃 "
+display = [
+  { threshold = 20, style = "bold red" },
+  { threshold = 50, style = "bold yellow" },
+]
