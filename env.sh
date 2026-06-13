@@ -50,6 +50,9 @@ path_prepend "$HOME/.local/bin"
 path_append "$HOME/miniconda/condabin"
 path_append "/opt/rocm/bin"
 
+# Mamba/conda: let Starship show env; avoid duplicate (xai_exp) prefix on its own line
+export CONDA_CHANGEPS1=false
+
 # Performance & misc
 export PIP_CACHE_DIR="$HOME/pip-cache"
 export TMPDIR="$HOME/tmp"

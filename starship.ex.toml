@@ -10,6 +10,7 @@ scan_timeout = 30
 # PROMPT FORMAT (Clean 2-line style)
 # =============================================================================
 format = """
+$conda\
 $directory\
 $git_branch\
 $git_status\
@@ -25,6 +26,15 @@ right_format = """
 $cmd_duration\
 $jobs\
 $time"""
+
+# =============================================================================
+# CONDA / MAMBA (replaces changeps1 prefix — keeps env inline with starship)
+# =============================================================================
+[conda]
+format = '(\($environment\) )'
+symbol = ""
+style = "bold cyan"
+ignore_base = true
 
 # =============================================================================
 # CHARACTER
