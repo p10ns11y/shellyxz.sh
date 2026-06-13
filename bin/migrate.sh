@@ -11,17 +11,100 @@
 
 set -euo pipefail
 
+# Remote bootstrap (curl | bash, or missing repo files). Override for forks/branches:
+#   SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/master
+SHELL_CONFIG_RAW="${SHELL_CONFIG_RAW:-https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master}"
+
 FORCE_RC=false
+BOOTSTRAP=false
 for arg in "$@"; do
     case "$arg" in
         --force-rc) FORCE_RC=true ;;
+        --bootstrap) BOOTSTRAP=true ;;
         -h|--help)
-            echo "Usage: migrate.sh [--force-rc]"
-            echo "  --force-rc  Overwrite ~/.zshrc, ~/.bashrc, and fish config even if hand-edited"
+            echo "Usage: migrate.sh [--force-rc] [--bootstrap]"
+            echo "  --force-rc   Overwrite ~/.zshrc, ~/.bashrc, and fish config even if hand-edited"
+            echo "  --bootstrap  Fetch missing repo files from SHELL_CONFIG_RAW (default: GitHub master)"
+            echo ""
+            echo "One-liner install (pipe bootstrap — fetches full config from GitHub):"
+            echo "  curl -fsSL ${SHELL_CONFIG_RAW}/bin/migrate.sh | bash"
+            echo ""
+            echo "Or clone + run:"
+            echo "  git clone git@github.com:p10ns11y/shellyxz.sh.git ~/.config/shell"
+            echo "  ~/.config/shell/bin/migrate.sh"
             exit 0
             ;;
     esac
 done
+
+CONFIG_DIR="${HOME}/.config/shell"
+
+# Colors + logging (needed before remote bootstrap)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log() { echo -e "${BLUE}[INFO]${NC} $1"; }
+success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# True when executed as: curl .../migrate.sh | bash
+is_piped_install() {
+    local base
+    base="$(basename "${0:-}")"
+    [[ "$base" == "bash" || "$base" == "sh" || "$base" == "dash" ]]
+}
+
+config_needs_bootstrap() {
+    local f
+    for f in lib.sh bin/check-shell.sh bin/recover-shell.sh; do
+        [[ -f "$CONFIG_DIR/$f" ]] || return 0
+    done
+    return 1
+}
+
+bootstrap_from_remote() {
+    local rel dest dir url
+    local files=(
+        lib.sh env.sh aliases.sh functions.sh personal.sh
+        bin/migrate.sh bin/check-shell.sh bin/recover-shell.sh
+        README.md shell.md SHELL-env-var-behavior.md .gitignore
+    )
+
+    if ! command -v curl &>/dev/null; then
+        warn "curl not found — cannot bootstrap from $SHELL_CONFIG_RAW"
+        return 1
+    fi
+
+    log "Bootstrapping ~/.config/shell from $SHELL_CONFIG_RAW"
+    mkdir -p "$CONFIG_DIR/bin"
+
+    for rel in "${files[@]}"; do
+        dest="$CONFIG_DIR/$rel"
+        if [[ -f "$dest" ]]; then
+            log "Keeping existing $rel"
+            continue
+        fi
+        dir="$(dirname "$dest")"
+        mkdir -p "$dir"
+        url="$SHELL_CONFIG_RAW/$rel"
+        if curl -fsSL "$url" -o "$dest"; then
+            log "Fetched: $rel"
+        else
+            warn "Failed to fetch $url"
+        fi
+    done
+
+    chmod +x "$CONFIG_DIR/bin/"*.sh 2>/dev/null || true
+    success "Remote bootstrap complete"
+}
+
+if [[ "$BOOTSTRAP" == true ]] || is_piped_install || config_needs_bootstrap; then
+    bootstrap_from_remote || true
+fi
 
 MANAGED_MARKER="Managed by ~/.config/shell/bin/migrate.sh"
 
@@ -41,20 +124,7 @@ write_rc_or_skip() {
     return 1
 }
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-log() { echo -e "${BLUE}[INFO]${NC} $1"; }
-success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
-
 BACKUP_DIR="$HOME/.config/shell/backups/$(date +%Y%m%d-%H%M%S)"
-CONFIG_DIR="$HOME/.config/shell"
 OMARCHY_PATH="$HOME/.local/share/omarchy"
 
 echo "==================================================================="
@@ -128,15 +198,25 @@ log "Installing script into ~/.config/shell/bin/ for git tracking..."
 
 mkdir -p "$CONFIG_DIR/bin"
 
-SCRIPT_SRC="$(realpath "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
+SCRIPT_SRC="$(realpath "${BASH_SOURCE[0]:-$0}" 2>/dev/null || readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || echo "${BASH_SOURCE[0]:-$0}")"
 TARGET_SCRIPT="$CONFIG_DIR/bin/migrate.sh"
 
-if [[ "$SCRIPT_SRC" != "$TARGET_SCRIPT" ]]; then
-    cp "$SCRIPT_SRC" "$TARGET_SCRIPT"
-    chmod +x "$TARGET_SCRIPT"
-    log "Script installed to: $TARGET_SCRIPT"
-else
+if [[ -f "$TARGET_SCRIPT" ]] && [[ "$SCRIPT_SRC" != "$TARGET_SCRIPT" ]]; then
+    # Piped install (curl | bash): bootstrap already fetched migrate.sh — skip redundant copy
+    if is_piped_install; then
+        log "Using bootstrapped migrate.sh at $TARGET_SCRIPT"
+    else
+        cp "$SCRIPT_SRC" "$TARGET_SCRIPT"
+        chmod +x "$TARGET_SCRIPT"
+        log "Script installed to: $TARGET_SCRIPT"
+    fi
+elif [[ "$SCRIPT_SRC" == "$TARGET_SCRIPT" ]]; then
     log "Script already located inside target directory"
+else
+    cp "$SCRIPT_SRC" "$TARGET_SCRIPT" 2>/dev/null || \
+        curl -fsSL "$SHELL_CONFIG_RAW/bin/migrate.sh" -o "$TARGET_SCRIPT" || \
+        warn "Could not install migrate.sh to $TARGET_SCRIPT"
+    chmod +x "$TARGET_SCRIPT" 2>/dev/null || true
 fi
 
 # =============================================================================
@@ -647,5 +727,6 @@ echo ""
 echo "Omarchy is respected and sourced early. Modern tools are layered on top."
 echo ""
 echo "Future runs: ~/.config/shell/bin/migrate.sh"
+echo "One-liner install: curl -fsSL $SHELL_CONFIG_RAW/bin/migrate.sh | bash"
 echo "Force rc regen: ~/.config/shell/bin/migrate.sh --force-rc"
 echo "==================================================================="

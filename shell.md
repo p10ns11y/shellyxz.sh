@@ -511,13 +511,21 @@ After creating login files, compare PATH across modes: `zsh -ic path_debug`, `zs
 
 ## `migrate.sh` behavior
 
+**One-liner install** (pipe bootstrap from GitHub):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master/bin/migrate.sh | bash
+```
+
+When piped, or when `lib.sh` / helper scripts are missing, migrate fetches the full tracked tree from `SHELL_CONFIG_RAW` (same URL base). Use `--bootstrap` to retry fetching any still-missing files. Fork/branch: `SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/main`.
+
 Re-running `bin/migrate.sh`:
 
 | Action | Behavior |
 |--------|----------|
 | `env.sh`, `aliases.sh`, `functions.sh` | **Preserved** if they already exist |
-| `personal.sh` | **Not generated** — create manually or copy from repo; `aliases.sh` sources it if present |
-| `lib.sh`, `bin/recover-shell.sh`, `bin/check-shell.sh` | **Not generated** — must come from git clone (not created by migrate) |
+| `personal.sh` | **Fetched on bootstrap** if missing; edit for your machine; `aliases.sh` sources it when present |
+| `lib.sh`, `bin/recover-shell.sh`, `bin/check-shell.sh` | **Fetched on bootstrap** (`curl …/migrate.sh \| bash` or `--bootstrap`); not generated from inline templates |
 | `~/.zshrc`, `~/.bashrc`, fish config | **Refreshed** only if missing or marked managed; **skipped** if hand-edited |
 | Login dotfiles (`~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`) | **Backed up only** — not generated (see [Login dotfiles](#login-dotfiles-manual-setup)) |
 | `--force-rc` | Overwrites rc files even when hand-edited |
