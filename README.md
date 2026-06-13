@@ -47,6 +47,88 @@ If that sounds stressful, use a simpler, distribution-default setup instead.
 | `migrate.sh`    | One-command setup / migration script         | Rarely         | Regenerates dotfiles; preserves existing modules |
 | `check-shell.sh`| Load-order and reserved-name verification    | Never          | Run after edits or before migrate |
 
+## Shell files, switching, and workflow
+
+Your config lives in two layers:
+
+| Layer | Where | What you edit day-to-day |
+|-------|--------|---------------------------|
+| **Portable modules** | `~/.config/shell/` (git) | `env.sh`, `aliases.sh`, `personal.sh`, `functions.sh` |
+| **Per-shell entrypoints** | `~/.zshrc`, `~/.bashrc`, fish config | Rarely — thin wrappers that `source` the modules |
+
+The rc/profile files in `$HOME` are **not** the source of truth. They only wire each shell into `~/.config/shell/`. See [shell.md — Startup files](shell.md#startup-files-what-rc-profile-mean) for the full load-order map.
+
+### Quick glossary
+
+| File | Shell | When it runs |
+|------|-------|--------------|
+| `~/.zshenv` | zsh | Every zsh (scripts too) — cargo, vite-plus |
+| `~/.zprofile` | zsh | Login zsh only — sources `env.sh` |
+| `~/.zshrc` | zsh | Interactive zsh — full stack |
+| `~/.profile` | POSIX/bash | Login — GPG, `env.sh`, cargo, vite-plus |
+| `~/.bash_profile` | bash | Login bash — sources `~/.bashrc`, vite-plus |
+| `~/.bashrc` | bash | Interactive bash — full stack |
+| `~/.config/fish/config.fish` | fish | Interactive fish — single combined config |
+
+**Login** = you started a session as a login shell (TTY login, some terminal emulators, `zsh -l`, `bash -l`). **Interactive** = you have a prompt. A normal terminal tab is usually both.
+
+### How to switch shells
+
+**Change your default** (new terminals use this):
+
+```bash
+chsh -s /usr/bin/zsh    # or /usr/bin/bash, /usr/bin/fish
+```
+
+**Try another shell temporarily** (leaves default unchanged):
+
+```bash
+exec zsh      # switch current session to zsh
+exec bash     # switch to bash
+exec fish     # switch to fish
+exit          # leave a subshell and return to the parent shell
+```
+
+**Run a one-off command in another shell:**
+
+```bash
+bash -lc 'echo $SHELL; alias ff'
+zsh -ic 'reload'
+```
+
+Check what is actually running: `echo $0` or `ps -p $$ -o comm=`. `$SHELL` is only your *login default*, not the current process.
+
+### Day-to-day workflow
+
+```mermaid
+flowchart LR
+    edit["Edit ~/.config/shell/<br/>aliases.sh, personal.sh, …"] --> reload["source ~/.zshrc<br/>or open new terminal"]
+    reload --> check["bin/check-shell.sh"]
+    check --> done["Use shell normally"]
+    migrate["bin/migrate.sh"] -->|"refresh managed rc"| reload
+```
+
+1. **Change aliases, PATH, exports** → edit `~/.config/shell/`, not rc files.
+2. **Reload** → `source ~/.zshrc` (or `reload` in zsh) or open a new terminal.
+3. **Verify** → `~/.config/shell/bin/check-shell.sh`.
+4. **Re-apply rc templates** → `migrate.sh` (only touches managed `~/.zshrc` / `~/.bashrc` / fish config).
+
+### When switching shells makes sense
+
+You do **not** need to switch often. Pick one default (zsh) and stay there unless the situation calls for another shell.
+
+| Situation | Shell | Why |
+|-----------|-------|-----|
+| Daily dev, local terminal | **zsh** (default) | Full tooling: thefuck, grok completions, modular Omarchy |
+| SSH to a server or container | **bash** | Usually the only installed shell; scripts assume it |
+| Running a third-party install script | **bash** | Many scripts hardcode `#!/bin/bash` or bash-isms |
+| Debugging "works in my terminal" issues | **bash -l** or **zsh -l** | Reproduce login vs non-login PATH differences |
+| Writing portable automation | **none / sh** | Scripts should not rely on your interactive rc |
+| Experimenting with fish UI | **fish** (temporary `exec fish`) | Optional; incomplete `ga`/`gd` parity |
+| CI, Docker, Makefile `SHELL=` | **bash** | Non-interactive; minimal env |
+
+**Rule of thumb:** interactive work → zsh; compatibility and servers → bash; scripts → explicit shebang, do not assume your dotfiles loaded.
+
 ## Recommended Shell Usage
 
 ### zsh (Recommended Daily Driver)
@@ -92,7 +174,7 @@ If that sounds stressful, use a simpler, distribution-default setup instead.
 - Experimentation or personal preference
 - Not recommended as your only shell (due to compatibility)
 
-**Limitations:** Omarchy worktree functions (`ga`, `gd`) and tools like `thefuck` are not available unless you add fish-native equivalents.
+**Limitations:** Omarchy worktree functions (`ga`, `gd`) need fish-native ports. Fish gets direnv, fzf, thefuck (native), and `functions.sh` via bass.
 
 ## How Sourcing Works
 
@@ -111,9 +193,11 @@ Load order is consistent across bash and zsh: Omarchy loads **before** your laye
 ### fish (best-effort)
 
 1. `bass` → `env.sh`
-2. `bass` → Omarchy aliases
-3. `bass` → `aliases.sh` (includes `personal.sh`)
-4. Native fish inits for `starship`, `zoxide`, `mise`
+2. `direnv hook fish`
+3. `bass` → Omarchy aliases
+4. `bass` → `functions.sh`
+5. `bass` → `aliases.sh` (includes `personal.sh`)
+6. Native fish inits for `starship`, `zoxide`, `mise`, `fzf`, `thefuck`
 
 This order ensures:
 - Omarchy functions like `ga()` are never shadowed by a premature `alias ga=`
@@ -139,6 +223,11 @@ Do not alias these — Omarchy owns them as functions:
 ### Work / Personal Specific
 → Add to `~/.config/shell/personal.sh`
 
+### API keys / secrets
+→ `~/.config/secrets/dev.env` (outside git; loaded via `personal.sh`)
+
+Do **not** put `.envrc` in `~/.config/shell/` — Cursor uses that folder as workspace cwd, and direnv would fire on every prompt.
+
 ### Custom Functions
 → Add to `~/.config/shell/functions.sh`
 
@@ -159,14 +248,15 @@ source ~/.zshrc   # or: source ~/.bashrc
 ## Maintenance
 
 - Run `~/.config/shell/bin/check-shell.sh` after editing rc files or shell modules
-- Run `~/.config/shell/bin/migrate.sh` to re-apply dotfile templates (`~/.zshrc`, `~/.bashrc`, fish config)
+- Run `~/.config/shell/bin/migrate.sh` to refresh **managed** rc files (`~/.zshrc`, `~/.bashrc`, fish config)
+- Hand-edited rc files (no managed marker) are **skipped** — use `migrate.sh --force-rc` to overwrite
 - `migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
 - The `backups/` folder contains timestamped backups + a `revert.sh`
 - Everything important lives under `~/.config/shell/` and is git tracked
-- See [shell.md](shell.md) for the full load-order reference and remaining caveats
+- See [shell.md](shell.md) for startup files, load order, switching, and remaining caveats
 
 ## Notes
 
 - This setup treats **Omarchy** as your personal foundation and layers modern tooling on top without fighting it.
 - The goal is **low cognitive load** — you should rarely need to edit `~/.zshrc` or `~/.bashrc` directly.
-- **PATH** is still built in multiple places (`env.sh`, Omarchy, `~/.zprofile`). Use `echo $PATH` per shell when debugging precedence.
+- **PATH** is owned by `env.sh` (`path_prepend` / `path_append`; `path_add` aliases prepend). Last `path_prepend` wins. Use `path_debug` in `functions.sh`. Omarchy still prepends its bin dir via envs.

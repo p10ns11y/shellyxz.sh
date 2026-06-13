@@ -11,6 +11,36 @@
 
 set -euo pipefail
 
+FORCE_RC=false
+for arg in "$@"; do
+    case "$arg" in
+        --force-rc) FORCE_RC=true ;;
+        -h|--help)
+            echo "Usage: migrate.sh [--force-rc]"
+            echo "  --force-rc  Overwrite ~/.zshrc, ~/.bashrc, and fish config even if hand-edited"
+            exit 0
+            ;;
+    esac
+done
+
+MANAGED_MARKER="Managed by ~/.config/shell/bin/migrate.sh"
+
+should_write_rc() {
+    local dest="$1"
+    [[ ! -f "$dest" ]] && return 0
+    [[ "$FORCE_RC" == true ]] && return 0
+    grep -qF "$MANAGED_MARKER" "$dest" 2>/dev/null
+}
+
+write_rc_or_skip() {
+    local dest="$1" label="$2"
+    if should_write_rc "$dest"; then
+        return 0
+    fi
+    warn "Keeping existing $label (not managed — use --force-rc to overwrite)"
+    return 1
+}
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -137,34 +167,42 @@ cat > "$CONFIG_DIR/env.sh" << 'ENV_EOF'
 # Portable environment variables and PATH setup.
 # Sourced by bash, zsh, and (partially) fish.
 
-# Safely add to PATH (deduplicated)
-path_add() {
+# PATH helpers (deduplicated). With path_prepend, last call wins (highest priority).
+path_prepend() {
     case ":$PATH:" in
         *":$1:"*) return ;;
         *) [ -d "$1" ] && export PATH="$1:$PATH" ;;
     esac
 }
 
-# Highest priority personal bins
-path_add "$HOME/.local/bin"
-path_add "$HOME/bin"
-path_add "$HOME/.local/share/mise/shims"
+path_append() {
+    case ":$PATH:" in
+        *":$1:"*) return ;;
+        *) [ -d "$1" ] && export PATH="$PATH:$1" ;;
+    esac
+}
 
-# Language/tool managers and runtimes
-path_add "$HOME/.bun/bin"
-path_add "$HOME/.opencode/bin"
-path_add "$HOME/.local/share/solana/install/active_release/bin"
-path_add "$HOME/.local/share/pnpm"
-path_add "$HOME/.cargo/bin"
-path_add "$HOME/.risc0/bin"
-path_add "$HOME/.grok/bin"
+path_add() { path_prepend "$@"; }
 
-# Mamba (keep later)
-path_add "$HOME/mamba/bin"
-
-# pnpm official handling
 export PNPM_HOME="$HOME/.local/share/pnpm"
-path_add "$PNPM_HOME"
+
+# Prepend: lowest priority first → highest priority last
+path_prepend "$HOME/.local/share/solana/install/active_release/bin"
+path_prepend "$HOME/.opencode/bin"
+path_prepend "$HOME/.bun/bin"
+path_prepend "$PNPM_HOME"
+path_prepend "$HOME/.cargo/bin"
+path_prepend "$HOME/.risc0/bin"
+path_prepend "$HOME/.grok/bin"
+path_prepend "$HOME/.vector/bin"
+path_prepend "$HOME/mamba/bin"
+path_prepend "$HOME/.local/share/mise/shims"
+path_prepend "$HOME/bin"
+path_prepend "$HOME/.local/bin"
+
+# Append: fallbacks only (won't shadow bins above)
+path_append "$HOME/miniconda/condabin"
+path_append "/opt/rocm/bin"
 
 # Performance & misc
 export PIP_CACHE_DIR="$HOME/pip-cache"
@@ -260,16 +298,23 @@ cat > "$CONFIG_DIR/functions.sh" << 'FUNCS_EOF'
 #!/usr/bin/env sh
 # ~/.config/shell/functions.sh
 # Extra functions. Currently minimal because Omarchy covers most needs.
+
+# Print PATH entries one per line (handy when debugging precedence)
+path_debug() {
+    echo "$PATH" | tr ':' '\n' | nl -ba
+}
 FUNCS_EOF
 fi
 
 # =============================================================================
 # 7. Generate ~/.zshrc
 # =============================================================================
+if write_rc_or_skip "$HOME/.zshrc" "~/.zshrc"; then
 log "Generating ~/.zshrc..."
 
 cat > "$HOME/.zshrc" << 'ZSHRC_EOF'
 #!/usr/bin/env zsh
+# Managed by ~/.config/shell/bin/migrate.sh
 # ~/.zshrc - Clean zsh config (pure zsh + starship)
 # Omarchy is treated as the personal alias/function layer.
 # This file focuses on shell-native inits + portable env.
@@ -340,14 +385,17 @@ fi
 alias zshconfig='$EDITOR ~/.zshrc'
 alias reload='source ~/.zshrc && echo "zshrc reloaded"'
 ZSHRC_EOF
+fi
 
 # =============================================================================
-# 9. Minimal ~/.bashrc
+# 8. Minimal ~/.bashrc
 # =============================================================================
+if write_rc_or_skip "$HOME/.bashrc" "~/.bashrc"; then
 log "Generating minimal ~/.bashrc..."
 
 cat > "$HOME/.bashrc" << 'BASHRC_EOF'
 #!/usr/bin/env bash
+# Managed by ~/.config/shell/bin/migrate.sh
 # ~/.bashrc - Minimal after migration
 # Most logic moved to ~/.config/shell/ for multi-shell consistency
 
@@ -373,15 +421,19 @@ HISTCONTROL=ignoreboth
 HISTSIZE=50000
 HISTFILESIZE=100000
 BASHRC_EOF
+fi
 
 # =============================================================================
 # 9. Basic Fish config (decent parity)
 # =============================================================================
-log "Generating fish config..."
-
+FISH_CONFIG="$HOME/.config/fish/config.fish"
 mkdir -p "$HOME/.config/fish"
 
-cat > "$HOME/.config/fish/config.fish" << 'FISH_EOF'
+if write_rc_or_skip "$FISH_CONFIG" "fish config"; then
+log "Generating fish config..."
+
+cat > "$FISH_CONFIG" << 'FISH_EOF'
+# Managed by ~/.config/shell/bin/migrate.sh
 # ~/.config/fish/config.fish
 # Decent parity with bash/zsh setup
 
@@ -390,9 +442,19 @@ if test -f "$HOME/.config/shell/env.sh"
     bass source "$HOME/.config/shell/env.sh" 2>/dev/null; or true
 end
 
+# Direnv (must come early)
+if type -q direnv
+    direnv hook fish | source
+end
+
 # Omarchy integration (best effort)
 if test -f "$HOME/.local/share/omarchy/default/bash/aliases"
     bass source "$HOME/.local/share/omarchy/default/bash/aliases" 2>/dev/null; or true
+end
+
+# Custom functions before aliases
+if test -f "$HOME/.config/shell/functions.sh"
+    bass source "$HOME/.config/shell/functions.sh" 2>/dev/null; or true
 end
 
 # Shared aliases + personal.sh chain (loads after Omarchy so ff etc. match zsh/bash)
@@ -415,7 +477,18 @@ if type -q mise
     mise activate fish | source
 end
 
+# fzf key bindings
+if type -q fzf
+    fzf --fish | source
+end
+
+# thefuck (native fish — must not use bass)
+if type -q thefuck
+    thefuck --alias | source
+end
+
 FISH_EOF
+fi
 
 # =============================================================================
 # 10. Git commit the new structure
@@ -451,4 +524,5 @@ echo ""
 echo "Omarchy is respected and sourced early. Modern tools are layered on top."
 echo ""
 echo "Future runs: ~/.config/shell/bin/migrate.sh"
+echo "Force rc regen: ~/.config/shell/bin/migrate.sh --force-rc"
 echo "==================================================================="

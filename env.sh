@@ -3,34 +3,42 @@
 # Portable environment variables and PATH setup.
 # Sourced by bash, zsh, and (partially) fish.
 
-# Safely add to PATH (deduplicated)
-path_add() {
+# PATH helpers (deduplicated). With path_prepend, last call wins (highest priority).
+path_prepend() {
     case ":$PATH:" in
         *":$1:"*) return ;;
         *) [ -d "$1" ] && export PATH="$1:$PATH" ;;
     esac
 }
 
-# Highest priority personal bins
-path_add "$HOME/.local/bin"
-path_add "$HOME/bin"
-path_add "$HOME/.local/share/mise/shims"
+path_append() {
+    case ":$PATH:" in
+        *":$1:"*) return ;;
+        *) [ -d "$1" ] && export PATH="$PATH:$1" ;;
+    esac
+}
 
-# Language/tool managers and runtimes
-path_add "$HOME/.bun/bin"
-path_add "$HOME/.opencode/bin"
-path_add "$HOME/.local/share/solana/install/active_release/bin"
-path_add "$HOME/.local/share/pnpm"
-path_add "$HOME/.cargo/bin"
-path_add "$HOME/.risc0/bin"
-path_add "$HOME/.grok/bin"
+path_add() { path_prepend "$@"; }
 
-# Mamba (keep later)
-path_add "$HOME/mamba/bin"
-
-# pnpm official handling
 export PNPM_HOME="$HOME/.local/share/pnpm"
-path_add "$PNPM_HOME"
+
+# Prepend: lowest priority first → highest priority last
+path_prepend "$HOME/.local/share/solana/install/active_release/bin"
+path_prepend "$HOME/.opencode/bin"
+path_prepend "$HOME/.bun/bin"
+path_prepend "$PNPM_HOME"
+path_prepend "$HOME/.cargo/bin"
+path_prepend "$HOME/.risc0/bin"
+path_prepend "$HOME/.grok/bin"
+path_prepend "$HOME/.vector/bin"
+path_prepend "$HOME/mamba/bin"
+path_prepend "$HOME/.local/share/mise/shims"
+path_prepend "$HOME/bin"
+path_prepend "$HOME/.local/bin"
+
+# Append: fallbacks only (won't shadow bins above)
+path_append "$HOME/miniconda/condabin"
+path_append "/opt/rocm/bin"
 
 # Performance & misc
 export PIP_CACHE_DIR="$HOME/pip-cache"

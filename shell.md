@@ -64,13 +64,117 @@ flowchart TB
 
 ---
 
+## Startup files: what rc, profile mean
+
+Unix shells do not read one config file. They read **different files depending on shell name, login vs non-login, and interactive vs non-interactive**. Your setup keeps heavy logic in `~/.config/shell/` and uses home-directory files as thin entrypoints.
+
+### The files on this machine
+
+| File | Role | Loaded when | What it does here |
+|------|------|-------------|-------------------|
+| `~/.zshenv` | zsh env | **Every** zsh (including scripts) | `cargo/env`, vite-plus — runs before everything else in zsh |
+| `~/.zprofile` | zsh login | Login zsh only (`zsh -l`, some terminals) | Sources `env.sh` for early PATH on login |
+| `~/.zshrc` | zsh interactive | Interactive zsh (normal terminal) | Full stack: `env.sh` → direnv → Omarchy → `functions.sh` → `aliases.sh` → tool inits |
+| `~/.profile` | POSIX login | Login sh/bash (when `bash_profile` absent) | GPG agent, `env.sh`, cargo, vite-plus |
+| `~/.bash_profile` | bash login | Login bash | Sources `~/.bashrc`, then vite-plus again |
+| `~/.bashrc` | bash interactive | Interactive bash | Full stack via Omarchy `rc` bundle + your modules |
+| `~/.config/fish/config.fish` | fish main | Interactive fish | Fish has no separate profile/rc split — one file does it all |
+
+Files **outside** `~/.config/shell/` but in the chain: Omarchy under `~/.local/share/omarchy/`, plus optional `~/.cargo/env`, `~/.vite-plus/env`.
+
+### Login vs interactive vs non-interactive
+
+```mermaid
+flowchart TD
+    subgraph modes["Three questions the shell asks"]
+        Q1["Which shell?<br/>bash / zsh / fish"]
+        Q2["Login shell?<br/>-l or TTY login"]
+        Q3["Interactive?<br/>prompt vs script"]
+    end
+
+    Q1 --> Q2 --> Q3
+
+    Q3 -->|interactive| RC["Load rc / config.fish<br/>aliases, prompt, fzf, …"]
+    Q3 -->|non-interactive| MIN["Minimal env only<br/>scripts, CI, cron"]
+    Q2 -->|login| PROF["Also load profile / zprofile<br/>PATH, GPG, env.sh"]
+```
+
+| Session type | Example | Typical files read (zsh) |
+|--------------|---------|---------------------------|
+| Interactive login | New terminal tab (most emulators) | `zshenv` → `zprofile` → `zshrc` |
+| Interactive non-login | `zsh` from inside bash | `zshenv` → `zshrc` |
+| Non-interactive | `zsh -c 'npm test'`, CI | `zshenv` only (often nothing you care about) |
+| Script shebang | `#!/usr/bin/env bash` in Makefile | **No rc** unless bash is invoked as login/interactive |
+
+That is why `path_debug` can differ between `zsh` and `zsh -l`: login adds `zprofile` → `env.sh` an extra time.
+
+### Where to put changes
+
+| You want to… | Edit this | Not this |
+|--------------|-----------|----------|
+| Add an alias | `aliases.sh` or `personal.sh` | `~/.zshrc` |
+| Fix PATH | `env.sh` | `~/.zprofile` (already delegates to `env.sh`) |
+| Add a function | `functions.sh` | rc files |
+| Change load order or add a tool init | `migrate.sh` template, then `--force-rc` | hand-edit rc without migrating |
+| One-off experiment | `exec fish` / `bash -l` | `chsh` |
+
+### Switching shells
+
+**Default shell** (what new login sessions use) is stored in `/etc/passwd`, changed with:
+
+```bash
+chsh -s /usr/bin/zsh   # list options: chsh -l
+```
+
+**Current shell** is the running process. `echo $SHELL` is the default, not the current. Use `echo $0` or `ps -p $$ -o comm=` to see what is running.
+
+| Action | Command | Effect |
+|--------|---------|--------|
+| Temporary switch | `exec zsh` / `exec bash` / `exec fish` | Replaces current process; `exit` closes terminal |
+| Subshell try-out | `fish` or `bash` (no exec) | Nested; `exit` returns to parent |
+| Login simulation | `bash -l`, `zsh -l` | Runs profile + rc — good for PATH debugging |
+| Non-interactive test | `bash -c 'cmd'` | Does not load your interactive aliases |
+
+Fish is **opt-in**: use `exec fish` to try it without changing `chsh`. Switch back by opening a new terminal (if zsh is default) or `exec zsh`.
+
+### Workflow: edit → reload → verify
+
+```mermaid
+flowchart TD
+    A["Edit ~/.config/shell/module"] --> B{"Which shell?"}
+    B -->|zsh| C["source ~/.zshrc or reload"]
+    B -->|bash| D["source ~/.bashrc"]
+    B -->|fish| E["Open new fish session"]
+    C --> F["bin/check-shell.sh"]
+    D --> F
+    E --> F
+    F --> G{"PATH wrong?"}
+    G -->|yes| H["path_debug in each shell<br/>compare zsh vs zsh -l vs bash -l"]
+    G -->|no| I["Done"]
+```
+
+### When you actually need another shell
+
+| Use case | Shell | Notes |
+|----------|-------|-------|
+| Local daily work | zsh | Default; all tools wired |
+| Remote SSH, VPS, Docker exec | bash | Often only `/bin/bash`; your `env.sh` layer still applies if dotfiles synced |
+| Vendor install script | bash | Run as `bash ./install.sh`, not `source` |
+| Reproduce user bug | match their shell | `bash -l` vs `bash` changes PATH |
+| Portable script / CI | `#!/usr/bin/env bash` or `sh` | Do not source `aliases.sh`; set explicit env in script |
+| Fish autosuggestions experiment | fish (temporary) | `ga`/`gd` not ported; use zsh for git worktrees |
+
+You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server session) or **implicit** (scripts spawn their own shell from shebang).
+
+---
+
 ## `~/.config/shell` modules
 
 | File | Role | Sourced by |
 |------|------|------------|
-| `env.sh` | `path_add`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
+| `env.sh` | `path_prepend`/`path_append`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
 | `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`/`n`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
-| `personal.sh` | Work aliases (`agrepos`, `agcore`, `agproto`) | via `aliases.sh` tail only |
+| `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` | via `aliases.sh` tail only |
 | `functions.sh` | Custom functions (placeholder today) | zsh, bash rc files |
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
 | `bin/check-shell.sh` | Verifies load order, direnv hooks, reserved names | manual run |
@@ -79,12 +183,17 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    subgraph path_add["path_add (deduped, prepended)"]
-        p1["~/.local/bin"]
-        p2["~/bin"]
+    subgraph path_prepend["path_prepend (last call wins)"]
+        p1["tool bins: bun, pnpm, cargo, …"]
+        p2["mamba"]
         p3["mise shims"]
-        p4["bun, opencode, solana, pnpm, cargo, risc0, grok"]
-        p5["mamba (late)"]
+        p4["~/bin"]
+        p5["~/.local/bin (highest)"]
+    end
+
+    subgraph path_append["path_append (fallbacks)"]
+        a1["condabin"]
+        a2["/opt/rocm/bin"]
     end
 
     subgraph exports["exports"]
@@ -101,7 +210,7 @@ flowchart LR
         l4["~/.cargo/env"]
     end
 
-    path_add --> exports --> loaders
+    path_prepend --> path_append --> exports --> loaders
 ```
 
 ---
@@ -114,13 +223,13 @@ Some environment is applied **before** `~/.zshrc` or `~/.bashrc` run.
 flowchart TD
     subgraph zsh_stack["zsh startup"]
         Z1["~/.zshenv<br/>every zsh: cargo, vite-plus"]
-        Z2["~/.zprofile<br/>login only: hardcoded PATH"]
+        Z2["~/.zprofile<br/>login only: sources env.sh"]
         Z3["~/.zshrc<br/>interactive: full stack"]
         Z1 --> Z2 --> Z3
     end
 
     subgraph bash_stack["bash startup"]
-        B1["~/.profile or ~/.bash_profile<br/>login: PATH, GPG, cargo, vite-plus"]
+        B1["~/.profile or ~/.bash_profile<br/>login: GPG, env.sh, cargo, vite-plus"]
         B2["~/.bashrc<br/>interactive: full stack"]
         B1 --> B2
         B3["~/.bash_profile may re-source vite-plus after bashrc"]
@@ -128,7 +237,7 @@ flowchart TD
     end
 ```
 
-**Caveat:** PATH is built in multiple places (`path_add` in `env.sh`, Omarchy `OMARCHY_PATH/bin`, hardcoded exports in `~/.zprofile`). Later entries do not always win — `path_add` prepends, so order inside `env.sh` matters.
+**Caveat:** PATH is built in `env.sh` via `path_prepend` (last call = highest priority) and `path_append` (fallbacks). Omarchy envs then prepend `omarchy/bin` again. Login files delegate to `env.sh`. Use `path_debug` when troubleshooting. `path_add` remains as an alias for `path_prepend`.
 
 ---
 
@@ -251,16 +360,16 @@ Use `fzf` directly or Omarchy's `eff` for file picking.
 
 ```mermaid
 flowchart TD
-    F1["bass → env.sh"] --> F2["bass → Omarchy aliases"]
-    F2 --> F3["bass → aliases.sh<br/>(chains personal.sh)"]
-    F3 --> F4["starship / zoxide / mise (fish native)"]
+    F1["bass → env.sh"] --> F2["direnv hook fish"]
+    F2 --> F3["bass → Omarchy aliases"]
+    F3 --> F4["bass → functions.sh"]
+    F4 --> F5["bass → aliases.sh<br/>(chains personal.sh)"]
+    F5 --> F6["starship / zoxide / mise / fzf (fish native)"]
 
-    F5["❌ not loaded"] --- F5a["Omarchy functions (ga, gd)"]
-    F5 --- F5b["functions.sh"]
-    F5 --- F5c["fzf, thefuck, direnv"]
+    F7["❌ not loaded"] --- F7a["Omarchy functions (ga, gd)"]
 ```
 
-Fish gets PATH/exports, Omarchy aliases, and work shortcuts via `aliases.sh` → `personal.sh`. Worktree helpers (`ga`, `gd`) need fish-native rewrites or wrappers.
+Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and work shortcuts via `aliases.sh` → `personal.sh`. Worktree helpers (`ga`, `gd`) still need fish-native function ports for full parity.
 
 ---
 
@@ -268,12 +377,12 @@ Fish gets PATH/exports, Omarchy aliases, and work shortcuts via `aliases.sh` →
 
 | Tool | zsh | bash | fish | Where |
 |------|-----|------|------|-------|
-| direnv | `.zshrc` | `.bashrc` | — | hook after `env.sh` |
+| direnv | `.zshrc` | `.bashrc` | `config.fish` | hook after `env.sh` |
 | mise | `.zshrc` | Omarchy `init` | `config.fish` | |
 | starship | `.zshrc` | Omarchy `init` | `config.fish` | |
 | zoxide | `.zshrc` | Omarchy `init` | `config.fish` | |
-| fzf | `.zshrc` | Omarchy `init` | — | |
-| thefuck | `.zshrc` | — | — | |
+| fzf | `.zshrc` | Omarchy `init` | `config.fish` | |
+| thefuck | `.zshrc` | — | `config.fish` | native fish only |
 | compinit | `.zshrc` | — | — | |
 | grok completions | `.zshrc` | — | — | |
 
@@ -286,10 +395,11 @@ Re-running `bin/migrate.sh`:
 | Action | Behavior |
 |--------|----------|
 | `env.sh`, `aliases.sh`, `functions.sh` | **Preserved** if they already exist |
-| `~/.zshrc`, `~/.bashrc`, fish config | **Regenerated** from templates |
+| `~/.zshrc`, `~/.bashrc`, fish config | **Refreshed** only if missing or marked managed; **skipped** if hand-edited |
+| `--force-rc` | Overwrites rc files even when hand-edited |
 | Dotfile backups | Written to `backups/TIMESTAMP/` with `revert.sh` |
 
-Templates match live load order: Omarchy before `aliases.sh`, direnv hooked, `functions.sh` wired, `personal.sh` chained in generated `aliases.sh`.
+Managed rc files include the marker comment `Managed by ~/.config/shell/bin/migrate.sh`. Edit `~/.config/shell/*` modules for day-to-day changes; use `--force-rc` when you intentionally want template updates in rc files.
 
 Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 
@@ -326,9 +436,10 @@ flowchart LR
 - [x] **Omarchy envs not duplicated in zsh** — only via `env.sh`.
 - [x] **direnv hooked** in bash and zsh when installed.
 - [x] **migrate preserves modules** — won't overwrite existing `env.sh` / `aliases.sh` / `functions.sh`.
-- [ ] **PATH is set in `env.sh`, Omarchy, and `~/.zprofile`** — debug with `echo $PATH` per shell.
-- [ ] **fish is partial** — no `ga`/`gd`, no `functions.sh`, no `thefuck`/`fzf`/`direnv`.
-- [ ] **migrate still regenerates** `~/.bashrc` / `~/.zshrc` — update migrate templates before re-running if you've hand-edited rc files.
+- [x] **PATH centralized** — `path_prepend`/`path_append` in `env.sh`; login files delegate; last prepend wins; use `path_debug`.
+- [x] **secrets outside shell repo** — `~/.config/secrets/dev.env`; no `.envrc` in workspace.
+- [ ] **fish is partial** — no `ga`/`gd` (direnv, fzf, `functions.sh`, thefuck added).
+- [x] **migrate rc policy** — skips hand-edited rc files; refreshes managed ones; `--force-rc` to overwrite.
 
 ---
 
@@ -336,7 +447,7 @@ flowchart LR
 
 | Path | Purpose |
 |------|---------|
-| [README.md](README.md) | Philosophy, where to add aliases, maintenance |
+| [README.md](README.md) | Philosophy, switching shells, where to add aliases, maintenance |
 | [env.sh](env.sh) | Portable environment |
 | [aliases.sh](aliases.sh) | Shared aliases + `personal.sh` chain |
 | [personal.sh](personal.sh) | Work-specific shortcuts |
