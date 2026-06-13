@@ -63,6 +63,7 @@ echo "==================================================================="
 echo ""
 log "Backup location: $BACKUP_DIR"
 log "Config dir     : $CONFIG_DIR"
+log "Omarchy path   : $OMARCHY_PATH"
 log "Script will be installed to: $CONFIG_DIR/bin/migrate.sh"
 echo ""
 
@@ -167,19 +168,14 @@ cat > "$CONFIG_DIR/env.sh" << 'ENV_EOF'
 # Portable environment variables and PATH setup.
 # Sourced by bash, zsh, and (partially) fish.
 
-# Make $SHELL always reflect the *current running shell* ("truth seeker").
-# By default the terminal/login process sets $SHELL once from /etc/passwd
-# and it is inherited across exec/chsh/new shells, so `echo $SHELL` lies.
-# We correct it here based on what shell is actually interpreting us right now
-# (ZSH_VERSION / BASH_VERSION are set by the real shell before we run).
-if [ -n "${ZSH_VERSION+set}" ]; then
-    _shell_bin=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
-    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
-elif [ -n "${BASH_VERSION+set}" ]; then
-    _shell_bin=$(command -v bash 2>/dev/null || echo /usr/bin/bash)
-    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+# Shared safe loaders (Omarchy paths, permission checks, secrets helper)
+if [ -f "$HOME/.config/shell/lib.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HOME/.config/shell/lib.sh"
 fi
-unset _shell_bin
+
+# Optional: set SHELL_TRUTH_SEEKER=0 before sourcing to keep inherited $SHELL.
+shell_truth_seeker 2>/dev/null || true
 
 # PATH helpers (deduplicated). With path_prepend, last call wins (highest priority).
 path_prepend() {
@@ -228,19 +224,32 @@ export HSA_OVERRIDE_GFX_VERSION=11.0.0
 # Fix clear if mamba interferes
 alias clear='/usr/bin/clear' 2>/dev/null || true
 
-# SSH & GPG
-export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
-export GPG_TTY="$(tty)"
+# SSH & GPG — interactive only (avoid tty/socket noise in scripts and CI)
+if _is_interactive_session 2>/dev/null; then
+    _sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+    [ -S "$_sock" ] && export SSH_AUTH_SOCK="$_sock"
+    _tty=$(tty 2>/dev/null) && [ -n "$_tty" ] && export GPG_TTY="$_tty"
+    unset _sock _tty
+fi
 
-# Source Omarchy envs early (if available)
-if [ -f "$HOME/.local/share/omarchy/default/bash/envs" ]; then
+# Omarchy envs (optional — missing install is fine)
+if command -v source_omarchy >/dev/null 2>&1; then
+    source_omarchy envs 2>/dev/null || true
+elif [ -f "$HOME/.local/share/omarchy/default/bash/envs" ]; then
+    # shellcheck disable=SC1091
     . "$HOME/.local/share/omarchy/default/bash/envs"
 fi
 
-# Your custom loaders (keep if they exist)
-[ -f "$HOME/.local/share/../bin/env" ] && . "$HOME/.local/share/../bin/env"
-[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# External loaders — explicit paths, permission-checked when lib.sh is present
+if command -v source_if_safe >/dev/null 2>&1; then
+    source_if_safe "$HOME/.local/bin/env" 2>/dev/null || true
+    source_if_safe "$HOME/.vite-plus/env" 2>/dev/null || true
+    source_if_safe "$HOME/.cargo/env" 2>/dev/null || true
+else
+    [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+    [ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
+    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+fi
 ENV_EOF
 fi
 
@@ -253,9 +262,10 @@ else
 log "Generating aliases.sh..."
 
 cat > "$CONFIG_DIR/aliases.sh" << 'ALIASES_EOF'
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # ~/.config/shell/aliases.sh
 # Additional aliases that complement (not duplicate) Omarchy.
+# Sourced by bash and zsh rc files; fish loads via bass (bash subshell).
 
 # Only add things Omarchy doesn't already handle well
 
@@ -266,7 +276,7 @@ if command -v yazi &>/dev/null; then
         tmp="$(mktemp -t "yazi-cwd.XXXXXX")"
         yazi "$@" --cwd-file="$tmp"
         if cwd="$(cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-            builtin cd -- "$cwd"
+            builtin cd -- "$cwd" || return 1
         fi
         rm -f -- "$tmp"
     }
@@ -295,6 +305,7 @@ alias gc='git commit'
 
 # Source personal/work-specific aliases last (so they can override if needed)
 if [ -f "$HOME/.config/shell/personal.sh" ]; then
+    # shellcheck disable=SC1091
     . "$HOME/.config/shell/personal.sh"
 fi
 ALIASES_EOF
@@ -309,9 +320,9 @@ else
 log "Generating functions.sh..."
 
 cat > "$CONFIG_DIR/functions.sh" << 'FUNCS_EOF'
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # ~/.config/shell/functions.sh
-# Extra functions. Currently minimal because Omarchy covers most needs.
+# Extra functions. Sourced by bash and zsh rc files; fish loads via bass.
 
 # Print PATH entries one per line (handy when debugging precedence)
 path_debug() {
@@ -326,6 +337,7 @@ shell_debug() {
     echo "=== shell identity ==="
     echo "Invoked as (\$0):          $0"
     echo "\$SHELL (env var):        $SHELL"
+    echo "SHELL_TRUTH_SEEKER:       ${SHELL_TRUTH_SEEKER:-1} (set 0 in env to keep inherited \$SHELL)"
     local login_sh
     login_sh=$(getent passwd "${USER:-$(id -un)}" 2>/dev/null | cut -d: -f7 || echo unknown)
     echo "Login shell (passwd):     $login_sh"
@@ -348,10 +360,13 @@ shell_debug() {
 # re-sourcing, to prevent "defining function based on alias" errors on reload.
 reload() {
     if [ -n "${ZSH_VERSION:-}" ]; then
+        # shellcheck disable=SC1091
         source "$HOME/.zshrc" && echo "zshrc reloaded"
     elif [ -n "${BASH_VERSION:-}" ]; then
+        # shellcheck disable=SC1091
         source "$HOME/.bashrc" && echo "bashrc reloaded"
         # Help people who are in the wrong shell after chsh and keep typing "reload"
+        local u login_sh
         u="${USER:-$(id -un 2>/dev/null || whoami)}"
         login_sh="$(getent passwd "$u" 2>/dev/null | cut -d: -f7 || echo /usr/bin/zsh)"
         if [ "$SHELL" != "$login_sh" ]; then
@@ -368,7 +383,7 @@ fi
 # =============================================================================
 # 7. Generate ~/.zshrc
 # =============================================================================
-if write_rc_or_skip "$HOME/.zshrc" "~/.zshrc"; then
+if write_rc_or_skip "$HOME/.zshrc" "$HOME/.zshrc"; then
 log "Generating ~/.zshrc..."
 
 cat > "$HOME/.zshrc" << 'ZSHRC_EOF'
@@ -395,11 +410,16 @@ for _name in n ga gd reload; do
     unalias "$_name" 2>/dev/null || true
     unfunction "$_name" 2>/dev/null || true
 done
-if [[ -f "$HOME/.local/share/omarchy/default/bash/aliases" ]]; then
-    source "$HOME/.local/share/omarchy/default/bash/aliases"
-fi
-if [[ -f "$HOME/.local/share/omarchy/default/bash/functions" ]]; then
-    source "$HOME/.local/share/omarchy/default/bash/functions"
+if typeset -f source_omarchy >/dev/null 2>&1; then
+    source_omarchy aliases 2>/dev/null || true
+    source_omarchy functions 2>/dev/null || true
+else
+    if [[ -f "$HOME/.local/share/omarchy/default/bash/aliases" ]]; then
+        source "$HOME/.local/share/omarchy/default/bash/aliases"
+    fi
+    if [[ -f "$HOME/.local/share/omarchy/default/bash/functions" ]]; then
+        source "$HOME/.local/share/omarchy/default/bash/functions"
+    fi
 fi
 
 # 4. Custom functions, then additional aliases (non-conflicting additions)
@@ -488,7 +508,7 @@ fi
 # =============================================================================
 # 8. Minimal ~/.bashrc
 # =============================================================================
-if write_rc_or_skip "$HOME/.bashrc" "~/.bashrc"; then
+if write_rc_or_skip "$HOME/.bashrc" "$HOME/.bashrc"; then
 log "Generating minimal ~/.bashrc..."
 
 cat > "$HOME/.bashrc" << 'BASHRC_EOF'
@@ -503,7 +523,9 @@ source "$HOME/.config/shell/env.sh"
 eval "$(direnv hook bash)"
 
 # Omarchy before aliases.sh (ga is a worktree function; aliasing it first breaks bash)
-if [[ -f "$HOME/.local/share/omarchy/default/bash/rc" ]]; then
+if typeset -f source_omarchy >/dev/null 2>&1; then
+    source_omarchy rc 2>/dev/null || true
+elif [[ -f "$HOME/.local/share/omarchy/default/bash/rc" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/rc"
 fi
 

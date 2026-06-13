@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 # Verify shell load order and reserved-name guardrails.
+# Usage: check-shell.sh [--audit]
 set -euo pipefail
 
 CONFIG_DIR="${HOME}/.config/shell"
+AUDIT=false
+for arg in "$@"; do
+    case "$arg" in
+        --audit) AUDIT=true ;;
+        -h|--help)
+            echo "Usage: check-shell.sh [--audit]"
+            echo "  --audit  Extra checks: dev.env permissions, recover-shell.sh executable, lib.sh present"
+            exit 0
+            ;;
+    esac
+done
 errors=0
 warnings=0
 
@@ -40,8 +52,32 @@ else
 fi
 if [[ -f "$HOME/.config/secrets/dev.env" ]]; then
     ok 'dev secrets at ~/.config/secrets/dev.env'
+    if [[ "$AUDIT" == true ]]; then
+        _perm=$(stat -c '%a' "$HOME/.config/secrets/dev.env" 2>/dev/null || echo '')
+        case "$_perm" in
+            600|640) ok "dev.env permissions: $_perm" ;;
+            *) warn "dev.env permissions $_perm (recommend 600)" ;;
+        esac
+    fi
 else
     warn 'missing ~/.config/secrets/dev.env (optional)'
+fi
+
+# lib.sh wired into env.sh; personal.sh must not use set -a for secrets
+if grep -q 'lib.sh' "$CONFIG_DIR/env.sh" 2>/dev/null; then
+    ok 'env.sh sources lib.sh'
+else
+    warn 'env.sh does not source lib.sh'
+fi
+if grep -qE '^[[:space:]]*set[[:space:]]+-a' "$CONFIG_DIR/personal.sh" 2>/dev/null; then
+    fail 'personal.sh uses set -a for secrets (use load_secrets_file in lib.sh)'
+else
+    ok 'personal.sh does not use set -a'
+fi
+if grep -vE '^[[:space:]]*#' "$CONFIG_DIR/env.sh" 2>/dev/null | grep -q '\.\./bin'; then
+    fail 'env.sh contains ../bin path (use ~/.local/bin/env)'
+else
+    ok 'env.sh uses explicit ~/.local/bin/env path'
 fi
 
 # Bash: Omarchy rc before aliases.sh (source lines only)
@@ -179,6 +215,33 @@ if [[ -f "$FISH_CFG" ]]; then
     grep -q 'functions.sh' "$FISH_CFG" && ok 'fish: functions.sh sourced' || warn 'fish: functions.sh missing'
     grep -q 'fzf --fish' "$FISH_CFG" && ok 'fish: fzf hooked' || warn 'fish: fzf missing'
     grep -q 'thefuck --alias' "$FISH_CFG" && ok 'fish: thefuck hooked' || warn 'fish: thefuck missing'
+fi
+
+# Static analysis via shellcheck (install: pacman -S shellcheck)
+if command -v shellcheck &>/dev/null; then
+    shellcheck_for_file() {
+        local _f="$1" _shell _exclude
+        case "$_f" in
+            */lib.sh|*/env.sh|*/personal.sh) _shell="sh" ;;
+            *) _shell="bash" ;;
+        esac
+        _exclude='SC1090,SC1091'
+        if shellcheck -s "$_shell" -x -S warning -e "$_exclude" "$_f" >/dev/null 2>&1; then
+            ok "shellcheck: ${_f#$CONFIG_DIR/}"
+        else
+            fail "shellcheck: ${_f#$CONFIG_DIR/} (run: shellcheck -s $_shell -x ${_f})"
+        fi
+    }
+    while IFS= read -r -d '' _scf; do
+        shellcheck_for_file "$_scf"
+    done < <(find "$CONFIG_DIR" -name '*.sh' -print0 2>/dev/null)
+else
+    warn 'shellcheck not installed (optional: pacman -S shellcheck)'
+fi
+
+if [[ "$AUDIT" == true ]]; then
+    [[ -x "$CONFIG_DIR/bin/recover-shell.sh" ]] && ok 'recover-shell.sh is executable' || warn 'recover-shell.sh missing or not executable'
+    [[ -f "$CONFIG_DIR/lib.sh" ]] && ok 'lib.sh present' || fail 'lib.sh missing'
 fi
 
 echo ""

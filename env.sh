@@ -3,19 +3,15 @@
 # Portable environment variables and PATH setup.
 # Sourced by bash, zsh, and (partially) fish.
 
-# Make $SHELL always reflect the *current running shell* ("truth seeker").
-# By default the terminal/login process sets $SHELL once from /etc/passwd
-# and it is inherited across exec/chsh/new shells, so `echo $SHELL` lies.
-# We correct it here based on what shell is actually interpreting us right now
-# (ZSH_VERSION / BASH_VERSION are set by the real shell before we run).
-if [ -n "${ZSH_VERSION+set}" ]; then
-    _shell_bin=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
-    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
-elif [ -n "${BASH_VERSION+set}" ]; then
-    _shell_bin=$(command -v bash 2>/dev/null || echo /usr/bin/bash)
-    [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+# Shared safe loaders (Omarchy paths, permission checks, secrets helper)
+if [ -f "$HOME/.config/shell/lib.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HOME/.config/shell/lib.sh"
 fi
-unset _shell_bin
+
+# Optional: set SHELL_TRUTH_SEEKER=0 before sourcing to keep inherited $SHELL.
+# See shell.md — echo $SHELL is often stale; this overwrites it with the live interpreter.
+shell_truth_seeker 2>/dev/null || true
 
 # PATH helpers (deduplicated). With path_prepend, last call wins (highest priority).
 path_prepend() {
@@ -64,16 +60,30 @@ export HSA_OVERRIDE_GFX_VERSION=11.0.0
 # Fix clear if mamba interferes
 alias clear='/usr/bin/clear' 2>/dev/null || true
 
-# SSH & GPG
-export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
-export GPG_TTY="$(tty)"
+# SSH & GPG — interactive only (avoid tty/socket noise in scripts and CI)
+if _is_interactive_session 2>/dev/null; then
+    _sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+    [ -S "$_sock" ] && export SSH_AUTH_SOCK="$_sock"
+    _tty=$(tty 2>/dev/null) && [ -n "$_tty" ] && export GPG_TTY="$_tty"
+    unset _sock _tty
+fi
 
-# Source Omarchy envs early (if available)
-if [ -f "$HOME/.local/share/omarchy/default/bash/envs" ]; then
+# Omarchy envs (optional — missing install is fine)
+if command -v source_omarchy >/dev/null 2>&1; then
+    source_omarchy envs 2>/dev/null || true
+elif [ -f "$HOME/.local/share/omarchy/default/bash/envs" ]; then
+    # shellcheck disable=SC1091
     . "$HOME/.local/share/omarchy/default/bash/envs"
 fi
 
-# Your custom loaders (keep if they exist)
-[ -f "$HOME/.local/share/../bin/env" ] && . "$HOME/.local/share/../bin/env"
-[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# External loaders — explicit paths, permission-checked when lib.sh is present
+# ~/.local/bin/env — user-managed PATH/tool hooks (not $HOME/.local/share/../bin)
+if command -v source_if_safe >/dev/null 2>&1; then
+    source_if_safe "$HOME/.local/bin/env" 2>/dev/null || true
+    source_if_safe "$HOME/.vite-plus/env" 2>/dev/null || true
+    source_if_safe "$HOME/.cargo/env" 2>/dev/null || true
+else
+    [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+    [ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
+    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+fi

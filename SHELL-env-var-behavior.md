@@ -9,16 +9,15 @@ It is written from the perspective of a user who has just changed their shell an
 ## TL;DR
 
 
-| Concept                                  | What it represents                                 | Updated by `chsh`? | Updated by `exec zsh`? | Fresh terminal after reboot? |
-| ---------------------------------------- | -------------------------------------------------- | ------------------ | ---------------------- | ---------------------------- |
-| **passwd shell** (`getent passwd $USER`) | Your configured login shell                        | Yes                | No                     | Yes                          |
-| **Current process** (`$0`, `ps -p $$`)   | The binary actually running right now              | No                 | Yes                    | Yes                          |
-| `**$SHELL` env var**                     | Usually the value set when this *session* was born | No                 | No (inherits)          | Yes (new session)            |
+| Concept | What it represents | Updated by `chsh`? | Updated by `exec zsh`? | After `env.sh` loads (this repo) |
+| ------- | ------------------ | ------------------ | ---------------------- | -------------------------------- |
+| **passwd shell** (`getent passwd $USER`) | Your configured login shell | Yes | No | No |
+| **Current process** (`$0`, `ps -p $$`) | The binary actually running right now | No | Yes | Yes |
+| **`$SHELL` env var** | Session birth value; corrected by truth seeker | No | No (inherits until env.sh) | Yes (`shell_truth_seeker`) |
 
-
-`**chsh` only updates the database.**  
-`**$SHELL` is set at session *birth* by the terminal/login process and then inherited.**  
-`**exec` replaces the process but keeps the old environment.**
+**`chsh` only updates the database.**  
+**`$SHELL` is set at session birth and inherited across `exec` until this repo's truth seeker runs.**  
+**`exec` replaces the process but keeps the old environment until `env.sh` / `~/.zshenv` correct it.**
 
 ---
 
@@ -37,7 +36,7 @@ When debugging shell changes, people mix up three different things:
    ps -p $$ -o comm=
    echo ${ZSH_VERSION:+zsh} ${BASH_VERSION:+bash}
   ```
-3. `**$SHELL` environment variable**
+3. **`$SHELL` environment variable**
   ```bash
    echo $SHELL
   ```
@@ -187,6 +186,8 @@ flowchart TD
 
 
 These overrides are **not** standard behavior. They are a deliberate local policy to make `$SHELL` reflect reality in your day-to-day use.
+
+See also: [shell.md — lib.sh helpers](shell.md#libsh-helpers), [README — Maintenance](README.md#maintenance).
 
 ---
 

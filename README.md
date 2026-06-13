@@ -8,7 +8,7 @@ Clean, portable, and low-maintenance shell configuration that works across **bas
 
 Shell config touches `PATH`, login files, and tool initialization. A bad edit can leave new terminals unusable — wrong `PATH`, syntax errors on `source`, or broken hooks — so the very tools you normally use to fix things (`git`, `nvim`, `mise`, your editor, even `cd`) may not be available in that session.
 
-Before changing anything here, know how you would recover without relying on a working interactive shell: a root/rescue TTY, a minimal `bash --norc`, booting from another user, restoring from `backups/*/revert.sh`, or fixing dotfiles from a graphical file manager or SSH session that does not load your broken rc.
+Before changing anything here, know how you would recover without relying on a working interactive shell: a root/rescue TTY, a minimal `bash --norc`, `~/.config/shell/bin/recover-shell.sh`, booting from another user, restoring from `backups/*/revert.sh`, or fixing dotfiles from a graphical file manager or SSH session that does not load your broken rc.
 
 If that sounds stressful, use a simpler, distribution-default setup instead.
 
@@ -28,8 +28,8 @@ Use this path on a **new machine** or after cloning the repo. Existing setups ca
 ### First install
 
 ```bash
-# 1. Place config (clone or copy)
-git clone <your-remote> ~/.config/shell   # or copy the directory
+# 1. Clone the full repo (lib.sh, recover-shell.sh, check-shell.sh are git-tracked — migrate does NOT generate them)
+git clone <your-remote> ~/.config/shell   # or copy the entire directory
 
 # 2. Run migration (backs up dotfiles, generates rc templates)
 ~/.config/shell/bin/migrate.sh
@@ -54,7 +54,7 @@ source ~/.zshrc                            # or: source ~/.bashrc
 - Regenerates managed `~/.zshrc`, `~/.bashrc`, fish config (skips hand-edited rc files)
 - Creates empty `completions/` placeholder directory
 - Runs `git init` + initial commit inside `~/.config/shell` if no `.git` exists
-- Does **not** create `personal.sh`, login dotfiles (`~/.zprofile`, `~/.profile`, etc.), or secrets
+- Does **not** create `lib.sh`, `personal.sh`, `bin/recover-shell.sh`, login dotfiles, or secrets — clone the full repo
 
 ## Philosophy
 
@@ -70,13 +70,15 @@ source ~/.zshrc                            # or: source ~/.bashrc
 ~/.config/shell/
 ├── README.md
 ├── shell.md            # Load-order reference and architecture
+├── lib.sh              # Safe sourcing helpers (Omarchy, secrets, permissions)
 ├── env.sh              # Portable PATH + environment variables
-├── aliases.sh          # Generic aliases + personal.sh chain
+├── aliases.sh          # Generic aliases + personal.sh chain (bash)
 ├── personal.sh         # Your work/personal specific aliases
-├── functions.sh        # Custom functions (optional)
+├── functions.sh        # Custom functions (bash)
 ├── bin/
 │   ├── migrate.sh      # Master migration / setup script
-│   └── check-shell.sh  # Verify load order and guardrails
+│   ├── check-shell.sh  # Load order, shellcheck, reserved names
+│   └── recover-shell.sh # Nuclear recovery when rc files break
 └── backups/            # Created by migrate.sh (gitignored) — timestamped + revert.sh
 ```
 
@@ -86,12 +88,36 @@ source ~/.zshrc                            # or: source ~/.bashrc
 
 | File            | Purpose                                      | Edit Frequency | Notes |
 |-----------------|----------------------------------------------|----------------|-------|
+| `lib.sh`        | Safe loaders (Omarchy paths, secrets, permissions) | Rarely         | Sourced by env.sh and personal.sh |
 | `env.sh`        | PATH setup, exports, environment variables   | Rarely         | Sourced by all shells |
-| `aliases.sh`    | Generic useful aliases                       | Occasionally   | Sourced by bash, zsh, fish (via bass) |
+| `aliases.sh`    | Generic useful aliases                       | Occasionally   | bash shebang; sourced by bash, zsh, fish (via bass) |
 | `personal.sh`   | Your work-specific aliases (agrepos, etc.)   | Frequently     | Chained from `aliases.sh` tail only |
-| `functions.sh`  | Custom shell functions                       | Rarely         | Sourced by bash + zsh rc files |
+| `functions.sh`  | Custom shell functions (`path_debug`, `reload`) | Rarely      | bash shebang; sourced by bash + zsh rc files |
 | `bin/migrate.sh`    | One-command setup / migration script         | Rarely         | Regenerates dotfiles; preserves existing modules |
-| `bin/check-shell.sh`| Load-order and reserved-name verification    | Never          | Run after edits or migrate |
+| `bin/check-shell.sh`| Load order, shellcheck, reserved names, zsh runtime checks | Never | `shellcheck` always; `--audit` adds secrets permissions |
+| `bin/recover-shell.sh` | Nuclear recovery when rc files break      | Never          | Works without sourcing broken rc files |
+
+### Shebang policy
+
+| File | Shebang | Why |
+|------|---------|-----|
+| `lib.sh`, `env.sh`, `personal.sh` | `sh` | POSIX-portable loaders; fish via bass |
+| `aliases.sh`, `functions.sh` | `bash` | `local`, `source`, `y()` need bash/zsh semantics |
+
+`check-shell.sh` runs `shellcheck -s sh` or `-s bash` per file accordingly.
+
+### `lib.sh` and secrets (summary)
+
+See [shell.md — lib.sh helpers](shell.md#libsh-helpers) for the full API.
+
+| Concern | Mechanism |
+|---------|-----------|
+| Omarchy paths | `source_omarchy`, `omarchy_file` — optional install, `OMARCHY_WARN=1` for missing modules |
+| External dotfiles | `source_if_safe` — ownership + not world-writable |
+| Secrets | `load_secrets_file` on `~/.config/secrets/dev.env` (mode **600**, `KEY=value` only) |
+| `$SHELL` accuracy | `shell_truth_seeker` in `env.sh` (default on); `SHELL_TRUTH_SEEKER=0` to keep inherited value |
+
+Deep dive on `$SHELL` inheritance vs truth seeker: [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md).
 
 ## Shell files, switching, and workflow
 
@@ -128,7 +154,7 @@ chsh -s /usr/bin/zsh    # or /usr/bin/bash, /usr/bin/fish
 
 After `chsh`, **open a new terminal** (or `exec /usr/bin/zsh -l` in the current one).
 
-**`$SHELL` will often still lie** even after a successful `exec`. It is inherited from when the terminal tab was originally created. Use `shell_debug`, `echo $0`, `ps -p $$ -o comm=`, or re-run `check-shell.sh` — those tell the truth. The check script now prints an explicit explanation + the exact `exec` command when it sees the mismatch.
+**`$SHELL` before config loads** is often stale (inherited from when the terminal tab opened). After `source ~/.zshrc`, `shell_truth_seeker` in `env.sh` sets `$SHELL` to the live interpreter by default. Use `shell_debug`, `echo $0`, or `ps -p $$` when debugging — see [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md).
 
 **Try another shell temporarily** (leaves default unchanged):
 
@@ -277,7 +303,9 @@ Do not alias these — Omarchy owns them as functions:
 → Add to `~/.config/shell/personal.sh`
 
 ### API keys / secrets
-→ `~/.config/secrets/dev.env` (outside git; loaded via `personal.sh`)
+→ `~/.config/secrets/dev.env` (outside git; loaded via `load_secrets_file` in `lib.sh` / `personal.sh`)
+
+Keep `dev.env` mode **600**. Use `KEY=value` lines only — no `set -a`, no shell commands.
 
 Do **not** put `.envrc` in `~/.config/shell/` — Cursor uses that folder as workspace cwd, and direnv would fire on every prompt.
 
@@ -300,13 +328,15 @@ source ~/.zshrc   # or: source ~/.bashrc
 
 ## Maintenance
 
-- Run `~/.config/shell/bin/check-shell.sh` after editing rc files or shell modules
+- Run `~/.config/shell/bin/check-shell.sh` after edits — runs **shellcheck on all `*.sh`** plus load-order and reserved-name checks
+- Add `--audit` for extra permission checks (`dev.env` mode 600, `recover-shell.sh` executable, `lib.sh` present)
 - Run `~/.config/shell/bin/migrate.sh` to refresh **managed** rc files (`~/.zshrc`, `~/.bashrc`, fish config)
 - Hand-edited rc files (no managed marker) are **skipped** — use `bin/migrate.sh --force-rc` to overwrite
 - `bin/migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
-- See [shell.md](shell.md) for startup files, load order, login dotfile templates, and remaining caveats
+- See [shell.md](shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
+- See [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
 
 ## Troubleshooting
 
@@ -319,8 +349,19 @@ source ~/.zshrc   # or: source ~/.bashrc
 | `ga`/`gd` missing | Omarchy not at `~/.local/share/omarchy` | Install/sync Omarchy |
 | PATH differs in `zsh` vs `zsh -l` | login dotfiles missing or differ | Set up `~/.zprofile` per [shell.md](shell.md) |
 | `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
+| All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
 
 `.gitignore` excludes `backups/` and secret patterns (`*.key`, `secrets/`, `.envrc`) so backups and local secrets never enter git.
+
+### Nuclear recovery
+
+When `source ~/.zshrc` fails and you cannot use git/nvim/mise:
+
+```bash
+bash --norc ~/.config/shell/bin/recover-shell.sh
+```
+
+This sets a minimal PATH and prints restore options (latest `backups/*/revert.sh`, `zsh -f`, edit `env.sh`, `migrate.sh --force-rc`).
 
 ## Notes
 

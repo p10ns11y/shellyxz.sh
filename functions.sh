@@ -1,6 +1,6 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # ~/.config/shell/functions.sh
-# Extra functions. Currently minimal because Omarchy covers most needs.
+# Extra functions. Sourced by bash and zsh rc files; fish loads via bass.
 
 # Print PATH entries one per line (handy when debugging precedence)
 path_debug() {
@@ -15,6 +15,7 @@ shell_debug() {
     echo "=== shell identity ==="
     echo "Invoked as (\$0):          $0"
     echo "\$SHELL (env var):        $SHELL"
+    echo "SHELL_TRUTH_SEEKER:       ${SHELL_TRUTH_SEEKER:-1} (set 0 in env to keep inherited \$SHELL)"
     local login_sh
     login_sh=$(getent passwd "${USER:-$(id -un)}" 2>/dev/null | cut -d: -f7 || echo unknown)
     echo "Login shell (passwd):     $login_sh"
@@ -37,10 +38,13 @@ shell_debug() {
 # re-sourcing, to prevent "defining function based on alias" errors on reload.
 reload() {
     if [ -n "${ZSH_VERSION:-}" ]; then
+        # shellcheck disable=SC1091
         source "$HOME/.zshrc" && echo "zshrc reloaded"
     elif [ -n "${BASH_VERSION:-}" ]; then
+        # shellcheck disable=SC1091
         source "$HOME/.bashrc" && echo "bashrc reloaded"
         # Help people who are in the wrong shell after chsh and keep typing "reload"
+        local u login_sh
         u="${USER:-$(id -un 2>/dev/null || whoami)}"
         login_sh="$(getent passwd "$u" 2>/dev/null | cut -d: -f7 || echo /usr/bin/zsh)"
         if [ "$SHELL" != "$login_sh" ]; then

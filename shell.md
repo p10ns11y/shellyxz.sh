@@ -129,12 +129,11 @@ chsh -s /usr/bin/zsh   # list options: chsh -l
 
 **Current shell** is the running process.
 
-**`echo $SHELL` is frequently a lie** after `chsh`, after `exec`, or in any long-lived terminal tab.
-- It is set once by the terminal emulator / login process to the value from `/etc/passwd` (or whatever the terminal decided at tab creation time).
-- `exec new-shell` inherits the old environment variable; the new shell usually does not overwrite an existing `$SHELL`.
-- This is the "ghosty" controlling SHELL that people see even after successful `exec /usr/bin/zsh -l`.
+**`echo $SHELL` before config loads** is frequently stale after `chsh`, `exec`, or in long-lived terminal tabs — it is inherited from the session creator.
 
-Use these instead:
+**After `env.sh` runs**, `shell_truth_seeker` (default `SHELL_TRUTH_SEEKER=1`) sets `$SHELL` to the live zsh/bash interpreter. So in a normal interactive session, `echo $SHELL` is truthful *after* rc load. Running `check-shell.sh` from bash without sourcing `env.sh` may still warn about `$SHELL` vs passwd — that is expected.
+
+Use these for ground truth at any point:
 
 ```bash
 shell_debug          # new helper (prints $0, ps, ZSH_VERSION/BASH_VERSION, passwd, etc.)
@@ -168,7 +167,7 @@ Do this to replace the current process:
 exec /usr/bin/zsh -l
 ```
 
-Then run `shell_debug` or the verification one-liner. The fancy prompt icon + `ZSH_VERSION` + `ps -p $$` will confirm you're in zsh. `echo $SHELL` may still show the old value — this is normal and not a bug in your chsh or config. The check script now prints a very loud explanation when this happens.
+Then run `shell_debug` or the verification one-liner. `ZSH_VERSION` + `ps -p $$` confirm you're in zsh. `echo $SHELL` is corrected once `env.sh` loads; before that it may still show the inherited value. See [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md).
 
 ### Workflow: edit → reload → verify
 
@@ -205,12 +204,45 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 
 | File | Role | Sourced by |
 |------|------|------------|
+| `lib.sh` | Safe sourcing (Omarchy, secrets, permission checks) | `env.sh`, `personal.sh` |
 | `env.sh` | `path_prepend`/`path_append`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
 | `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
-| `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` | via `aliases.sh` tail only |
-| `functions.sh` | Custom functions (`path_debug`, …) | zsh, bash rc files; fish (via bass) |
+| `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` via `load_secrets_file` | via `aliases.sh` tail only |
+| `functions.sh` | Custom functions (`path_debug`, `shell_debug`, `reload`) | zsh, bash rc files; fish (via bass) |
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
-| `bin/check-shell.sh` | Verifies load order, direnv hooks, reserved names | manual run |
+| `bin/check-shell.sh` | Load order, reserved names, shellcheck (`--audit` for permissions) | manual run |
+| `bin/recover-shell.sh` | Nuclear recovery when rc files are broken | manual run |
+
+### `lib.sh` helpers
+
+| Function | Purpose |
+|----------|---------|
+| `_is_interactive_session` | Returns true when stdin and stdout are ttys (gates SSH/GPG exports in `env.sh`) |
+| `source_if_safe` | Source a file only when owned by you/root and not world-writable |
+| `omarchy_file` | Print path to `default/bash/{envs,aliases,functions,rc}` or return 1 |
+| `source_omarchy` | Load an Omarchy module when present; no-op when absent |
+| `load_secrets_file` | Parse `KEY=value` secrets without `set -a` |
+| `shell_truth_seeker` | Set `$SHELL` to the live interpreter (`SHELL_TRUTH_SEEKER=0` to disable) |
+
+**Omarchy layout** (pinned in `lib.sh`):
+
+```
+~/.local/share/omarchy/default/bash/envs
+~/.local/share/omarchy/default/bash/aliases   # includes n()
+~/.local/share/omarchy/default/bash/functions # ga, gd
+~/.local/share/omarchy/default/bash/rc        # bash bundle
+```
+
+Set `OMARCHY_WARN=1` to print missing-module warnings. Override root with `OMARCHY_ROOT=...`.
+
+### `$SHELL` truth seeker
+
+`env.sh` calls `shell_truth_seeker` by default so `$SHELL` matches the running interpreter (zsh/bash) **after rc load**. Stock Unix behavior (inherited stale `$SHELL` across `exec`) is documented in [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md). **Downside:** tools that expect the passwd default before config loads may disagree. Disable per-session:
+
+```bash
+export SHELL_TRUTH_SEEKER=0
+source ~/.zshrc
+```
 
 ### What `env.sh` sets up
 
@@ -238,7 +270,7 @@ flowchart LR
 
     subgraph loaders["optional dotfiles"]
         l1["Omarchy envs"]
-        l2["~/.local/bin/env"]
+        l2["~/.local/bin/env (via source_if_safe)"]
         l3["~/.vite-plus/env"]
         l4["~/.cargo/env"]
     end
@@ -485,6 +517,7 @@ Re-running `bin/migrate.sh`:
 |--------|----------|
 | `env.sh`, `aliases.sh`, `functions.sh` | **Preserved** if they already exist |
 | `personal.sh` | **Not generated** — create manually or copy from repo; `aliases.sh` sources it if present |
+| `lib.sh`, `bin/recover-shell.sh`, `bin/check-shell.sh` | **Not generated** — must come from git clone (not created by migrate) |
 | `~/.zshrc`, `~/.bashrc`, fish config | **Refreshed** only if missing or marked managed; **skipped** if hand-edited |
 | Login dotfiles (`~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`) | **Backed up only** — not generated (see [Login dotfiles](#login-dotfiles-manual-setup)) |
 | `--force-rc` | Overwrites rc files even when hand-edited |
@@ -498,6 +531,19 @@ Managed rc files include the marker comment `Managed by ~/.config/shell/bin/migr
 **direnv note:** Managed zsh/bash templates call `eval "$(direnv hook …)"` without a `command -v` guard (fish template does guard). Install direnv before sourcing rc files, or edit hooks locally.
 
 Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
+
+### `check-shell.sh` checks
+
+| Always (default) | With `--audit` |
+|------------------|----------------|
+| Load-order grep (bash/zsh Omarchy before aliases) | `dev.env` file mode (recommend 600) |
+| Reserved names (`ga`, `n`) in repo files | `recover-shell.sh` executable |
+| zsh runtime: `n`/`ga`/`gd` resolve to functions | `lib.sh` present |
+| `personal.sh` chained from `aliases.sh` | |
+| migrate preserve/`--force-rc` policy | |
+| fish tier-1 hooks (when fish config exists) | |
+| **shellcheck** on every `*.sh` under `~/.config/shell` | |
+| Login shell vs process identity (with `$SHELL` caveat) | |
 
 ---
 
@@ -515,7 +561,8 @@ flowchart LR
 
 | Task | Command |
 |------|---------|
-| Verify config + shell identity | `~/.config/shell/bin/check-shell.sh` |
+| Verify config + shell identity | `~/.config/shell/bin/check-shell.sh` (shellcheck always; `--audit` for secrets permissions) |
+| Nuclear recovery (broken rc) | `bash --norc ~/.config/shell/bin/recover-shell.sh` |
 | Debug "why is $SHELL still bash after exec/chsh" | `shell_debug` |
 | Reload current shell | `reload` (bash or zsh, depending on what you're in right now) |
 | (or manual) | `source ~/.zshrc` or `source ~/.bashrc` |
@@ -539,7 +586,9 @@ flowchart LR
 - [ ] **fish is partial** — requires bass plugin; no `ga`/`gd` (direnv, fzf, `functions.sh`, thefuck added).
 - [x] **migrate rc policy** — skips hand-edited rc files; refreshes managed ones; `--force-rc` to overwrite.
 - [x] **login dotfiles manual** — migrate backs up but does not generate `~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`.
-- [x] **direnv required for managed zsh/bash** — templates hook direnv unconditionally; install before first `source ~/.zshrc`.
+- [x] **secrets via load_secrets_file** — no `set -a` in `personal.sh`; `dev.env` mode 600 recommended.
+- [x] **external loaders hardened** — `source_if_safe` for `~/.local/bin/env`, vite-plus, cargo; no `../bin` paths.
+- [x] **nuclear recovery** — `bin/recover-shell.sh` works without loading rc files.
 
 ---
 
@@ -553,5 +602,7 @@ flowchart LR
 | [personal.sh](personal.sh) | Work-specific shortcuts |
 | [functions.sh](functions.sh) | Custom functions |
 | [bin/migrate.sh](bin/migrate.sh) | Setup script and dotfile templates |
-| [bin/check-shell.sh](bin/check-shell.sh) | Load-order verification |
-| [docs/SHELL-env-var-behavior.md](docs/SHELL-env-var-behavior.md) | Deep dive into why `$SHELL` is often stale after `chsh` / `exec`, with Mermaid diagrams |
+| [lib.sh](lib.sh) | Safe sourcing helpers |
+| [bin/recover-shell.sh](bin/recover-shell.sh) | Nuclear recovery |
+| [bin/check-shell.sh](bin/check-shell.sh) | Load-order + shellcheck verification |
+| [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) | Why `$SHELL` is stale before config load; truth seeker overrides |
