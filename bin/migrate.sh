@@ -23,7 +23,7 @@ for arg in "$@"; do
         --bootstrap) BOOTSTRAP=true ;;
         -h|--help)
             echo "Usage: migrate.sh [--force-rc] [--bootstrap]"
-            echo "  --force-rc   Overwrite ~/.zshrc, ~/.bashrc, and fish config even if hand-edited"
+            echo "  --force-rc   Overwrite managed dotfiles (~/.zshrc, login files, fish) even if hand-edited"
             echo "  --bootstrap  Fetch missing repo files from SHELL_CONFIG_RAW (default: GitHub master)"
             echo ""
             echo "One-liner install (pipe bootstrap — fetches full config from GitHub):"
@@ -481,10 +481,12 @@ cat > "$HOME/.zshrc" << 'ZSHRC_EOF'
 source "$HOME/.config/shell/env.sh"
 
 # 2. Direnv (must come early; use the right hook if .zshrc is sourced from bash)
-if [ -n "${ZSH_VERSION:-}" ]; then
-    eval "$(direnv hook zsh)"
-elif [ -n "${BASH_VERSION:-}" ]; then
-    eval "$(direnv hook bash)"
+if command -v direnv &>/dev/null; then
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        eval "$(direnv hook zsh)"
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        eval "$(direnv hook bash)"
+    fi
 fi
 
 # 3. Omarchy base layer (aliases + functions; envs already loaded via env.sh)
@@ -613,7 +615,9 @@ cat > "$HOME/.bashrc" << 'BASHRC_EOF'
 [[ $- != *i* ]] && return
 
 source "$HOME/.config/shell/env.sh"
-eval "$(direnv hook bash)"
+if command -v direnv &>/dev/null; then
+    eval "$(direnv hook bash)"
+fi
 
 # Omarchy before aliases.sh (ga is a worktree function; aliasing it first breaks bash)
 if typeset -f source_omarchy >/dev/null 2>&1; then
@@ -717,7 +721,69 @@ FISH_EOF
 fi
 
 # =============================================================================
-# 10. Git commit the new structure
+# 10. Login dotfiles (zprofile, zshenv, profile, bash_profile)
+# =============================================================================
+if write_rc_or_skip "$HOME/.zprofile" "zprofile"; then
+log "Generating ~/.zprofile..."
+cat > "$HOME/.zprofile" << 'ZPROFILE_EOF'
+#!/usr/bin/env zsh
+# Managed by ~/.config/shell/bin/migrate.sh
+# Login PATH — delegate to portable env (~/.config/shell/env.sh)
+[ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
+ZPROFILE_EOF
+fi
+
+if write_rc_or_skip "$HOME/.zshenv" "zshenv"; then
+log "Generating ~/.zshenv..."
+cat > "$HOME/.zshenv" << 'ZSHENV_EOF'
+#!/usr/bin/env zsh
+# Managed by ~/.config/shell/bin/migrate.sh
+export SHELL=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
+ZSHENV_EOF
+fi
+
+if write_rc_or_skip "$HOME/.profile" "profile"; then
+log "Generating ~/.profile..."
+cat > "$HOME/.profile" << 'PROFILE_EOF'
+# Managed by ~/.config/shell/bin/migrate.sh
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+export GPG_TTY=$(tty)
+gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+[ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
+PROFILE_EOF
+fi
+
+if write_rc_or_skip "$HOME/.bash_profile" "bash_profile"; then
+log "Generating ~/.bash_profile..."
+cat > "$HOME/.bash_profile" << 'BASHPROFILE_EOF'
+# Managed by ~/.config/shell/bin/migrate.sh
+[[ -f ~/.bashrc ]] && . ~/.bashrc
+[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
+BASHPROFILE_EOF
+fi
+
+# =============================================================================
+# 11. Starship config (from starship.ex.toml when absent)
+# =============================================================================
+STARSHIP_DEST="$HOME/.config/starship.toml"
+mkdir -p "$HOME/.config"
+if [[ ! -f "$STARSHIP_DEST" ]]; then
+    if [[ -f "$CONFIG_DIR/starship.ex.toml" ]]; then
+        cp "$CONFIG_DIR/starship.ex.toml" "$STARSHIP_DEST"
+        log "Installed ~/.config/starship.toml from starship.ex.toml"
+    else
+        warn "starship.ex.toml missing — run migrate with --bootstrap or clone the repo"
+    fi
+else
+    log "Keeping existing ~/.config/starship.toml"
+fi
+
+# =============================================================================
+# 12. Git commit the new structure
 # =============================================================================
 log "Committing initial setup to git..."
 
@@ -743,6 +809,8 @@ echo "Key files created:"
 echo "  - $CONFIG_DIR/env.sh"
 echo "  - $CONFIG_DIR/aliases.sh"
 echo "  - $CONFIG_DIR/bin/migrate.sh   ← Master script (git tracked)"
+echo "  - ~/.zprofile, ~/.zshenv, ~/.profile, ~/.bash_profile (when missing or managed)"
+echo "  - ~/.config/starship.toml (from starship.ex.toml when absent)"
 echo "  - ~/.zshrc (clean, pure zsh + starship)"
 echo "  - ~/.bashrc (minimal)"
 echo "  - ~/.config/fish/config.fish"

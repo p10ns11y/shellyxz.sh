@@ -21,7 +21,7 @@ Use this path on a **new machine** or after cloning the repo. Existing setups ca
 | Requirement | Why |
 |-------------|-----|
 | **Omarchy** at `~/.local/share/omarchy` | `ga`/`gd` worktree helpers, alias layer, bash `rc` bundle |
-| **direnv** (recommended) | Managed rc templates call `direnv hook` — install direnv first. zsh uses a shell-aware hook (zsh vs bash when sourcing `.zshrc` from bash); bash calls hook unconditionally; fish guards with `type -q` |
+| **direnv** (recommended) | Managed rc templates guard `direnv hook` with `command -v direnv` (fish: `type -q`). zsh uses a shell-aware hook when sourcing `.zshrc` from bash |
 | **fish + bass** (fish only) | Fish loads portable modules via the bass plugin; without bass, env/aliases fail silently (`or true`) |
 | **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck` when missing; other distros install those manually |
 
@@ -41,23 +41,19 @@ The script detects `curl | bash`, downloads missing repo files (`lib.sh`, `env.s
 # 1. Clone the repo
 git clone git@github.com:p10ns11y/shellyxz.sh.git ~/.config/shell
 
-# 2. Run migration (backs up dotfiles, generates rc templates)
+# 2. Run migration (backs up dotfiles, generates rc + login templates)
 ~/.config/shell/bin/migrate.sh
 
-# 3. Set up login-layer dotfiles (migrate does NOT generate these — see shell.md)
-#    Copy templates from shell.md → "Login dotfiles (manual setup)" if missing.
-
-# 4. Optional: secrets (personal.sh ships from repo; edit for your machine)
+# 3. Optional: secrets (personal.sh ships from repo; edit for your machine)
 mkdir -p ~/.config/secrets
 # add API keys to ~/.config/secrets/dev.env (loaded by personal.sh)
 
-# 5. Reload and verify
+# 4. Reload and verify
 source ~/.zshrc                            # or: source ~/.bashrc
 ~/.config/shell/bin/check-shell.sh
 
-# 6. Optional: Starship prompt (example config in repo)
-cp ~/.config/shell/starship.ex.toml ~/.config/starship.toml
-# Mamba/conda: env.sh sets CONDA_CHANGEPS1=false; Starship conda module shows (env) inline
+# Starship: migrate copies starship.ex.toml → ~/.config/starship.toml when absent
+# Mamba/conda: env.sh sets CONDA_CHANGEPS1=false; Starship [conda] module shows (env) inline
 ```
 
 **What `bin/migrate.sh` does on first run:**
@@ -66,10 +62,12 @@ cp ~/.config/shell/starship.ex.toml ~/.config/starship.toml
 - Backs up existing dotfiles to `backups/TIMESTAMP/` (gitignored) with `revert.sh`
 - Generates `env.sh`, `aliases.sh`, `functions.sh` only if still missing after bootstrap (preserves existing)
 - Regenerates managed `~/.zshrc`, `~/.bashrc`, fish config (skips hand-edited rc files)
+- Generates login dotfiles (`~/.zprofile`, `~/.zshenv`, `~/.profile`, `~/.bash_profile`) when missing or managed
+- Installs `~/.config/starship.toml` from `starship.ex.toml` when absent
 - Creates empty `completions/` placeholder directory
-- Bootstraps `starship.ex.toml` example (copy to `~/.config/starship.toml` manually)
+- Bootstraps `starship.ex.toml` example in the repo
 - Runs `git init` + initial commit inside `~/.config/shell` if no `.git` exists
-- Does **not** create login dotfiles (`~/.zprofile`, `~/.profile`, etc.) or secrets
+- Does **not** create secrets (`~/.config/secrets/dev.env`)
 
 ## Philosophy
 
@@ -278,7 +276,7 @@ Load order is consistent across bash and zsh: Omarchy loads **before** your laye
 ### zsh and bash
 
 1. `env.sh` — PATH, exports, Omarchy envs (`CONDA_CHANGEPS1=false` for Starship conda module)
-2. `direnv` hook — zsh: zsh/bash-aware; bash: unconditional; fish: `type -q direnv`
+2. `direnv` hook — guarded with `command -v direnv`; zsh: zsh/bash-aware when sourced from bash
 3. Omarchy — modular parts in zsh (`aliases`, `functions`); monolithic `rc` in bash
 4. `functions.sh` — your custom functions
 5. `aliases.sh` — generic aliases
@@ -366,7 +364,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 | Hand-edited rc not updating | migrate skips non-managed files | `bin/migrate.sh --force-rc` |
 | Fish missing aliases/PATH | bass not installed | Install bass plugin; or use zsh/bash |
 | `ga`/`gd` missing | Omarchy not at `~/.local/share/omarchy` | Install/sync Omarchy |
-| PATH differs in `zsh` vs `zsh -l` | login dotfiles missing or differ | Set up `~/.zprofile` per [shell.md](shell.md) |
+| PATH differs in `zsh` vs `zsh -l` | login dotfiles missing | Run `bin/migrate.sh` (generates `~/.zprofile` when absent) |
 | `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
 | All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
 

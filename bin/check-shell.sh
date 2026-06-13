@@ -119,12 +119,29 @@ fi
 
 echo "  Reliable current shell check: shell_debug   (or: echo \$0; ps -p \$\$ -o comm=; echo \${ZSH_VERSION:-} \${BASH_VERSION:-})"
 
-# Direnv hooks when direnv is installed
+# Direnv hooks when direnv is installed; guarded hooks when absent
 if command -v direnv &>/dev/null; then
     grep -q 'direnv hook bash' "$HOME/.bashrc" && ok 'direnv hooked in bash' || fail 'direnv missing from ~/.bashrc'
     grep -q 'direnv hook zsh' "$HOME/.zshrc" && ok 'direnv hooked in zsh' || fail 'direnv missing from ~/.zshrc'
 else
-    warn 'direnv not installed; skipping hook checks'
+    if grep -q 'direnv hook bash' "$HOME/.bashrc" 2>/dev/null; then
+        if grep -q 'command -v direnv' "$HOME/.bashrc"; then
+            ok 'bashrc direnv hook guarded (direnv not installed)'
+        else
+            warn 'bashrc calls direnv hook without command -v guard — bin/migrate.sh --force-rc'
+        fi
+    else
+        ok 'bashrc has no direnv hook'
+    fi
+    if grep -q 'direnv hook zsh' "$HOME/.zshrc" 2>/dev/null; then
+        if grep -q 'command -v direnv' "$HOME/.zshrc"; then
+            ok 'zshrc direnv hook guarded (direnv not installed)'
+        else
+            warn 'zshrc calls direnv hook without command -v guard — bin/migrate.sh --force-rc'
+        fi
+    else
+        ok 'zshrc has no direnv hook'
+    fi
 fi
 
 # personal.sh chained from aliases.sh
@@ -175,16 +192,51 @@ else
     ok 'zshrc does not duplicate Omarchy envs'
 fi
 
-# Login files delegate PATH to env.sh
-if [[ -f "$HOME/.zprofile" ]] && grep -q 'config/shell/env.sh' "$HOME/.zprofile"; then
-    ok 'zprofile delegates PATH to env.sh'
-elif [[ -f "$HOME/.zprofile" ]] && grep -q '^export PATH=' "$HOME/.zprofile"; then
-    warn 'zprofile still has hardcoded PATH export'
+# Login files delegate PATH to env.sh (migrate generates when missing or managed)
+for login_file in zprofile profile; do
+    if [[ -f "$HOME/.${login_file}" ]]; then
+        if grep -q 'config/shell/env.sh' "$HOME/.${login_file}"; then
+            ok "${HOME}/.${login_file} delegates to env.sh"
+        else
+            warn "${HOME}/.${login_file} exists but does not source env.sh"
+        fi
+    else
+        warn "missing ${HOME}/.${login_file} (run bin/migrate.sh)"
+    fi
+done
+if [[ -f "$HOME/.zshenv" ]]; then
+    grep -q 'export SHELL=' "$HOME/.zshenv" && ok 'zshenv sets SHELL' || warn 'zshenv missing export SHELL='
+else
+    warn 'missing ~/.zshenv (run bin/migrate.sh)'
 fi
-if [[ -f "$HOME/.profile" ]] && grep -q 'config/shell/env.sh' "$HOME/.profile"; then
-    ok 'profile sources env.sh'
-elif [[ -f "$HOME/.profile" ]] && grep -q '^export PATH=' "$HOME/.profile"; then
-    warn 'profile still has hardcoded PATH export'
+if [[ -f "$HOME/.bash_profile" ]]; then
+    grep -q 'bashrc' "$HOME/.bash_profile" && ok 'bash_profile sources bashrc' || warn 'bash_profile may not source ~/.bashrc'
+else
+    warn 'missing ~/.bash_profile (run bin/migrate.sh)'
+fi
+
+# Starship + mamba prompt pairing
+if command -v starship &>/dev/null; then
+    if [[ -f "$HOME/.config/starship.toml" ]]; then
+        ok 'starship.toml present'
+        if grep -q '\[conda\]' "$HOME/.config/starship.toml"; then
+            ok 'starship.toml has [conda] module'
+        else
+            warn 'starship.toml missing [conda] module (duplicate env prefix risk with mamba)'
+        fi
+    else
+        warn 'starship installed but ~/.config/starship.toml missing (run migrate or cp starship.ex.toml)'
+    fi
+    if grep -q 'CONDA_CHANGEPS1=false' "$CONFIG_DIR/env.sh" 2>/dev/null; then
+        ok 'CONDA_CHANGEPS1=false in env.sh'
+    else
+        warn 'env.sh missing CONDA_CHANGEPS1=false'
+    fi
+fi
+if [[ -f "$CONFIG_DIR/starship.ex.toml" ]]; then
+    ok 'starship.ex.toml present in repo'
+else
+    warn 'starship.ex.toml missing from ~/.config/shell'
 fi
 
 # path_debug helper

@@ -450,10 +450,10 @@ Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and wo
 
 | Tool | zsh | bash | fish | Where |
 |------|-----|------|------|-------|
-| direnv | `.zshrc` | `.bashrc` | `config.fish` | zsh: shell-aware hook; bash: unconditional; fish: `type -q` |
+| direnv | `.zshrc` | `.bashrc` | `config.fish` | `command -v` / `type -q` guard; zsh: shell-aware hook |
 | mamba | `.zshrc` | `.bashrc` | `config.fish` | when `mamba` on PATH |
 | mise | `.zshrc` | Omarchy `init` | `config.fish` | |
-| starship | `.zshrc` | Omarchy `init` | `config.fish` | optional: `starship.ex.toml` → `~/.config/starship.toml` |
+| starship | `.zshrc` | Omarchy `init` | `config.fish` | `starship.ex.toml` → `~/.config/starship.toml` (migrate when absent) |
 | zoxide | `.zshrc` | Omarchy `init` | `config.fish` | |
 | fzf | `.zshrc` | Omarchy `init` | `config.fish` | |
 | thefuck | `.zshrc` | — | `config.fish` | native fish only |
@@ -462,58 +462,49 @@ Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and wo
 
 ---
 
-## Login dotfiles (manual setup)
+## Login dotfiles
 
-`bin/migrate.sh` **backs up** login-layer dotfiles but does **not** generate them. Without these, login shells may miss early PATH, GPG agent, cargo, or vite-plus setup.
+`bin/migrate.sh` generates login-layer dotfiles when they are **missing** or already **managed** (marker comment present). Hand-edited login files are preserved unless you pass `--force-rc`.
 
-Copy or create these in `$HOME` (templates match a typical Omarchy + portable-env setup):
+Without these, login shells may miss early PATH, GPG agent, cargo, or vite-plus setup. Templates use conditional `[ -f … ] && . …` for optional loaders (cargo, vite-plus).
 
 **`~/.zprofile`** — login zsh only; early PATH via portable env:
 
 ```bash
-# Login PATH — delegate to portable env (~/.config/shell/env.sh)
+# Managed by ~/.config/shell/bin/migrate.sh
 [ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
 ```
 
 **`~/.zshenv`** — every zsh (including scripts):
 
 ```bash
-# Truth-seeking SHELL: make $SHELL report the actual zsh binary even for
-# non-interactive zsh, zsh -c, etc. (earliest possible point).
+# Managed by ~/.config/shell/bin/migrate.sh
 export SHELL=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
-
-. "$HOME/.cargo/env"
-
-# Vite+ bin (https://viteplus.dev)
-. "$HOME/.vite-plus/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 ```
 
 **`~/.profile`** — POSIX login (GPG, env, cargo, vite-plus):
 
 ```bash
-. "$HOME/.local/bin/env"
+# Managed by ~/.config/shell/bin/migrate.sh
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 export GPG_TTY=$(tty)
 gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
-
-# Portable PATH and exports (~/.config/shell/env.sh)
 [ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
-
-. "$HOME/.cargo/env"
-
-# Vite+ bin (https://viteplus.dev)
-. "$HOME/.vite-plus/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 ```
 
 **`~/.bash_profile`** — login bash; sources interactive rc then vite-plus:
 
 ```bash
+# Managed by ~/.config/shell/bin/migrate.sh
 [[ -f ~/.bashrc ]] && . ~/.bashrc
-
-# Vite+ bin (https://viteplus.dev)
-. "$HOME/.vite-plus/env"
+[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 ```
 
-After creating login files, compare PATH across modes: `zsh -ic path_debug`, `zsh -lc path_debug`, `bash -lc path_debug`.
+After migrate, compare PATH across modes: `zsh -ic path_debug`, `zsh -lc path_debug`, `bash -lc path_debug`.
 
 ---
 
@@ -535,8 +526,9 @@ Re-running `bin/migrate.sh`:
 | `personal.sh` | **Fetched on bootstrap** if missing; edit for your machine; `aliases.sh` sources it when present |
 | `lib.sh`, `bin/recover-shell.sh`, `bin/check-shell.sh` | **Fetched on bootstrap** (`curl …/migrate.sh \| bash` or `--bootstrap`); not generated from inline templates |
 | `~/.zshrc`, `~/.bashrc`, fish config | **Refreshed** only if missing or marked managed; **skipped** if hand-edited |
-| Login dotfiles (`~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`) | **Backed up only** — not generated (see [Login dotfiles](#login-dotfiles-manual-setup)) |
-| `--force-rc` | Overwrites rc files even when hand-edited |
+| Login dotfiles (`~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`) | **Generated** when missing or managed; **skipped** if hand-edited |
+| `~/.config/starship.toml` | **Copied** from `starship.ex.toml` when absent; existing file preserved |
+| `--force-rc` | Overwrites managed rc and login dotfiles even when hand-edited |
 | Dotfile backups | Written to `backups/TIMESTAMP/` (gitignored) with `revert.sh` |
 | `completions/` | Empty placeholder directory created; reserved for future shell completions |
 | Package installs (Arch) | Tries `paru -S yazi thefuck` when missing; warns on failure |
@@ -544,9 +536,9 @@ Re-running `bin/migrate.sh`:
 
 Managed rc files include the marker comment `Managed by ~/.config/shell/bin/migrate.sh`. Edit `~/.config/shell/*` modules for day-to-day changes; use `--force-rc` when you intentionally want template updates in rc files.
 
-**direnv note:** zsh template uses a ZSH/BASH guard so `source ~/.zshrc` from bash does not run the zsh hook. Bash template calls `eval "$(direnv hook bash)"` unconditionally. Fish guards with `type -q direnv`. Install direnv before sourcing rc files.
+**direnv note:** zsh/bash templates wrap hooks in `command -v direnv` (fish uses `type -q`). zsh template also uses a ZSH/BASH guard so `source ~/.zshrc` from bash does not run the zsh hook.
 
-**Starship / mamba:** `env.sh` sets `CONDA_CHANGEPS1=false` so Starship's `[conda]` module owns `(env)` inline. Copy `starship.ex.toml` to `~/.config/starship.toml` after install.
+**Starship / mamba:** `env.sh` sets `CONDA_CHANGEPS1=false` so Starship's `[conda]` module owns `(env)` inline. migrate copies `starship.ex.toml` to `~/.config/starship.toml` when absent.
 
 Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 
@@ -562,6 +554,9 @@ Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 | fish tier-1 hooks (when fish config exists) | |
 | **shellcheck** on every `*.sh` under `~/.config/shell` | |
 | Login shell vs process identity (with `$SHELL` caveat) | |
+| Login dotfiles present and delegate to `env.sh` | |
+| Starship + `CONDA_CHANGEPS1` pairing (when starship installed) | |
+| Direnv hook guards when direnv absent | |
 
 ---
 
@@ -603,7 +598,7 @@ flowchart LR
 - [x] **secrets outside shell repo** — `~/.config/secrets/dev.env`; no `.envrc` in workspace.
 - [ ] **fish is partial** — requires bass plugin; no `ga`/`gd` (direnv, fzf, `functions.sh`, thefuck added).
 - [x] **migrate rc policy** — skips hand-edited rc files; refreshes managed ones; `--force-rc` to overwrite.
-- [x] **login dotfiles manual** — migrate backs up but does not generate `~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`.
+- [x] **login dotfiles generated** — migrate creates `~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv` when missing or managed.
 - [x] **secrets via load_secrets_file** — no `set -a` in `personal.sh`; `dev.env` mode 600 recommended.
 - [x] **external loaders hardened** — `source_if_safe` for `~/.local/bin/env`, vite-plus, cargo; no `../bin` paths.
 - [x] **nuclear recovery** — `bin/recover-shell.sh` works without loading rc files.
