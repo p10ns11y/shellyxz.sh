@@ -4,6 +4,8 @@ How `~/.config/shell/` layers portable environment, Omarchy, and shell-native to
 
 For day-to-day editing guidance see [README.md](README.md). This document is the **accurate load-order reference** — verified against live dotfiles and `bin/migrate.sh`.
 
+**Prerequisites:** Omarchy (`~/.local/share/omarchy`), direnv (for managed zsh/bash rc), bass (fish only). See [README — Getting started](README.md#getting-started).
+
 ---
 
 ## Overview
@@ -53,10 +55,9 @@ flowchart TB
 
     zshrc --> functions
     bashrc --> functions
-    functions --> aliases
-    aliases --> personal
     zshrc --> aliases
     bashrc --> aliases
+    aliases --> personal
     fishcfg --> aliases
 ```
 
@@ -175,7 +176,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | `env.sh` | `path_prepend`/`path_append`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
 | `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`/`n`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
 | `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` | via `aliases.sh` tail only |
-| `functions.sh` | Custom functions (placeholder today) | zsh, bash rc files |
+| `functions.sh` | Custom functions (`path_debug`, …) | zsh, bash rc files; fish (via bass) |
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
 | `bin/check-shell.sh` | Verifies load order, direnv hooks, reserved names | manual run |
 
@@ -388,6 +389,57 @@ Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and wo
 
 ---
 
+## Login dotfiles (manual setup)
+
+`bin/migrate.sh` **backs up** login-layer dotfiles but does **not** generate them. Without these, login shells may miss early PATH, GPG agent, cargo, or vite-plus setup.
+
+Copy or create these in `$HOME` (templates match a typical Omarchy + portable-env setup):
+
+**`~/.zprofile`** — login zsh only; early PATH via portable env:
+
+```bash
+# Login PATH — delegate to portable env (~/.config/shell/env.sh)
+[ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
+```
+
+**`~/.zshenv`** — every zsh (including scripts):
+
+```bash
+. "$HOME/.cargo/env"
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"
+```
+
+**`~/.profile`** — POSIX login (GPG, env, cargo, vite-plus):
+
+```bash
+. "$HOME/.local/bin/env"
+export GPG_TTY=$(tty)
+gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+
+# Portable PATH and exports (~/.config/shell/env.sh)
+[ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
+
+. "$HOME/.cargo/env"
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"
+```
+
+**`~/.bash_profile`** — login bash; sources interactive rc then vite-plus:
+
+```bash
+[[ -f ~/.bashrc ]] && . ~/.bashrc
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"
+```
+
+After creating login files, compare PATH across modes: `zsh -ic path_debug`, `zsh -lc path_debug`, `bash -lc path_debug`.
+
+---
+
 ## `migrate.sh` behavior
 
 Re-running `bin/migrate.sh`:
@@ -395,11 +447,18 @@ Re-running `bin/migrate.sh`:
 | Action | Behavior |
 |--------|----------|
 | `env.sh`, `aliases.sh`, `functions.sh` | **Preserved** if they already exist |
+| `personal.sh` | **Not generated** — create manually or copy from repo; `aliases.sh` sources it if present |
 | `~/.zshrc`, `~/.bashrc`, fish config | **Refreshed** only if missing or marked managed; **skipped** if hand-edited |
+| Login dotfiles (`~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`) | **Backed up only** — not generated (see [Login dotfiles](#login-dotfiles-manual-setup)) |
 | `--force-rc` | Overwrites rc files even when hand-edited |
-| Dotfile backups | Written to `backups/TIMESTAMP/` with `revert.sh` |
+| Dotfile backups | Written to `backups/TIMESTAMP/` (gitignored) with `revert.sh` |
+| `completions/` | Empty placeholder directory created; reserved for future shell completions |
+| Package installs (Arch) | Tries `paru -S yazi thefuck` when missing; warns on failure |
+| Git | `git init` + initial commit if `~/.config/shell/.git` absent; `git add -A` + commit on every run (no-op if clean) |
 
 Managed rc files include the marker comment `Managed by ~/.config/shell/bin/migrate.sh`. Edit `~/.config/shell/*` modules for day-to-day changes; use `--force-rc` when you intentionally want template updates in rc files.
+
+**direnv note:** Managed zsh/bash templates call `eval "$(direnv hook …)"` without a `command -v` guard (fish template does guard). Install direnv before sourcing rc files, or edit hooks locally.
 
 Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 
@@ -409,12 +468,12 @@ Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 
 ```mermaid
 flowchart LR
-    edit["Edit env.sh / aliases.sh / personal.sh"] --> check["bin/check-shell.sh"]
-    check --> source["source ~/.zshrc<br/>or source ~/.bashrc"]
+    edit["Edit env.sh / aliases.sh / personal.sh"] --> source["source ~/.zshrc<br/>or source ~/.bashrc"]
+    source --> check["bin/check-shell.sh"]
     migrate["bin/migrate.sh"] --> backup["backups/TIMESTAMP/"]
     backup --> revert["revert.sh"]
     migrate --> regen["Regenerates ~/.zshrc, ~/.bashrc, fish config"]
-    regen --> check
+    regen --> source
 ```
 
 | Task | Command |
@@ -438,8 +497,10 @@ flowchart LR
 - [x] **migrate preserves modules** — won't overwrite existing `env.sh` / `aliases.sh` / `functions.sh`.
 - [x] **PATH centralized** — `path_prepend`/`path_append` in `env.sh`; login files delegate; last prepend wins; use `path_debug`.
 - [x] **secrets outside shell repo** — `~/.config/secrets/dev.env`; no `.envrc` in workspace.
-- [ ] **fish is partial** — no `ga`/`gd` (direnv, fzf, `functions.sh`, thefuck added).
+- [ ] **fish is partial** — requires bass plugin; no `ga`/`gd` (direnv, fzf, `functions.sh`, thefuck added).
 - [x] **migrate rc policy** — skips hand-edited rc files; refreshes managed ones; `--force-rc` to overwrite.
+- [x] **login dotfiles manual** — migrate backs up but does not generate `~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`.
+- [x] **direnv required for managed zsh/bash** — templates hook direnv unconditionally; install before first `source ~/.zshrc`.
 
 ---
 
