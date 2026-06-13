@@ -157,6 +157,8 @@ Fish is **opt-in**: use `exec fish` to try it without changing `chsh`. Switch ba
 
 **After `chsh -s /usr/bin/zsh` (or any switch):** the change only affects *new* terminal sessions/logins.
 
+**Ghostty (Omarchy):** with `gtk-single-instance`, run `killall ghostty` after `chsh` so new windows pick up passwd — closing windows is not enough. Do not edit `~/.config/ghostty/config` for shell choice.
+
 Your existing terminal tab keeps:
 - The old process binary until you `exec` or open a new tab.
 - The old `$SHELL` environment variable (often forever, even after `exec /usr/bin/zsh -l`).
@@ -318,22 +320,26 @@ flowchart TD
     D --> E["5. functions.sh"]
     E --> F["6. aliases.sh"]
     F --> G["6a. personal.sh<br/>(chained inside aliases.sh)"]
-    G --> H["7. mise activate zsh"]
-    H --> I["8. starship init zsh"]
-    I --> J["9. zoxide init zsh"]
-    J --> K["10. fzf --zsh"]
-    K --> L["11. thefuck --alias"]
-    L --> M["12. compinit + history opts"]
-    M --> N["13. grok completions"]
-    N --> O["14. zshconfig, reload aliases"]
+    G --> H["7. mamba shell hook zsh"]
+    H --> H2["8. mise activate zsh"]
+    H2 --> I["9. starship init zsh"]
+    I --> J["10. zoxide init zsh"]
+    J --> K["11. fzf --zsh"]
+    K --> L["12. thefuck --alias"]
+    L --> M["13. compinit + history opts"]
+    M --> N["14. grok completions"]
+    N --> O["15. zshconfig, reload"]
+    P["Early return if sourced from bash<br/>(portable bits only)"] -.-> G
 ```
 
 | Step | File / command | Notes |
 |------|----------------|-------|
-| 1 | `env.sh` | Single source for Omarchy envs |
+| 1 | `env.sh` | Single source for Omarchy envs; `CONDA_CHANGEPS1=false` |
+| 2 | `direnv` | zsh/bash-aware hook if `.zshrc` sourced from bash |
 | 4 | Omarchy `functions` | Defines `ga()` git-worktree helper — **never alias `ga`** |
 | 6 | `aliases.sh` | `ff` = **fastfetch** (wins over Omarchy) |
-| 7–11 | tool inits | All in `.zshrc`, not Omarchy `init` |
+| 7–12 | tool inits | mamba → mise → starship → zoxide → fzf → thefuck |
+| — | bash `source` | If `ZSH_VERSION` unset, returns before step 7 (zsh-only inits skipped) |
 
 ---
 
@@ -353,7 +359,8 @@ flowchart TD
     C5 --> C6["completions + inputrc"]
     C6 --> D["4. functions.sh"]
     D --> E["5. aliases.sh + personal.sh"]
-    E --> F["6. bash history opts"]
+    E --> E2["6. mamba shell hook bash"]
+    E2 --> F["7. bash history opts"]
 ```
 
 Omarchy functions like `ga()` load **before** `aliases.sh`, so bash does not hit `syntax error near unexpected token '('` if someone re-adds `alias ga=`.
@@ -430,7 +437,7 @@ flowchart TD
     F2 --> F3["bass → Omarchy aliases"]
     F3 --> F4["bass → functions.sh"]
     F4 --> F5["bass → aliases.sh<br/>(chains personal.sh)"]
-    F5 --> F6["starship / zoxide / mise / fzf (fish native)"]
+    F5 --> F6["starship / zoxide / mamba / mise / fzf (fish native)"]
 
     F7["❌ not loaded"] --- F7a["Omarchy functions (ga, gd)"]
 ```
@@ -443,9 +450,10 @@ Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and wo
 
 | Tool | zsh | bash | fish | Where |
 |------|-----|------|------|-------|
-| direnv | `.zshrc` | `.bashrc` | `config.fish` | hook after `env.sh` |
+| direnv | `.zshrc` | `.bashrc` | `config.fish` | zsh: shell-aware hook; bash: unconditional; fish: `type -q` |
+| mamba | `.zshrc` | `.bashrc` | `config.fish` | when `mamba` on PATH |
 | mise | `.zshrc` | Omarchy `init` | `config.fish` | |
-| starship | `.zshrc` | Omarchy `init` | `config.fish` | |
+| starship | `.zshrc` | Omarchy `init` | `config.fish` | optional: `starship.ex.toml` → `~/.config/starship.toml` |
 | zoxide | `.zshrc` | Omarchy `init` | `config.fish` | |
 | fzf | `.zshrc` | Omarchy `init` | `config.fish` | |
 | thefuck | `.zshrc` | — | `config.fish` | native fish only |
@@ -536,7 +544,9 @@ Re-running `bin/migrate.sh`:
 
 Managed rc files include the marker comment `Managed by ~/.config/shell/bin/migrate.sh`. Edit `~/.config/shell/*` modules for day-to-day changes; use `--force-rc` when you intentionally want template updates in rc files.
 
-**direnv note:** Managed zsh/bash templates call `eval "$(direnv hook …)"` without a `command -v` guard (fish template does guard). Install direnv before sourcing rc files, or edit hooks locally.
+**direnv note:** zsh template uses a ZSH/BASH guard so `source ~/.zshrc` from bash does not run the zsh hook. Bash template calls `eval "$(direnv hook bash)"` unconditionally. Fish guards with `type -q direnv`. Install direnv before sourcing rc files.
+
+**Starship / mamba:** `env.sh` sets `CONDA_CHANGEPS1=false` so Starship's `[conda]` module owns `(env)` inline. Copy `starship.ex.toml` to `~/.config/starship.toml` after install.
 
 Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 

@@ -71,7 +71,7 @@ bootstrap_from_remote() {
     local files=(
         lib.sh env.sh aliases.sh functions.sh personal.sh
         bin/migrate.sh bin/check-shell.sh bin/recover-shell.sh
-        README.md shell.md SHELL-env-var-behavior.md .gitignore
+        README.md shell.md SHELL-env-var-behavior.md starship.ex.toml .gitignore
     )
 
     if ! command -v curl &>/dev/null; then

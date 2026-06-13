@@ -21,7 +21,7 @@ Use this path on a **new machine** or after cloning the repo. Existing setups ca
 | Requirement | Why |
 |-------------|-----|
 | **Omarchy** at `~/.local/share/omarchy` | `ga`/`gd` worktree helpers, alias layer, bash `rc` bundle |
-| **direnv** (recommended) | Managed `~/.zshrc` / `~/.bashrc` templates call `direnv hook` unconditionally — install direnv or wrap hooks yourself |
+| **direnv** (recommended) | Managed rc templates call `direnv hook` — install direnv first. zsh uses a shell-aware hook (zsh vs bash when sourcing `.zshrc` from bash); bash calls hook unconditionally; fish guards with `type -q` |
 | **fish + bass** (fish only) | Fish loads portable modules via the bass plugin; without bass, env/aliases fail silently (`or true`) |
 | **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck` when missing; other distros install those manually |
 
@@ -54,6 +54,10 @@ mkdir -p ~/.config/secrets
 # 5. Reload and verify
 source ~/.zshrc                            # or: source ~/.bashrc
 ~/.config/shell/bin/check-shell.sh
+
+# 6. Optional: Starship prompt (example config in repo)
+cp ~/.config/shell/starship.ex.toml ~/.config/starship.toml
+# Mamba/conda: env.sh sets CONDA_CHANGEPS1=false; Starship conda module shows (env) inline
 ```
 
 **What `bin/migrate.sh` does on first run:**
@@ -63,6 +67,7 @@ source ~/.zshrc                            # or: source ~/.bashrc
 - Generates `env.sh`, `aliases.sh`, `functions.sh` only if still missing after bootstrap (preserves existing)
 - Regenerates managed `~/.zshrc`, `~/.bashrc`, fish config (skips hand-edited rc files)
 - Creates empty `completions/` placeholder directory
+- Bootstraps `starship.ex.toml` example (copy to `~/.config/starship.toml` manually)
 - Runs `git init` + initial commit inside `~/.config/shell` if no `.git` exists
 - Does **not** create login dotfiles (`~/.zprofile`, `~/.profile`, etc.) or secrets
 
@@ -79,7 +84,9 @@ source ~/.zshrc                            # or: source ~/.bashrc
 ```
 ~/.config/shell/
 ├── README.md
-├── shell.md            # Load-order reference and architecture
+├── shell.md                    # Load-order reference and architecture
+├── SHELL-env-var-behavior.md   # Why $SHELL lies; truth seeker; Ghostty gtk-single-instance
+├── starship.ex.toml            # Example Starship config (copy to ~/.config/starship.toml)
 ├── lib.sh              # Safe sourcing helpers (Omarchy, secrets, permissions)
 ├── env.sh              # Portable PATH + environment variables
 ├── aliases.sh          # Generic aliases + personal.sh chain (bash)
@@ -270,13 +277,13 @@ Load order is consistent across bash and zsh: Omarchy loads **before** your laye
 
 ### zsh and bash
 
-1. `env.sh` — PATH, exports, Omarchy envs
-2. `direnv` hook (when installed)
+1. `env.sh` — PATH, exports, Omarchy envs (`CONDA_CHANGEPS1=false` for Starship conda module)
+2. `direnv` hook — zsh: zsh/bash-aware; bash: unconditional; fish: `type -q direnv`
 3. Omarchy — modular parts in zsh (`aliases`, `functions`); monolithic `rc` in bash
 4. `functions.sh` — your custom functions
 5. `aliases.sh` — generic aliases
 6. `personal.sh` — chained at the tail of `aliases.sh`
-7. Shell-native tool inits (`starship`, `mise`, `zoxide`, etc.)
+7. Shell-native tool inits — **mamba** (when installed), then `mise`, `starship`, `zoxide`, etc.
 
 ### fish (best-effort)
 
@@ -285,7 +292,7 @@ Load order is consistent across bash and zsh: Omarchy loads **before** your laye
 3. `bass` → Omarchy aliases
 4. `bass` → `functions.sh`
 5. `bass` → `aliases.sh` (includes `personal.sh`)
-6. Native fish inits for `starship`, `zoxide`, `mise`, `fzf`, `thefuck`
+6. Native fish inits for `starship`, `zoxide`, `mamba`, `mise`, `fzf`, `thefuck`
 
 This order ensures:
 - Omarchy functions like `ga()` are never shadowed by a premature `alias ga=`
@@ -353,6 +360,8 @@ source ~/.zshrc   # or: source ~/.bashrc
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `source ~/.zshrc` errors on direnv | direnv not installed | `pacman -S direnv` (or your package manager) |
+| Duplicate `(env)` on prompt | mamba changeps1 + Starship conda | `CONDA_CHANGEPS1=false` in env.sh; copy `starship.ex.toml`; `conda config --set changeps1 false` |
+| Still bash after `chsh` in Ghostty | gtk-single-instance stale process | `killall ghostty` then Super+Return (Omarchy owns ghostty config) |
 | `check-shell.sh` reports reserved-name violation | `alias ga=`, `alias gd=`, or `alias n=` added | Remove from `aliases.sh` / `personal.sh` |
 | Hand-edited rc not updating | migrate skips non-managed files | `bin/migrate.sh --force-rc` |
 | Fish missing aliases/PATH | bass not installed | Install bass plugin; or use zsh/bash |

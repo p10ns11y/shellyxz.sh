@@ -208,6 +208,7 @@ shell_debug
 ## Common Gotchas
 
 - **Reopening the terminal app** is not always enough — some emulators remember the shell used for existing profiles.
+- **Ghostty + gtk-single-instance:** config and login shell apply only after the background process exits — `killall ghostty`, then open a new window (Omarchy maintains `~/.config/ghostty/config`).
 - **tmux / screen / zellij** reattach old sessions and keep their original environment.
 - **Terminal emulators** sometimes have their own "default shell" setting that can override or ignore `chsh`.
 - **Agents and wrappers** (build tools, remote development servers, etc.) often start under whatever shell the parent had.
