@@ -208,7 +208,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 |------|------|------------|
 | `lib.sh` | Safe sourcing (Omarchy, secrets, permission checks) | `env.sh`, `personal.sh` |
 | `env.sh` | `path_prepend`/`path_append`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
-| `aliases.sh` | yazi `y()`, monitoring aliases, `ff`/`lg`, git shortcuts; **chains** `personal.sh` | zsh, bash, fish (via bass) |
+| `aliases.sh` | yazi `y()`, guarded `cat`/`grep`/`find`/`ps`, `gdf`/`gdfs`, monitoring (`top`→btop), `ff`/`lg`; **chains** `personal.sh` | zsh, bash, fish (via bass) |
 | `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` via `load_secrets_file` | via `aliases.sh` tail only |
 | `functions.sh` | Custom functions (`path_debug`, `shell_debug`, `reload`) | zsh, bash rc files; fish (via bass) |
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
@@ -216,6 +216,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | `bin/recover-shell.sh` | Nuclear recovery when rc files are broken | manual run |
 | `bin/agent-verify-layout.sh` | tmux verification cockpit layout | `av` / Prefix+V |
 | `bin/fzf-preview.sh` | fzf bat preview helper (internal) | via `env.sh` |
+| `git.ex.config` | delta snippet → `~/.config/git/verification`; enable with `git config --global include.path …` | migrate copy-when-absent |
 | [bin/README.md](bin/README.md) | Detailed usage for every script in `bin/` | reference |
 
 ### `lib.sh` helpers
