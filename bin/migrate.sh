@@ -224,18 +224,34 @@ else
 fi
 
 # =============================================================================
-# 3. Install missing tools (yazi + thefuck)
+# 3. Install missing tools (Arch: paru — other distros: install manually)
+# Currently optimized for Arch via paru. Other distros: install procs,
+# difftastic, git-delta, yazi, and thefuck manually, then source ~/.zshrc.
 # =============================================================================
 log "Checking for missing tools..."
 
-if ! command -v yazi &>/dev/null; then
-    log "Installing yazi via paru..."
-    paru -S --needed --noconfirm yazi || warn "Failed to install yazi. Please install manually."
-fi
+if command -v paru &>/dev/null; then
+    if ! command -v yazi &>/dev/null; then
+        log "Installing yazi via paru..."
+        paru -S --needed --noconfirm yazi || warn "Failed to install yazi. Please install manually."
+    fi
 
-if ! command -v thefuck &>/dev/null; then
-    log "Installing thefuck via paru..."
-    paru -S --needed --noconfirm thefuck || warn "Failed to install thefuck. Please install manually."
+    if ! command -v thefuck &>/dev/null; then
+        log "Installing thefuck via paru..."
+        paru -S --needed --noconfirm thefuck || warn "Failed to install thefuck. Please install manually."
+    fi
+
+    if ! command -v procs &>/dev/null; then
+        log "Installing procs via paru..."
+        paru -S --needed --noconfirm procs || warn "Failed to install procs. Please install manually."
+    fi
+
+    if ! command -v difft &>/dev/null; then
+        log "Installing difftastic via paru..."
+        paru -S --needed --noconfirm difftastic || warn "Failed to install difftastic. Please install manually."
+    fi
+else
+    warn "paru not found — skip auto-install (yazi, thefuck, procs, difftastic). Install manually on non-Arch."
 fi
 
 # =============================================================================
@@ -396,7 +412,8 @@ if command -v dust &>/dev/null; then
     alias du='dust'
 fi
 
-# Verification speed aliases (guarded — only when binary exists)
+# Verification speed aliases (guarded — active when binary exists on PATH)
+# ps→procs, gdf/gdfs→difftastic; cat/grep/find→bat/rg/fd
 if command -v bat &>/dev/null; then
     alias cat='bat --style=plain'
 fi
@@ -968,6 +985,15 @@ elif [[ -f "$GIT_VERIF" ]]; then
     log "Keeping existing ~/.config/git/verification"
 fi
 
+if [[ -f "$GIT_VERIF" ]] && command -v git &>/dev/null; then
+    if ! git config --global --get-all include.path 2>/dev/null | grep -qF "$GIT_VERIF"; then
+        git config --global include.path "$GIT_VERIF"
+        log "Set git config include.path for delta"
+    else
+        log "git include.path already enables delta"
+    fi
+fi
+
 chmod +x "$CONFIG_DIR/bin/agent-verify-layout.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/fzf-preview.sh" 2>/dev/null || true
 
@@ -993,6 +1019,8 @@ echo "  1. Restart your terminal or run: source ~/.zshrc"
 echo "  2. Test in zsh: zsh -l"
 echo "  3. Test in bash: bash -l"
 echo "  4. Revert if needed: $BACKUP_DIR/revert.sh"
+echo "  5. Git delta: git config --global include.path ~/.config/git/verification"
+echo "     (migrate sets this automatically when verification file exists)"
 echo ""
 echo "Key files created:"
 echo "  - $CONFIG_DIR/env.sh"

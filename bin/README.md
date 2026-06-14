@@ -2,7 +2,7 @@
 
 Executable helpers for **setup**, **verification**, and **recovery** of `~/.config/shell/`. Run from a working shell unless noted; paths assume `$HOME/.config/shell`.
 
-See also: [README.md](../README.md) (overview), [VERIFICATION.md](../VERIFICATION.md) (cockpit workflow), [shell.md](../shell.md) (load order).
+See also: [README.md](../README.md) (overview), [VERIFICATION.md](../VERIFICATION.md) (cockpit workflow), [human-in-the-loop-workflow.md](../human-in-the-loop-workflow.md) (repeatable drills), [shell.md](../shell.md) (load order).
 
 ---
 
@@ -26,6 +26,7 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../VERIFICATIO
 git clone git@github.com:p10ns11y/shellyxz.sh.git ~/.config/shell
 ~/.config/shell/bin/migrate.sh
 source ~/.zshrc    # or ~/.bashrc
+git config --global include.path ~/.config/git/verification   # if migrate did not set it
 ~/.config/shell/bin/check-shell.sh
 ```
 
@@ -36,6 +37,7 @@ Includes verification assets (`agent-verify-layout.sh`, `fzf-preview.sh`, `VERIF
 ```bash
 curl -fsSL https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master/bin/migrate.sh | bash
 source ~/.zshrc
+git config --global include.path ~/.config/git/verification
 ~/.config/shell/bin/check-shell.sh
 ```
 
@@ -82,13 +84,15 @@ SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/ma
 
 **Preserves:** existing `env.sh`, `aliases.sh`, `functions.sh`, hand-edited rc files (without `--force-rc`), existing `starship.toml`, tmux/yazi/git configs.
 
-**Arch note:** tries `paru -S yazi thefuck` when missing; fails softly on non-Arch.
+**Arch note:** tries `paru -S yazi thefuck procs difftastic` when `paru` exists; fails softly otherwise. **Other distros:** install those packages manually — see [human-in-the-loop-workflow.md](../human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros).
 
-**After migrate (git delta):**
+**Git delta:** migrate copies `git.ex.config` → `~/.config/git/verification` and sets `git config --global include.path` when not already configured. Re-run manually if needed:
 
 ```bash
 git config --global include.path ~/.config/git/verification
 ```
+
+**Difftastic:** `gdf` / `gdfs` aliases in `aliases.sh` when `difft` is on PATH (`paru -S difftastic` on Arch).
 
 **Revert:**
 
@@ -118,6 +122,7 @@ git config --global include.path ~/.config/git/verification
 - Reserved names (`ga`, `n`; runtime `gd` in zsh)
 - Login dotfiles delegate to `env.sh`
 - Verification: `FZF_DEFAULT_OPTS`, `agent_verify`, `vf`, `agent-verify-layout.sh`, `tmux.conf`, `VERIFICATION.md`
+- Git delta: `include.path` when `~/.config/git/verification` exists; `delta`, `procs`, `difft` on PATH (warn if missing)
 - Optional nvim `verification-workflow.lua` (warn if missing)
 - fish: direnv, `functions.sh`, fzf, thefuck
 - **shellcheck** on all `*.sh` (warns if `shellcheck` not installed — `pacman -S shellcheck`)
@@ -221,7 +226,7 @@ t                    # tmux attach
 z my-project
 av                   # or Prefix+V inside tmux
 agent_scan .
-lg
+gdf                            # or gdfs for staged; lg for lazygit + delta
 ```
 
 ### Nuclear recovery

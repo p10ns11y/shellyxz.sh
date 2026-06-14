@@ -2,7 +2,7 @@
 
 Human-in-the-loop verification cockpit for agent output. Goal: **insight + action in under 10 seconds** after an agent finishes.
 
-See [README.md](README.md) for shell setup; [shell.md](shell.md) for load order.
+See [README.md](README.md) for shell setup; [shell.md](shell.md) for load order. **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
 
 ---
 
@@ -24,7 +24,7 @@ Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor integra
 | Tool / concern | Where it lives |
 |----------------|----------------|
 | PATH, fzf defaults | `env.sh` |
-| `top`, `lg`, `ff`, `y`, `av`, guarded `cat`/`grep`/`find` | `aliases.sh` |
+| `top`, `lg`, `ff`, `y`, `av`, guarded `cat`/`grep`/`find`/`ps`, `gdf`/`gdfs` | `aliases.sh` |
 | `vf`, `agent_scan`, `agent_verify` | `functions.sh` |
 | Cockpit layout script | `bin/agent-verify-layout.sh` |
 | tmux base | Omarchy → `~/.config/tmux/tmux.conf` |
@@ -83,7 +83,7 @@ Hyprland: **Super+Alt+Return** → tmux.
 1. **Jump** — `z project` or `tmux select-window -t verify`
 2. **Visual sweep** — `y` → sort modified (`o` `m` in yazi if not using `yazi.ex.toml` defaults)
 3. **Structured scan** — `agent_scan .` or `rg 'TODO|FIXME|panic|unwrap' src/ | head -20`
-4. **Review diffs** — `lg` (lazygit; enable delta via git verification include)
+4. **Review diffs** — `lg` (lazygit + delta) or `gdf` / `gdfs` (difftastic in terminal)
 5. **Targeted tests** — `tt` for new test window; watch btop pane
 6. **Fix loop** — `vf` or `rg --vimgrep 'pat' src/ \| nvim -q -`; `thefuck` for rushed commands
 7. **Close loop** — commit in lazygit; detach tmux (`Prefix+d` default detach)
@@ -104,6 +104,8 @@ jq '.summary, .issues' report.json | bat -l json
 | `agent_scan [dir]` | rg sweep + dust + JSON reports |
 | `agent_verify [dir]` / `av` | tmux cockpit layout |
 | `tt` | New tmux window `test` in current path |
+| `ps` | procs (when installed; replaces POSIX `ps`) |
+| `gdf` / `gdfs` | git diff with difftastic (unstaged / staged) |
 | `eff` | Omarchy: fzf → editor |
 | `shell_debug` | Show editor-terminal detection |
 
@@ -146,17 +148,29 @@ End of day: detach tmux — layout persists in session.
 
 ---
 
-## Optional installs
+## Verification toolchain
 
-| Package | Why |
-|---------|-----|
-| `procs` | `ps` alias (guarded) |
-| `delta` | Pretty git diffs (`git.ex.config`) |
-| TPM + tmux-resurrect | Session survive reboot (manual setup) |
+Aliases are **guarded** (`command -v`); once packages are installed they activate on `source ~/.zshrc`.
+
+| Package | Command / alias | Role |
+|---------|-----------------|------|
+| `procs` | `ps` | Process list with filters (btop pane companion) |
+| `delta` | via `lg`, `git diff`, `git log` | Syntax-highlighted pager diffs (lazygit + terminal) |
+| `difftastic` (`difft`) | `gdf`, `gdfs` | Structural diff in terminal without lazygit |
+
+**Enable delta** (required once after migrate scaffolds `~/.config/git/verification`):
 
 ```bash
 git config --global include.path ~/.config/git/verification
 ```
+
+`delta` is expected on `PATH` (`~/.cargo/bin` via `env.sh`, or `pacman -S git-delta`). See [git.ex.config](git.ex.config).
+
+**Optional extras**
+
+| Package | Why |
+|---------|-----|
+| TPM + tmux-resurrect | Session survive reboot (manual setup) |
 
 ---
 
@@ -164,6 +178,7 @@ git config --global include.path ~/.config/git/verification
 
 ```bash
 ~/.config/shell/bin/migrate.sh   # scaffolds tmux, yazi, git when absent
+git config --global include.path ~/.config/git/verification   # enable delta
 source ~/.zshrc
 ~/.config/shell/bin/check-shell.sh
 ```

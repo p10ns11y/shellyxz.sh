@@ -23,7 +23,7 @@ Use this path on a **new machine** or after cloning the repo. Existing setups ca
 | **Omarchy** at `~/.local/share/omarchy` | `ga`/`gd` worktree helpers, alias layer, bash `rc` bundle |
 | **direnv** (recommended) | Managed rc templates guard `direnv hook` with `command -v direnv` (fish: `type -q`). zsh uses a shell-aware hook when sourcing `.zshrc` from bash |
 | **fish + bass** (fish only) | Fish loads portable modules via the bass plugin; without bass, env/aliases fail silently (`or true`) |
-| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck` when missing; other distros install those manually |
+| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck procs difftastic` when missing; **other distros:** install those manually — see [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros) |
 
 ### First install
 
@@ -50,8 +50,10 @@ mkdir -p ~/.config/secrets
 
 # 4. Reload and verify
 source ~/.zshrc                            # or: source ~/.bashrc
+git config --global include.path ~/.config/git/verification   # enable delta (lazygit + git pager)
 ~/.config/shell/bin/check-shell.sh
 
+# Verification aliases (after procs/difftastic installed): ps, gdf, gdfs — see VERIFICATION.md
 # Starship: migrate copies starship.ex.toml → ~/.config/starship.toml when absent
 # Mamba/conda: env.sh sets CONDA_CHANGEPS1=false; Starship [conda] module shows (env) inline
 ```
@@ -83,9 +85,13 @@ source ~/.zshrc                            # or: source ~/.bashrc
 ~/.config/shell/
 ├── README.md
 ├── VERIFICATION.md           # Agent verification cockpit workflow
+├── human-in-the-loop-workflow.md  # Drills, cockpit tour, messy-diff triage
 ├── shell.md                    # Load-order reference and architecture
 ├── SHELL-env-var-behavior.md   # Why $SHELL lies; truth seeker; Ghostty gtk-single-instance
 ├── starship.ex.toml            # Example Starship config (copy to ~/.config/starship.toml)
+├── tmux.verify.conf.ex         # tmux verify overlay (→ ~/.config/tmux/verify.conf)
+├── yazi.ex.toml                # yazi defaults (→ ~/.config/yazi/yazi.toml)
+├── git.ex.config               # git delta snippet (→ ~/.config/git/verification)
 ├── lib.sh              # Safe sourcing helpers (Omarchy, secrets, permissions)
 ├── env.sh              # Portable PATH + environment variables
 ├── aliases.sh          # Generic aliases + personal.sh chain (bash)
@@ -95,7 +101,9 @@ source ~/.zshrc                            # or: source ~/.bashrc
 │   ├── README.md           # Detailed usage for every script in bin/
 │   ├── migrate.sh      # Master migration / setup script
 │   ├── check-shell.sh  # Load order, shellcheck, reserved names
-│   └── recover-shell.sh # Nuclear recovery when rc files break
+│   ├── recover-shell.sh # Nuclear recovery when rc files break
+│   ├── agent-verify-layout.sh  # tmux verification cockpit
+│   └── fzf-preview.sh  # fzf bat preview (internal)
 └── backups/            # Created by migrate.sh (gitignored) — timestamped + revert.sh
 ```
 
@@ -354,7 +362,8 @@ source ~/.zshrc   # or: source ~/.bashrc
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
 - See [shell.md](shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
-- See [VERIFICATION.md](VERIFICATION.md) for agent verification cockpit (`av`, tmux layout, nvim Telescope keymaps)
+- See [VERIFICATION.md](VERIFICATION.md) for agent verification cockpit (`av`, tmux layout, nvim Telescope keymaps, `ps`/`gdf`/`gdfs`, delta via git include)
+- See [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) for repeatable rituals, cockpit tour, and messy agent-diff triage
 - See [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
 
 ## Troubleshooting
@@ -372,6 +381,8 @@ source ~/.zshrc   # or: source ~/.bashrc
 | `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
 | All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
 | `agent_verify` refuses in Cursor | editor terminal guard | Use Ghostty/tmux (`t` or Super+Alt+Return); see [VERIFICATION.md](VERIFICATION.md) |
+| Plain git/lazygit diffs (no color) | `include.path` not set | `git config --global include.path ~/.config/git/verification` |
+| `gdf`/`gdfs` unknown | difftastic not on PATH | `paru -S difftastic` (Arch) or install `difft`; `source ~/.zshrc` |
 
 `.gitignore` excludes `backups/` and secret patterns (`*.key`, `secrets/`, `.envrc`) so backups and local secrets never enter git.
 
