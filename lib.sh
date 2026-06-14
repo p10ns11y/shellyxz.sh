@@ -15,6 +15,25 @@ _is_interactive_session() {
     [ -t 0 ] && [ -t 1 ]
 }
 
+# Sets SHELL_IN_EDITOR_TERMINAL to yes|no (Cursor/VS Code integrated terminal vs native).
+# Call detect_editor_terminal, then test the variable — avoids shell exit-code confusion.
+detect_editor_terminal() {
+    SHELL_IN_EDITOR_TERMINAL=no
+    case "${TERM_PROGRAM:-}" in
+        vscode|cursor|Cursor) SHELL_IN_EDITOR_TERMINAL=yes; return ;;
+    esac
+    if [ -n "${VSCODE_IPC_HOOK:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${VSCODE_CWD:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${CURSOR_AGENT:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${VSCODE_PID:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    case "${CHROME_DESKTOP:-}" in
+        *cursor*|*code*) SHELL_IN_EDITOR_TERMINAL=yes; return ;;
+    esac
+    case "${APPIMAGE:-}" in
+        *cursor*|*Cursor*|*code*) SHELL_IN_EDITOR_TERMINAL=yes; return ;;
+    esac
+}
+
 # Regular file owned by us (or root), not world-writable, not a symlink.
 _file_is_safe_to_source() {
     _f="$1"

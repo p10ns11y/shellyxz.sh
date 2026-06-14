@@ -21,6 +21,13 @@ shell_debug() {
     echo "Login shell (passwd):     $login_sh"
     echo "Current process (ps):     $(ps -p $$ -o pid,comm,args 2>/dev/null || echo 'ps unavailable')"
     echo "TERM_PROGRAM:             ${TERM_PROGRAM:-unset}"
+    if command -v detect_editor_terminal >/dev/null 2>&1; then
+        detect_editor_terminal 2>/dev/null
+        case "${SHELL_IN_EDITOR_TERMINAL:-no}" in
+            yes) echo "Editor terminal:          yes (mise hook skipped; shims on PATH)" ;;
+            no)  echo "Editor terminal:          no" ;;
+        esac
+    fi
     echo "ZSH_VERSION:              ${ZSH_VERSION:-unset (not zsh)}"
     echo "BASH_VERSION:             ${BASH_VERSION:-unset (not bash)}"
     if [ -n "${ZSH_VERSION:-}" ]; then

@@ -536,8 +536,9 @@ if command -v mamba &>/dev/null; then
     eval "$(mamba shell hook --shell zsh)"
 fi
 
-# mise (version manager)
-if command -v mise &>/dev/null; then
+# mise (version manager) — shims on PATH via env.sh; skip hook in editor terminals (phantom tabs)
+detect_editor_terminal 2>/dev/null
+if command -v mise &>/dev/null && [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ]; then
     eval "$(mise activate zsh)"
 fi
 
@@ -619,8 +620,21 @@ if command -v direnv &>/dev/null; then
     eval "$(direnv hook bash)"
 fi
 
-# Omarchy before aliases.sh (ga is a worktree function; aliasing it first breaks bash)
-if typeset -f source_omarchy >/dev/null 2>&1; then
+# Omarchy — skip rc/init in editor terminals (mise hook → phantom activate/zsh tabs)
+detect_editor_terminal 2>/dev/null
+if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = yes ]; then
+    if typeset -f source_omarchy >/dev/null 2>&1; then
+        source_omarchy aliases 2>/dev/null || true
+        source_omarchy functions 2>/dev/null || true
+    else
+        if [[ -f "$HOME/.local/share/omarchy/default/bash/aliases" ]]; then
+            source "$HOME/.local/share/omarchy/default/bash/aliases"
+        fi
+        if [[ -f "$HOME/.local/share/omarchy/default/bash/functions" ]]; then
+            source "$HOME/.local/share/omarchy/default/bash/functions"
+        fi
+    fi
+elif typeset -f source_omarchy >/dev/null 2>&1; then
     source_omarchy rc 2>/dev/null || true
 elif [[ -f "$HOME/.local/share/omarchy/default/bash/rc" ]]; then
     source "$HOME/.local/share/omarchy/default/bash/rc"
