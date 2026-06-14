@@ -283,6 +283,24 @@ grep -q '^vf()' "$CONFIG_DIR/functions.sh" \
     && ok 'nvim verification-workflow plugin' \
     || warn 'nvim verification-workflow plugin missing (optional)'
 
+GIT_VERIFY="$HOME/.config/git/verification"
+if [[ -f "$GIT_VERIFY" ]]; then
+    if git config --global --get-all include.path 2>/dev/null | grep -qF "$GIT_VERIFY"; then
+        ok 'git include.path → verification (delta)'
+    else
+        warn 'git verification exists but include.path not set — git config --global include.path ~/.config/git/verification'
+    fi
+fi
+command -v delta &>/dev/null \
+    && ok 'delta on PATH' \
+    || warn 'delta not on PATH (install git-delta or cargo install git-delta)'
+command -v procs &>/dev/null \
+    && ok 'procs installed (ps alias when sourced)' \
+    || warn 'procs not installed (optional: paru -S procs)'
+command -v difft &>/dev/null \
+    && ok 'difftastic installed (gdf/gdfs when sourced)' \
+    || warn 'difftastic not installed (optional: paru -S difftastic)'
+
 # fish tier-1 tools
 FISH_CFG="$HOME/.config/fish/config.fish"
 if [[ -f "$FISH_CFG" ]]; then

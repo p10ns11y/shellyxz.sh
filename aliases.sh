@@ -29,7 +29,8 @@ if command -v dust &>/dev/null; then
     alias du='dust'
 fi
 
-# Verification speed aliases (guarded — only when binary exists)
+# Verification speed aliases (guarded — active when binary exists on PATH)
+# ps→procs, gdf/gdfs→difftastic; cat/grep/find→bat/rg/fd
 if command -v bat &>/dev/null; then
     alias cat='bat --style=plain'
 fi
