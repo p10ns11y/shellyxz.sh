@@ -53,6 +53,22 @@ path_append "/opt/rocm/bin"
 # Mamba/conda: let Starship show env; avoid duplicate (xai_exp) prefix on its own line
 export CONDA_CHANGEPS1=false
 
+# fzf — bat preview for verification sweeps (skip heavy preview in editor terminals)
+if command -v fzf >/dev/null 2>&1; then
+    detect_editor_terminal 2>/dev/null || true
+    if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ] && command -v bat >/dev/null 2>&1; then
+        # shellcheck disable=SC2089,SC2090
+        export FZF_DEFAULT_OPTS="--height 50% --layout=reverse --border rounded --preview-window=right:60%:wrap --preview '${HOME}/.config/shell/bin/fzf-preview.sh {}'"
+        export FZF_CTRL_T_OPTS='--preview-window=right:60%:wrap'
+    else
+        # shellcheck disable=SC2090
+        export FZF_DEFAULT_OPTS='--height 50% --layout=reverse --border rounded'
+    fi
+    if command -v fd >/dev/null 2>&1; then
+        export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    fi
+fi
+
 # Performance & misc
 export PIP_CACHE_DIR="$HOME/pip-cache"
 export TMPDIR="$HOME/tmp"

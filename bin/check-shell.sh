@@ -260,6 +260,29 @@ grep -q 'should_write_rc' "$CONFIG_DIR/bin/migrate.sh" \
     && ok 'migrate.sh preserves hand-edited rc files' \
     || warn 'migrate.sh may always overwrite rc files'
 
+# Verification workflow
+grep -q 'FZF_DEFAULT_OPTS' "$CONFIG_DIR/env.sh" \
+    && ok 'env.sh: FZF_DEFAULT_OPTS' \
+    || warn 'env.sh: FZF_DEFAULT_OPTS missing'
+grep -q 'agent_verify' "$CONFIG_DIR/functions.sh" \
+    && ok 'functions.sh: agent_verify' \
+    || warn 'functions.sh: agent_verify missing'
+grep -q '^vf()' "$CONFIG_DIR/functions.sh" \
+    && ok 'functions.sh: vf' \
+    || warn 'functions.sh: vf missing'
+[[ -x "$CONFIG_DIR/bin/agent-verify-layout.sh" ]] \
+    && ok 'agent-verify-layout.sh executable' \
+    || warn 'agent-verify-layout.sh missing or not executable'
+[[ -f "$HOME/.config/tmux/tmux.conf" ]] \
+    && ok 'tmux.conf present' \
+    || warn 'tmux.conf missing (run migrate.sh)'
+[[ -f "$CONFIG_DIR/VERIFICATION.md" ]] \
+    && ok 'VERIFICATION.md present' \
+    || warn 'VERIFICATION.md missing'
+[[ -f "$HOME/.config/nvim/lua/plugins/verification-workflow.lua" ]] \
+    && ok 'nvim verification-workflow plugin' \
+    || warn 'nvim verification-workflow plugin missing (optional)'
+
 # fish tier-1 tools
 FISH_CFG="$HOME/.config/fish/config.fish"
 if [[ -f "$FISH_CFG" ]]; then

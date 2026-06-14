@@ -26,6 +26,8 @@ for arg in "$@"; do
             echo "  --force-rc   Overwrite managed dotfiles (~/.zshrc, login files, fish) even if hand-edited"
             echo "  --bootstrap  Fetch missing repo files from SHELL_CONFIG_RAW (default: GitHub master)"
             echo ""
+            echo "Also scaffolds (when example files exist): tmux/yazi/git verification,"
+            echo "starship.toml, backups with revert.sh. See bin/README.md."
             echo "One-liner install (pipe bootstrap — fetches full config from GitHub):"
             echo "  curl -fsSL ${SHELL_CONFIG_RAW}/bin/migrate.sh | bash"
             echo ""
@@ -70,8 +72,10 @@ bootstrap_from_remote() {
     local rel dest dir url
     local files=(
         lib.sh env.sh aliases.sh functions.sh personal.sh
-        bin/migrate.sh bin/check-shell.sh bin/recover-shell.sh
-        README.md shell.md SHELL-env-var-behavior.md starship.ex.toml .gitignore
+        bin/migrate.sh bin/check-shell.sh bin/recover-shell.sh bin/README.md
+        bin/agent-verify-layout.sh bin/fzf-preview.sh
+        README.md shell.md SHELL-env-var-behavior.md VERIFICATION.md
+        starship.ex.toml tmux.verify.conf.ex yazi.ex.toml git.ex.config .gitignore
     )
 
     if ! command -v curl &>/dev/null; then
@@ -297,6 +301,22 @@ path_append "/opt/rocm/bin"
 # Mamba/conda: let Starship show env; avoid duplicate (xai_exp) prefix on its own line
 export CONDA_CHANGEPS1=false
 
+# fzf — bat preview for verification sweeps (skip heavy preview in editor terminals)
+if command -v fzf >/dev/null 2>&1; then
+    detect_editor_terminal 2>/dev/null || true
+    if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ] && command -v bat >/dev/null 2>&1; then
+        # shellcheck disable=SC2089,SC2090
+        export FZF_DEFAULT_OPTS="--height 50% --layout=reverse --border rounded --preview-window=right:60%:wrap --preview '${HOME}/.config/shell/bin/fzf-preview.sh {}'"
+        export FZF_CTRL_T_OPTS='--preview-window=right:60%:wrap'
+    else
+        # shellcheck disable=SC2090
+        export FZF_DEFAULT_OPTS='--height 50% --layout=reverse --border rounded'
+    fi
+    if command -v fd >/dev/null 2>&1; then
+        export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    fi
+fi
+
 # Performance & misc
 export PIP_CACHE_DIR="$HOME/pip-cache"
 export TMPDIR="$HOME/tmp"
@@ -376,15 +396,37 @@ if command -v dust &>/dev/null; then
     alias du='dust'
 fi
 
+# Verification speed aliases (guarded — only when binary exists)
+if command -v bat &>/dev/null; then
+    alias cat='bat --style=plain'
+fi
+if command -v rg &>/dev/null; then
+    alias grep='rg'
+fi
+if command -v fd &>/dev/null; then
+    alias find='fd'
+fi
+if command -v procs &>/dev/null; then
+    alias ps='procs'
+fi
+if command -v tmux &>/dev/null; then
+    alias tt='tmux new-window -n test -c "#{pane_current_path}"'
+fi
+
 # Quality of life
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
+alias av='agent_verify'
 # n() is Omarchy's nvim wrapper — do not alias here (breaks zsh reload)
 
 # Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'
 alias gc='git commit'
+if command -v difft &>/dev/null; then
+    alias gdf='git -c diff.external=difft diff'
+    alias gdfs='git -c diff.external=difft diff --staged'
+fi
 
 # Source personal/work-specific aliases last (so they can override if needed)
 if [ -f "$HOME/.config/shell/personal.sh" ]; then
@@ -426,6 +468,13 @@ shell_debug() {
     echo "Login shell (passwd):     $login_sh"
     echo "Current process (ps):     $(ps -p $$ -o pid,comm,args 2>/dev/null || echo 'ps unavailable')"
     echo "TERM_PROGRAM:             ${TERM_PROGRAM:-unset}"
+    if command -v detect_editor_terminal >/dev/null 2>&1; then
+        detect_editor_terminal 2>/dev/null
+        case "${SHELL_IN_EDITOR_TERMINAL:-no}" in
+            yes) echo "Editor terminal:          yes (mise hook skipped; shims on PATH)" ;;
+            no)  echo "Editor terminal:          no" ;;
+        esac
+    fi
     echo "ZSH_VERSION:              ${ZSH_VERSION:-unset (not zsh)}"
     echo "BASH_VERSION:             ${BASH_VERSION:-unset (not bash)}"
     if [ -n "${ZSH_VERSION:-}" ]; then
@@ -436,6 +485,74 @@ shell_debug() {
     echo ""
     echo "Tip: after 'exec /usr/bin/zsh -l' the prompt + ZSH_VERSION + ps will tell the truth."
     echo "     echo \$SHELL frequently lies because it is inherited from the original terminal session."
+}
+
+# Fuzzy-open file in $EDITOR (complements Omarchy eff).
+vf() {
+    command -v fzf >/dev/null 2>&1 || { echo "vf: fzf not found" >&2; return 1; }
+    local f preview
+    if command -v bat >/dev/null 2>&1; then
+        preview="bat --style=numbers --color=always {}"
+    else
+        preview="cat {}"
+    fi
+    if command -v fd >/dev/null 2>&1; then
+        f="$(fd --type f --hidden --exclude .git 2>/dev/null | fzf --preview "$preview")"
+    else
+        f="$(find . -type f 2>/dev/null | fzf --preview "$preview")"
+    fi
+    [ -n "$f" ] && "${EDITOR:-nvim}" "$f"
+}
+
+# Quick structured scan after agent output (rg + dust + JSON reports).
+agent_scan() {
+    local dir="${1:-.}"
+    echo "=== rg sweep ==="
+    if command -v rg >/dev/null 2>&1; then
+        rg -n 'TODO|FIXME|panic!|unwrap\(|ERROR|error:' "$dir" 2>/dev/null | head -30
+    else
+        echo "rg not found"
+    fi
+    echo "=== dust ==="
+    if command -v dust >/dev/null 2>&1; then
+        dust -s "$dir" 2>/dev/null | head -15
+    fi
+    for f in "$dir/report.json" "$dir/output.json"; do
+        if [ -f "$f" ]; then
+            echo "=== $f ==="
+            if command -v jq >/dev/null 2>&1; then
+                if command -v bat >/dev/null 2>&1; then
+                    jq '.summary // .issues // .' "$f" 2>/dev/null | bat -l json
+                else
+                    jq '.summary // .issues // .' "$f" 2>/dev/null
+                fi
+            else
+                head -20 "$f"
+            fi
+        fi
+    done
+}
+
+# Open verification cockpit layout in tmux (requires native terminal + active tmux).
+agent_verify() {
+    if command -v detect_editor_terminal >/dev/null 2>&1; then
+        detect_editor_terminal 2>/dev/null
+        if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = yes ]; then
+            echo "Run in Ghostty/tmux (t or Super+Alt+Return), not Cursor integrated terminal." >&2
+            return 1
+        fi
+    fi
+    if [ -z "${TMUX:-}" ]; then
+        echo "agent_verify: start tmux first (t or Super+Alt+Return)" >&2
+        return 1
+    fi
+    local dir="${1:-.}"
+    local script="$HOME/.config/shell/bin/agent-verify-layout.sh"
+    if [ ! -x "$script" ]; then
+        echo "agent_verify: missing $script" >&2
+        return 1
+    fi
+    "$script" "$dir"
 }
 
 # Portable reload helper for the current shell.
@@ -797,7 +914,65 @@ else
 fi
 
 # =============================================================================
-# 12. Git commit the new structure
+# 12. tmux / yazi / git verification scaffolds
+# =============================================================================
+TMUX_DIR="$HOME/.config/tmux"
+OMARCHY_TMUX="$OMARCHY_PATH/config/tmux/tmux.conf"
+mkdir -p "$TMUX_DIR"
+
+if [[ ! -f "$TMUX_DIR/tmux.conf" ]]; then
+    if [[ -f "$OMARCHY_TMUX" ]]; then
+        cp "$OMARCHY_TMUX" "$TMUX_DIR/tmux.conf"
+        log "Installed ~/.config/tmux/tmux.conf from Omarchy"
+    else
+        warn "Omarchy tmux.conf missing at $OMARCHY_TMUX"
+    fi
+else
+    log "Keeping existing ~/.config/tmux/tmux.conf"
+fi
+
+if [[ -f "$TMUX_DIR/tmux.conf" ]] && ! grep -q 'Managed by ~/.config/shell/bin/migrate.sh' "$TMUX_DIR/tmux.conf" 2>/dev/null; then
+    cat >> "$TMUX_DIR/tmux.conf" << 'TMUXINCLUDE'
+
+# Managed by ~/.config/shell/bin/migrate.sh
+source-file ~/.config/tmux/verify.conf
+TMUXINCLUDE
+    log "Appended verify.conf include to tmux.conf"
+elif [[ -f "$TMUX_DIR/tmux.conf" ]] && grep -q '%include ~/.config/tmux/verify.conf' "$TMUX_DIR/tmux.conf" 2>/dev/null; then
+    sed -i 's|%include ~/.config/tmux/verify.conf|source-file ~/.config/tmux/verify.conf|' "$TMUX_DIR/tmux.conf"
+    log "Repaired tmux.conf: %include → source-file for verify.conf"
+fi
+
+if [[ ! -f "$TMUX_DIR/verify.conf" ]] && [[ -f "$CONFIG_DIR/tmux.verify.conf.ex" ]]; then
+    cp "$CONFIG_DIR/tmux.verify.conf.ex" "$TMUX_DIR/verify.conf"
+    log "Installed ~/.config/tmux/verify.conf"
+elif [[ -f "$TMUX_DIR/verify.conf" ]]; then
+    log "Keeping existing ~/.config/tmux/verify.conf"
+fi
+
+YAZI_DEST="$HOME/.config/yazi/yazi.toml"
+mkdir -p "$(dirname "$YAZI_DEST")"
+if [[ ! -f "$YAZI_DEST" ]] && [[ -f "$CONFIG_DIR/yazi.ex.toml" ]]; then
+    cp "$CONFIG_DIR/yazi.ex.toml" "$YAZI_DEST"
+    log "Installed ~/.config/yazi/yazi.toml from yazi.ex.toml"
+elif [[ -f "$YAZI_DEST" ]]; then
+    log "Keeping existing ~/.config/yazi/yazi.toml"
+fi
+
+GIT_VERIF="$HOME/.config/git/verification"
+mkdir -p "$(dirname "$GIT_VERIF")"
+if [[ ! -f "$GIT_VERIF" ]] && [[ -f "$CONFIG_DIR/git.ex.config" ]]; then
+    cp "$CONFIG_DIR/git.ex.config" "$GIT_VERIF"
+    log "Installed ~/.config/git/verification (enable: git config --global include.path ~/.config/git/verification)"
+elif [[ -f "$GIT_VERIF" ]]; then
+    log "Keeping existing ~/.config/git/verification"
+fi
+
+chmod +x "$CONFIG_DIR/bin/agent-verify-layout.sh" 2>/dev/null || true
+chmod +x "$CONFIG_DIR/bin/fzf-preview.sh" 2>/dev/null || true
+
+# =============================================================================
+# 13. Git commit the new structure
 # =============================================================================
 log "Committing initial setup to git..."
 
@@ -822,9 +997,13 @@ echo ""
 echo "Key files created:"
 echo "  - $CONFIG_DIR/env.sh"
 echo "  - $CONFIG_DIR/aliases.sh"
+echo "  - $CONFIG_DIR/bin/README.md        ← Script reference (migrate, check, recover, verify)"
 echo "  - $CONFIG_DIR/bin/migrate.sh   ← Master script (git tracked)"
 echo "  - ~/.zprofile, ~/.zshenv, ~/.profile, ~/.bash_profile (when missing or managed)"
 echo "  - ~/.config/starship.toml (from starship.ex.toml when absent)"
+echo "  - ~/.config/tmux/tmux.conf + verify.conf (from Omarchy + overlay when absent)"
+echo "  - ~/.config/yazi/yazi.toml (from yazi.ex.toml when absent)"
+echo "  - ~/.config/git/verification (from git.ex.config when absent)"
 echo "  - ~/.zshrc (clean, pure zsh + starship)"
 echo "  - ~/.bashrc (minimal)"
 echo "  - ~/.config/fish/config.fish"

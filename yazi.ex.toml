@@ -1,0 +1,20 @@
+# Example yazi config for agent verification workflow.
+# migrate.sh copies to ~/.config/yazi/yazi.toml when absent.
+# Sort by modified in UI: o then m (newest agent artifacts first).
+
+[mgr]
+ratio = [1, 4]
+sort_by = "mtime"
+sort_reverse = true
+show_hidden = true
+
+[opener]
+edit = [
+    { run = '$EDITOR "$@"', block = true, for = "unix" },
+]
+open = [
+    { run = 'xdg-open "$@"', desc = "Open" },
+]
+
+[preview]
+wrap = "yes"

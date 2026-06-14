@@ -82,6 +82,7 @@ source ~/.zshrc                            # or: source ~/.bashrc
 ```
 ~/.config/shell/
 ├── README.md
+├── VERIFICATION.md           # Agent verification cockpit workflow
 ├── shell.md                    # Load-order reference and architecture
 ├── SHELL-env-var-behavior.md   # Why $SHELL lies; truth seeker; Ghostty gtk-single-instance
 ├── starship.ex.toml            # Example Starship config (copy to ~/.config/starship.toml)
@@ -91,6 +92,7 @@ source ~/.zshrc                            # or: source ~/.bashrc
 ├── personal.sh         # Your work/personal specific aliases
 ├── functions.sh        # Custom functions (bash)
 ├── bin/
+│   ├── README.md           # Detailed usage for every script in bin/
 │   ├── migrate.sh      # Master migration / setup script
 │   ├── check-shell.sh  # Load order, shellcheck, reserved names
 │   └── recover-shell.sh # Nuclear recovery when rc files break
@@ -344,6 +346,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 ## Maintenance
 
 - Run `~/.config/shell/bin/check-shell.sh` after edits — runs **shellcheck on all `*.sh`** plus load-order and reserved-name checks
+- Script reference: [bin/README.md](bin/README.md) — migrate, check-shell, recover, agent-verify-layout, fzf-preview
 - Add `--audit` for extra permission checks (`dev.env` mode 600, `recover-shell.sh` executable, `lib.sh` present)
 - Run `~/.config/shell/bin/migrate.sh` to refresh **managed** rc files (`~/.zshrc`, `~/.bashrc`, fish config)
 - Hand-edited rc files (no managed marker) are **skipped** — use `bin/migrate.sh --force-rc` to overwrite
@@ -351,6 +354,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
 - See [shell.md](shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
+- See [VERIFICATION.md](VERIFICATION.md) for agent verification cockpit (`av`, tmux layout, nvim Telescope keymaps)
 - See [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
 
 ## Troubleshooting
@@ -367,6 +371,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 | PATH differs in `zsh` vs `zsh -l` | login dotfiles missing | Run `bin/migrate.sh` (generates `~/.zprofile` when absent) |
 | `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
 | All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
+| `agent_verify` refuses in Cursor | editor terminal guard | Use Ghostty/tmux (`t` or Super+Alt+Return); see [VERIFICATION.md](VERIFICATION.md) |
 
 `.gitignore` excludes `backups/` and secret patterns (`*.key`, `secrets/`, `.envrc`) so backups and local secrets never enter git.
 

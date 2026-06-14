@@ -29,15 +29,37 @@ if command -v dust &>/dev/null; then
     alias du='dust'
 fi
 
+# Verification speed aliases (guarded — only when binary exists)
+if command -v bat &>/dev/null; then
+    alias cat='bat --style=plain'
+fi
+if command -v rg &>/dev/null; then
+    alias grep='rg'
+fi
+if command -v fd &>/dev/null; then
+    alias find='fd'
+fi
+if command -v procs &>/dev/null; then
+    alias ps='procs'
+fi
+if command -v tmux &>/dev/null; then
+    alias tt='tmux new-window -n test -c "#{pane_current_path}"'
+fi
+
 # Quality of life
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
+alias av='agent_verify'
 # n() is Omarchy's nvim wrapper — do not alias here (breaks zsh reload)
 
 # Git shortcuts (ga is Omarchy's worktree helper — do not alias here)
 alias gs='git status'
 alias gc='git commit'
+if command -v difft &>/dev/null; then
+    alias gdf='git -c diff.external=difft diff'
+    alias gdfs='git -c diff.external=difft diff --staged'
+fi
 
 # Source personal/work-specific aliases last (so they can override if needed)
 if [ -f "$HOME/.config/shell/personal.sh" ]; then

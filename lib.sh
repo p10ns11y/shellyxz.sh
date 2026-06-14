@@ -18,19 +18,19 @@ _is_interactive_session() {
 # Sets SHELL_IN_EDITOR_TERMINAL to yes|no (Cursor/VS Code integrated terminal vs native).
 # Call detect_editor_terminal, then test the variable — avoids shell exit-code confusion.
 detect_editor_terminal() {
-    SHELL_IN_EDITOR_TERMINAL=no
+    export SHELL_IN_EDITOR_TERMINAL=no
     case "${TERM_PROGRAM:-}" in
-        vscode|cursor|Cursor) SHELL_IN_EDITOR_TERMINAL=yes; return ;;
+        vscode|cursor|Cursor) export SHELL_IN_EDITOR_TERMINAL=yes; return ;;
     esac
-    if [ -n "${VSCODE_IPC_HOOK:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
-    if [ -n "${VSCODE_CWD:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
-    if [ -n "${CURSOR_AGENT:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
-    if [ -n "${VSCODE_PID:-}" ]; then SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${VSCODE_IPC_HOOK:-}" ]; then export SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${VSCODE_CWD:-}" ]; then export SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${CURSOR_AGENT:-}" ]; then export SHELL_IN_EDITOR_TERMINAL=yes; return; fi
+    if [ -n "${VSCODE_PID:-}" ]; then export SHELL_IN_EDITOR_TERMINAL=yes; return; fi
     case "${CHROME_DESKTOP:-}" in
-        *cursor*|*code*) SHELL_IN_EDITOR_TERMINAL=yes; return ;;
+        *cursor*|*code*) export SHELL_IN_EDITOR_TERMINAL=yes; return ;;
     esac
     case "${APPIMAGE:-}" in
-        *cursor*|*Cursor*|*code*) SHELL_IN_EDITOR_TERMINAL=yes; return ;;
+        *cursor*|*Cursor*|*code*) export SHELL_IN_EDITOR_TERMINAL=yes; return ;;
     esac
 }
 
