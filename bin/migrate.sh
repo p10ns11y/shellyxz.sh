@@ -224,28 +224,34 @@ else
 fi
 
 # =============================================================================
-# 3. Install missing tools (yazi + thefuck)
+# 3. Install missing tools (Arch: paru — other distros: install manually)
+# Currently optimized for Arch via paru. Other distros: install procs,
+# difftastic, git-delta, yazi, and thefuck manually, then source ~/.zshrc.
 # =============================================================================
 log "Checking for missing tools..."
 
-if ! command -v yazi &>/dev/null; then
-    log "Installing yazi via paru..."
-    paru -S --needed --noconfirm yazi || warn "Failed to install yazi. Please install manually."
-fi
+if command -v paru &>/dev/null; then
+    if ! command -v yazi &>/dev/null; then
+        log "Installing yazi via paru..."
+        paru -S --needed --noconfirm yazi || warn "Failed to install yazi. Please install manually."
+    fi
 
-if ! command -v thefuck &>/dev/null; then
-    log "Installing thefuck via paru..."
-    paru -S --needed --noconfirm thefuck || warn "Failed to install thefuck. Please install manually."
-fi
+    if ! command -v thefuck &>/dev/null; then
+        log "Installing thefuck via paru..."
+        paru -S --needed --noconfirm thefuck || warn "Failed to install thefuck. Please install manually."
+    fi
 
-if ! command -v procs &>/dev/null; then
-    log "Installing procs via paru..."
-    paru -S --needed --noconfirm procs || warn "Failed to install procs. Please install manually."
-fi
+    if ! command -v procs &>/dev/null; then
+        log "Installing procs via paru..."
+        paru -S --needed --noconfirm procs || warn "Failed to install procs. Please install manually."
+    fi
 
-if ! command -v difft &>/dev/null; then
-    log "Installing difftastic via paru..."
-    paru -S --needed --noconfirm difftastic || warn "Failed to install difftastic. Please install manually."
+    if ! command -v difft &>/dev/null; then
+        log "Installing difftastic via paru..."
+        paru -S --needed --noconfirm difftastic || warn "Failed to install difftastic. Please install manually."
+    fi
+else
+    warn "paru not found — skip auto-install (yazi, thefuck, procs, difftastic). Install manually on non-Arch."
 fi
 
 # =============================================================================

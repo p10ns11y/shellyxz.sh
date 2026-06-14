@@ -84,7 +84,7 @@ SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/ma
 
 **Preserves:** existing `env.sh`, `aliases.sh`, `functions.sh`, hand-edited rc files (without `--force-rc`), existing `starship.toml`, tmux/yazi/git configs.
 
-**Arch note:** tries `paru -S yazi thefuck procs difftastic` when missing; fails softly on non-Arch.
+**Arch note:** tries `paru -S yazi thefuck procs difftastic` when `paru` exists; fails softly otherwise. **Other distros:** install those packages manually — see [human-in-the-loop-workflow.md](../human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros).
 
 **Git delta:** migrate copies `git.ex.config` → `~/.config/git/verification` and sets `git config --global include.path` when not already configured. Re-run manually if needed:
 

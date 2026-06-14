@@ -23,7 +23,7 @@ Use this path on a **new machine** or after cloning the repo. Existing setups ca
 | **Omarchy** at `~/.local/share/omarchy` | `ga`/`gd` worktree helpers, alias layer, bash `rc` bundle |
 | **direnv** (recommended) | Managed rc templates guard `direnv hook` with `command -v direnv` (fish: `type -q`). zsh uses a shell-aware hook when sourcing `.zshrc` from bash |
 | **fish + bass** (fish only) | Fish loads portable modules via the bass plugin; without bass, env/aliases fail silently (`or true`) |
-| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck procs difftastic` when missing; other distros install those manually |
+| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck procs difftastic` when missing; **other distros:** install those manually — see [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros) |
 
 ### First install
 
@@ -85,7 +85,7 @@ git config --global include.path ~/.config/git/verification   # enable delta (la
 ~/.config/shell/
 ├── README.md
 ├── VERIFICATION.md           # Agent verification cockpit workflow
-├── human-in-the-loop-workflow.md  # Repeatable agent-review rituals (simple → complex)
+├── human-in-the-loop-workflow.md  # Drills, cockpit tour, messy-diff triage
 ├── shell.md                    # Load-order reference and architecture
 ├── SHELL-env-var-behavior.md   # Why $SHELL lies; truth seeker; Ghostty gtk-single-instance
 ├── starship.ex.toml            # Example Starship config (copy to ~/.config/starship.toml)
@@ -363,7 +363,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
 - See [shell.md](shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
 - See [VERIFICATION.md](VERIFICATION.md) for agent verification cockpit (`av`, tmux layout, nvim Telescope keymaps, `ps`/`gdf`/`gdfs`, delta via git include)
-- See [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) for repeatable post-agent rituals (`agent_scan` vs `av`, worked examples)
+- See [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) for repeatable rituals, cockpit tour, and messy agent-diff triage
 - See [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
 
 ## Troubleshooting

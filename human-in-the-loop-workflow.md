@@ -4,6 +4,24 @@ Repeatable rituals for reviewing agent output before you commit. This doc is the
 
 **Rule of thumb:** run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor’s integrated terminal refuses `agent_verify` / `av` by design.
 
+> **Meta-tooling, on purpose:** you use agents to build tooling that makes *human* review of agent output faster. The loop is: agent changes → you verify in the cockpit → you commit. AI assists; you approve.
+
+---
+
+## Platform note (Arch vs other distros)
+
+`bin/migrate.sh` auto-installs optional tools via **paru on Arch** (`yazi`, `thefuck`, `procs`, `difftastic`). On other distros, install manually:
+
+```bash
+# Arch (automated by migrate when paru exists)
+paru -S procs difftastic git-delta yazi thefuck
+
+# Other distros — package names vary; need: procs, difft (difftastic), delta, bat, rg, fd
+# e.g. cargo install git-delta difftastic, or your package manager equivalent
+```
+
+Then: `source ~/.zshrc` and `git config --global include.path ~/.config/git/verification`.
+
 ---
 
 ## `agent_verify` vs `agent_scan`
@@ -22,231 +40,215 @@ Repeatable rituals for reviewing agent output before you commit. This doc is the
 `av` sets up *where* you work; `agent_scan` tells you *what to look at first* in that moment.
 
 ```bash
-# agent_verify — layout only (bin/agent-verify-layout.sh)
-av                    # same as: agent_verify .
-agent_verify ~/code/my-app
-
-# agent_scan — terminal report (functions.sh)
-agent_scan .          # rg + dust + report.json / output.json
-agent_scan src/
+t && z <project> && av && agent_scan .
 ```
+
+---
+
+## Cockpit tour (what each pane is for)
+
+After `av`, you get four regions. This matches the tmux + lazygit + delta + difftastic layout in practice:
+
+```
++--------------------+---------------------+
+|  shell / nvim      |  lazygit            |  ← lg: stage, diff, commit
++--------------------+---------------------+
+|  yazi              |  (lazygit continues)|
++------------------------------------------+
+|  btop              |                     |  ← ps/tt: tests & load
++------------------------------------------+
+```
+
+| Pane | Tool | Your job there |
+|------|------|----------------|
+| Top-left | shell / nvim | `agent_scan .`, `gdf`, `vf`, `check-shell.sh`, edits |
+| Top-right | lazygit | File list, **delta** diffs, stage (`space`), commit (`c`) |
+| Bottom-left | yazi | Visual sweep — what changed, sorted by mtime |
+| Bottom-right | btop | Watch CPU/RAM while `tt` runs tests |
+
+**tmux window:** `2:verify` (or `verify` window name). **Zoom:** Prefix+Z on a pane when you need full width (e.g. `gdf` side-by-side, or `ff` before splitting).
+
+**Narrow panes:** `ff` (fastfetch) truncates in thin panes — run it full-width before `av`, or use `fastfetch --logo none`.
 
 ---
 
 ## Core ritual (drill this)
 
-Same sequence every time. Say it while typing:
-
 > **Tee-Zed-A-V, scan, look, diff, fix, git.**
 
-```bash
-t && z <project> && av && agent_scan .
-```
-
-| Step | Command | Where | Purpose |
-|------|---------|-------|---------|
-| 1 | `t` | — | tmux attach or new session `Work` |
-| 2 | `z <project>` | — | Jump to repo (zoxide) |
-| 3 | `av` | all panes | Open verification cockpit |
-| 4 | `agent_scan .` | top-left shell | Structured spot-check |
-| 5 | `y` | yazi pane | Visual sweep (mtime / modified) |
-| 6 | `lg` or `gdf` | lazygit / shell | Review diffs (delta / difftastic) |
-| 7 | `vf` or nvim | editor pane | Fix flagged files |
-| 8 | `tt` + tests | test window + btop | Run checks; watch load |
-| 9 | `lg` → commit | lazygit | Ship when satisfied |
-| 10 | Prefix+d | — | Detach (layout persists) |
-
-**tmux prefix:** `Ctrl+Space` (Omarchy). **nvim leader:** `Space`.
+| Step | Command | Pane |
+|------|---------|------|
+| 1 | `t` | — |
+| 2 | `z <project>` | — |
+| 3 | `av` | layout |
+| 4 | `agent_scan .` | shell |
+| 5 | `y` | yazi |
+| 6 | `lg` / `gdf` | lazygit / shell |
+| 7 | `vf` / nvim | editor |
+| 8 | `tt` + tests | test window + btop |
+| 9 | `lg` → `c` | lazygit commit |
+| 10 | Prefix+d | detach |
 
 ---
 
-## Workflow examples
+## Example A — clean agent pass (docs only)
 
-### Simple — single-file doc or comment fix
+Agent added one new markdown file and updated cross-links. lazygit shows a small diff; `agent_scan` may look noisy but is harmless.
 
-Agent updated one markdown file or a small config tweak. Low risk; you still verify before commit.
+**lazygit:** `human-in-the-loop-workflow.md` (A), `VERIFICATION.md` (M) — small hunks.
+
+**`agent_scan` output:**
+
+```
+./VERIFICATION.md:85:3. **Structured scan** — `agent_scan .` ...
+./functions.sh:65:        rg -n 'TODO|FIXME|panic!|unwrap\(|ERROR|error:'
+./bin/migrate.sh:54:error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+```
+
+**Triage:** all **noise** — docs mentioning the scanner, or `error()` helper names. No action.
+
+**Flow:**
+
+```bash
+t && z ~/.config/shell && av && agent_scan .
+# lazygit: read new doc hunks → space stage → c commit
+```
+
+---
+
+## Example B — messy / realistic agent pass (multi-file, mixed signal)
+
+Agent touched **7+ files**: `README.md`, `VERIFICATION.md`, `aliases.sh`, `bin/migrate.sh`, `bin/check-shell.sh`, `shell.md`, `git.ex.config`, plus untracked `human-in-the-loop-workflow.md`. Some changes are good; some need editing. This is the case Grok asked for — **noise + real review**.
+
+### 1. Spatial — open cockpit
 
 ```bash
 t && z ~/.config/shell && av
-agent_scan .
-gdf                          # one-file diff in terminal
-vf                           # fuzzy-open if scan flagged something odd
-lg                           # stage + commit with message
 ```
 
-**Time budget:** 2–5 minutes. Skip `tt` and btop unless you changed executable scripts.
+**lazygit Files pane:** scan the list — anything unexpected? (`??` untracked, `M` modified). Click each file; **delta** diff in center pane.
 
-**Nvim shortcut:** open file → `<leader>vh` pin it if you bounce between doc and `check-shell.sh` output.
-
----
-
-### Simple — alias or env one-liner
-
-Agent added an alias or export. Confirm it loads and doesn’t shadow Omarchy reserved names.
+### 2. Temporal — survey (filter noise)
 
 ```bash
-t && z ~/.config/shell && av
 agent_scan .
-source ~/.zshrc && check-shell.sh    # top-left shell pane
-gdf                                  # aliases.sh / env.sh only?
 ```
 
-If `check-shell` is clean and diff looks right → `lg` commit. No cockpit re-layout needed on return visits; `tmux select-window -t verify` if session still open.
+| `agent_scan` hit | Verdict | Action |
+|------------------|---------|--------|
+| `VERIFICATION.md` mentions `agent_scan` | Noise | Ignore |
+| `functions.sh:65` rg pattern | Noise | Scanner source |
+| `migrate.sh:54` `error()` | Noise | Log helper, not app error |
+| `check-shell.sh` `ERROR:` string | Noise | Test harness message |
+| *New* `TODO` in `aliases.sh` | **Signal** | Open in nvim / `vf` |
+| `dust` shows huge new dir | **Signal** | `y` → investigate |
 
----
+### 3. Diff strategy — pick the right lens
 
-### Moderate — multi-file feature in one repo
+| Change type | Tool | Why |
+|-------------|------|-----|
+| Markdown tables / prose | `lg` (delta inline) or `gdf README.md` | Readable word-level highlights |
+| Shell logic (`migrate.sh`, `check-shell.sh`) | `gdf bin/migrate.sh` | **difftastic** structural view for `if`/`fi` blocks |
+| Config snippet (`git.ex.config`) | `lg` + `vf` | Small file; fuzzy-open to edit comments |
+| “Did agent break load order?” | `source ~/.zshrc && check-shell.sh` | shell pane — must pass 0 errors |
 
-Agent touched several files (e.g. new shell function + migrate template + doc). Standard post-agent flow.
+**From your cockpit session:**
+
+- `gdf shell.md` — side-by-side table row change (`aliases.sh` description) — **keep** if accurate.
+- `lg` on `README.md` — paru line gains `procs difftastic` — **keep** if migrate matches.
+- `vf` → `tmux.verify.conf.ex` — confirm Prefix+Z / Prefix+V bindings still make sense.
+
+### 4. Fix loop (human irons out agent slop)
 
 ```bash
-t && z my-project && av
+# Edit in nvim pane or:
+vf migrate.sh
+# Re-survey:
 agent_scan .
-y                                # yazi: sort by modified, skim tree
-lg                               # lazygit: delta side-by-side per file
-gdf                              # or gdfs for staged-only pass
-vf                               # open anything scan highlighted
-tt                               # new tmux window: npm test / cargo test / ./bin/check-shell.sh
-ps                               # procs — glance at test processes (btop pane too)
-agent_scan .                     # re-survey before commit
-lg                               # commit with scoped message
-```
-
-**Nvim parallel:** `<leader>va` (TODO/FIXME preset) → `<leader>vf` → edit → `<leader>sg` for one more grep pass.
-
-**JSON agent report present:**
-
-```bash
-agent_scan .                     # auto-pretty-prints report.json / output.json
-jq '.issues[]' report.json | bat -l json
-```
-
----
-
-### Moderate — agent changed dependencies or install paths
-
-Agent edited `package.json`, `Cargo.toml`, migrate `paru` block, or PATH in `env.sh`. Verify install + load order.
-
-```bash
-t && z my-project && av
-agent_scan .
-gdf
-mise install / npm install / paru -S <pkg>   # only if agent added deps — you run, not blind trust
-source ~/.zshrc
 check-shell.sh
-tt && <project test command>
-ps | head                        # procs: confirm no runaway dev servers
-lg
+gdf                          # full unstaged pass
 ```
 
-**Red flags in `agent_scan`:** `ERROR`, `panic!`, `unwrap(`, new `TODO`/`FIXME` in production paths.
+**Reject** agent changes that: shadow Omarchy (`ga`, `gd`, `n`), skip `command -v` guards, or add secrets.
 
----
+### 5. Ship in slices (not one blind commit)
 
-### Complex — cross-repo or worktree session
-
-Agent worked in a worktree or you have agent output in repo A affecting repo B (shell config + live dotfiles).
+lazygit: stage **by concern** — e.g. commit 1 toolchain (`aliases.sh`, `check-shell.sh`, `migrate.sh`), commit 2 docs (`human-in-the-loop-workflow.md`, `VERIFICATION.md`). Matches how you’d review a PR.
 
 ```bash
-t
-z shell-repo && av && agent_scan .
-# review ~/.config/shell changes in lazygit
-lg                               # commit portable modules first
-
-z app-repo && av && agent_scan .
-lg                               # separate verify window per project (Prefix+w / M-2 switch)
+# lazygit: space per hunk/file → c → message → repeat
 ```
-
-Use **separate tmux windows** per repo (`Prefix+c` or `tt`). Pin shared context with nvim Harpoon (`<leader>vh`) on the file you keep re-opening.
-
-**Shell + live config:** after committing `~/.config/shell`, run `migrate.sh` in a third pane only if rc templates changed — then `source ~/.zshrc` in a fresh pane and `check-shell.sh`.
 
 ---
 
-### Complex — agent left tests failing or partial implementation
-
-Agent “finished” but CI would fail. Full loop with fix iterations.
+## Example C — agent left failing checks
 
 ```bash
 t && z my-project && av
 agent_scan .
-rg --vimgrep 'TODO|FIXME|unimplemented' src/ | nvim -q -   # quickfix list in nvim pane
-lg                               # see full diff scope
-tt                               # run test suite
-# fix loop:
-vf                               # or nvim quickfix jumps
-agent_scan .                     # after each fix batch
+check-shell.sh               # or project test command in tt window
+# fix → agent_scan . → gdf → tt → lg
+```
+
+Do not `lg` commit until checks you care about are green.
+
+---
+
+## Example D — security-sensitive diff
+
+```bash
+t && z my-project && av
+agent_scan .
+rg -n 'password|secret|api[_-]?key|token' --glob '!.git' .
 gdf
-tt                               # re-run until green
-ps                               # btop + procs if tests spawn servers
-lg                               # commit only when tests pass
+check-shell.sh --audit       # if shell repo
 ```
 
-**Do not commit** until step 4 of super-flow is satisfied: you understand every hunk (`lg` or `gdf`) and tests you care about pass (`tt`).
+Never commit secrets. Read every hunk in `lg` even when `agent_scan` is quiet.
 
 ---
 
-### Complex — security- or secrets-sensitive diff
+## Interpreting `agent_scan` (quick reference)
 
-Agent touched auth, env loading, `personal.sh`, or `~/.config/secrets/`. Slow down; no autopilot.
+| Section | Means |
+|---------|--------|
+| `=== rg sweep ===` | Grep for TODO/FIXME/panic/unwrap/ERROR — **smoke alarm**, not verdict |
+| `=== dust ===` | Largest paths — spot unexpected bulk or new dirs |
+| `=== report.json ===` | Agent left structured output — read `.summary` / `.issues` |
 
-```bash
-t && z my-project && av
-agent_scan .
-gdf                              # full unstaged pass
-rg -n 'password|secret|api[_-]?key|token' .   # manual; exclude .git
-check-shell.sh --audit           # if shell repo: dev.env permissions
-lg                               # review hunk-by-hunk; never commit .env / secrets
-```
-
-**Never commit:** `~/.config/secrets/*`, API keys, `.envrc` with live credentials. `check-shell` and `.gitignore` are guardrails, not substitutes for reading the diff.
+**Noise in `~/.config/shell`:** hits in `VERIFICATION.md`, `functions.sh`, `migrate.sh`, `check-shell.sh` are usually self-reference. **Signal in app repos:** new hits under `src/`, `lib/`, etc.
 
 ---
 
 ## Decision tree
 
 ```
-Agent finished
-    │
-    ├─ In Cursor terminal? ──yes──► Open Ghostty → t
-    │
-    └─ In Ghostty/tmux? ──no──► t
-            │
-            ▼
-        z <project> → av          (venue)
-            │
-            ▼
-        agent_scan .              (survey)
-            │
-            ├─ 1–2 files, docs only? ──► gdf → lg → done
-            │
-            ├─ feature / multi-file? ──► y → lg → tt → agent_scan → lg
-            │
-            └─ tests red / security? ──► rg/nvim quickfix → fix loop → tt → lg
+Agent finished → Ghostty → t → z → av (spatial)
+                    → agent_scan . (temporal)
+                    → noise only? → lg/gdf review → commit
+                    → signal? → vf/nvim fix → re-scan → commit
+                    → tests/security? → slow loop → commit when green
 ```
 
 ---
 
 ## Command cheat sheet
 
-| Situation | Reach for |
-|-----------|-----------|
+| Situation | Command |
+|-----------|---------|
 | Open cockpit | `av` |
-| Quick terminal checklist | `agent_scan .` |
-| Browse changed files | `y` (yazi) |
+| Checklist | `agent_scan .` |
 | Git UI + delta | `lg` |
-| Terminal structural diff | `gdf` / `gdfs` |
-| Fuzzy open file | `vf` |
-| New test window | `tt` |
-| Process glance | `ps` (procs) / btop pane |
-| nvim grep preset | `<leader>va` |
-| nvim find in cwd | `<leader>vf` |
-| Reload tmux config | Prefix+q |
+| Structural terminal diff | `gdf` / `gdfs` |
+| Fuzzy open | `vf` |
+| Zoom pane | Prefix+Z |
+| Config file peek | `vf` → type `tmux` / `migrate` |
+| Validate shell repo | `check-shell.sh` |
 
 ---
 
 ## Related docs
 
-- [VERIFICATION.md](VERIFICATION.md) — philosophy, cockpit layout, tmux/nvim keys, toolchain
-- [bin/README.md](bin/README.md) — `migrate.sh`, `check-shell.sh`, `agent-verify-layout.sh`
-- [shell.md](shell.md) — load order, `functions.sh` / `aliases.sh` modules
+- [VERIFICATION.md](VERIFICATION.md) — philosophy, keys, toolchain setup
+- [bin/README.md](bin/README.md) — migrate, check-shell, agent-verify-layout
+- [shell.md](shell.md) — load order
