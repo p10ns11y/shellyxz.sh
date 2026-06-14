@@ -214,6 +214,9 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
 | `bin/check-shell.sh` | Load order, reserved names, shellcheck (`--audit` for permissions) | manual run |
 | `bin/recover-shell.sh` | Nuclear recovery when rc files are broken | manual run |
+| `bin/agent-verify-layout.sh` | tmux verification cockpit layout | `av` / Prefix+V |
+| `bin/fzf-preview.sh` | fzf bat preview helper (internal) | via `env.sh` |
+| [bin/README.md](bin/README.md) | Detailed usage for every script in `bin/` | reference |
 
 ### `lib.sh` helpers
 
