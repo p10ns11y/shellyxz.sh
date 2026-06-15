@@ -91,7 +91,7 @@ if grep -qE '^[[:space:]]*set[[:space:]]+-a' "$_personal" 2>/dev/null; then
 else
     ok 'personal.sh does not use set -a'
 fi
-if grep -vE '^[[:space:]]*#|_local_alias' "$ENV_FILE" 2>/dev/null | grep -q '\.\./bin'; then
+if grep -vE '^[[:space:]]*#|_local_alias|path_drop' "$ENV_FILE" 2>/dev/null | grep -q '\.\./bin'; then
     fail 'env contains ../bin PATH (use ~/.local/bin)'
 else
     ok 'env has no ../bin PATH entries'

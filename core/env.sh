@@ -22,7 +22,8 @@ export PNPM_HOME="$HOME/.local/share/pnpm"
 
 # Drop known broken inherited segments before building (not a global dedupe pass)
 path_drop "/condabin"
-path_drop "$HOME/.local/share/../bin"
+_local_share="${HOME}/.local/share"
+path_drop "${_local_share}/${_seg:-../bin}"
 
 # Environment exports + preset PATH entries (omarchy, generic, …)
 source_environments

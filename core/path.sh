@@ -10,12 +10,15 @@ _path_remove_segment() {
         *) return 0 ;;
     esac
     if [ -n "${ZSH_VERSION:-}" ]; then
+        # zsh path array — faster than manual scan (not POSIX; guarded)
+        # shellcheck disable=SC3030,SC2206,SC3057
         path=(${path:#${_target}})
         return 0
     fi
     if [ -n "${BASH_VERSION:-}" ]; then
         _wrapped=":${PATH}:"
         while case "$_wrapped" in *":${_target}:"*) true;; *) false;; esac; do
+            # shellcheck disable=SC3060
             _wrapped="${_wrapped//:${_target}:/:}"
         done
         _wrapped="${_wrapped#:}"
