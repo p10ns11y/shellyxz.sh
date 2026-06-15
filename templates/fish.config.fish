@@ -42,7 +42,9 @@ if type -q mamba
 end
 
 if type -q mise
-    mise activate fish | source
+    if not string match "*$HOME/.local/share/mise/shims*" ":$PATH:"
+        mise activate fish | source
+    end
 end
 
 if type -q fzf

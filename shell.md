@@ -68,15 +68,15 @@ Unix shells do not read one config file. They read **different files depending o
 
 | File | Role | Loaded when | What it does here |
 |------|------|-------------|-------------------|
-| `~/.zshenv` | zsh env | **Every** zsh (including scripts) | `cargo/env`, vite-plus — runs before everything else in zsh |
+| `~/.zshenv` | zsh env | **Every** zsh (including scripts) | Sets `$SHELL` to zsh path only (`templates/login/zshenv`) |
 | `~/.zprofile` | zsh login | Login zsh only (`zsh -l`, some terminals) | Sources `env.sh` for early PATH on login |
-| `~/.zshrc` | zsh interactive | Interactive zsh (normal terminal) | Full stack: `env.sh` → direnv → Omarchy → `functions.sh` → `aliases.sh` → tool inits |
-| `~/.profile` | POSIX login | Login sh/bash (when `bash_profile` absent) | GPG agent, `env.sh`, cargo, vite-plus |
-| `~/.bash_profile` | bash login | Login bash | Sources `~/.bashrc`, then vite-plus again |
-| `~/.bashrc` | bash interactive | Interactive bash | Full stack via Omarchy `rc` bundle + your modules |
+| `~/.zshrc` | zsh interactive | Interactive zsh (normal terminal) | Full stack: `env.sh` → direnv → environment hooks → `functions.sh` → `aliases.sh` → tool inits |
+| `~/.profile` | POSIX login | Login sh/bash (when `bash_profile` absent) | GPG agent + sources `env.sh` |
+| `~/.bash_profile` | bash login | Login bash | Sources `~/.bashrc` only |
+| `~/.bashrc` | bash interactive | Interactive bash | Full stack via `env.sh` + environment hooks + modules |
 | `~/.config/fish/config.fish` | fish main | Interactive fish | Fish has no separate profile/rc split — one file does it all |
 
-Files **outside** `~/.config/shell/` but in the chain: Omarchy under `~/.local/share/omarchy/`, plus optional `~/.cargo/env`, `~/.vite-plus/env`.
+**PATH, cargo, vite-plus:** owned by `core/env.sh` (`path_prepend` + `source_if_safe` for `~/.vite-plus/env`). Login files delegate via `env.sh`; they do **not** source `~/.cargo/env` or `~/.local/bin/env`.
 
 ### Login vs interactive vs non-interactive
 
@@ -202,7 +202,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | File | Role | Sourced by |
 |------|------|------------|
 | `lib.sh` | Safe sourcing (Omarchy, secrets, permission checks) | `env.sh`, `personal.sh` |
-| `env.sh` | `path_prepend`/`path_append`, exports (SSH, GPG, threads), Omarchy envs, cargo/vite loaders | zsh, bash, fish (via bass) |
+| `env.sh` | `path_prepend`/`path_append`, `path_drop`, exports, `source_environments`, vite-plus via `source_if_safe` | zsh, bash, fish (via bass) |
 | `aliases.sh` | yazi `y()`, guarded `cat`/`grep`/`find`/`ps`, `gdf`/`gdfs`, monitoring (`top`→btop), `ff`/`lg`; **chains** `personal.sh` | zsh, bash, fish (via bass) |
 | `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` via `load_secrets_file` | via `aliases.sh` tail only |
 | `functions.sh` | Custom functions (`path_debug`, `shell_debug`, `reload`) | zsh, bash rc files; fish (via bass) |
@@ -269,11 +269,10 @@ flowchart LR
         e4["SSH_AUTH_SOCK, GPG_TTY"]
     end
 
-    subgraph loaders["optional dotfiles"]
-        l1["Omarchy envs"]
-        l2["~/.local/bin/env (via source_if_safe)"]
-        l3["~/.vite-plus/env"]
-        l4["~/.cargo/env"]
+    subgraph loaders["post-PATH in env.sh"]
+        l1["source_environments"]
+        l2["~/.vite-plus/env (source_if_safe)"]
+        l3["local/overwrite.sh (optional)"]
     end
 
     path_prepend --> path_append --> exports --> loaders
@@ -283,7 +282,7 @@ flowchart LR
 
 Single source of truth for managed PATH segments. Machine-readable list: [`core/path.contract`](core/path.contract) (validated by `bin/check-shell.sh`).
 
-**Rules:** `path_prepend` / `path_append` in `core/path.sh` are idempotent (remove-then-add). Build order in `core/env.sh` runs low → high; **`which` uses first match** (table below is resolution order). `~/.vite-plus/env` re-promotes its bin; `core/env.sh` re-asserts `$HOME/bin` after. Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do **not** source `~/.cargo/env` or `~/.local/bin/env`.
+**Rules:** `path_prepend` / `path_append` in `core/path.sh` skip work when a segment is absent or already at the target position; otherwise remove-then-add. Build order in `core/env.sh` runs low → high; **`which` uses first match** (table below is resolution order after vite+ hook + post `$HOME/bin` re-assert). Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do **not** source `~/.cargo/env` or `~/.local/bin/env`.
 
 | Priority (`which`) | Segment | Who prepends | Preset |
 |-------------------:|---------|--------------|--------|
@@ -324,18 +323,16 @@ Some environment is applied **before** `~/.zshrc` or `~/.bashrc` run.
 ```mermaid
 flowchart TD
     subgraph zsh_stack["zsh startup"]
-        Z1["~/.zshenv<br/>every zsh: cargo, vite-plus"]
+        Z1["~/.zshenv<br/>every zsh: export SHELL"]
         Z2["~/.zprofile<br/>login only: sources env.sh"]
         Z3["~/.zshrc<br/>interactive: full stack"]
         Z1 --> Z2 --> Z3
     end
 
     subgraph bash_stack["bash startup"]
-        B1["~/.profile or ~/.bash_profile<br/>login: GPG, env.sh, cargo, vite-plus"]
+        B1["~/.profile or ~/.bash_profile<br/>login: GPG + env.sh or bashrc"]
         B2["~/.bashrc<br/>interactive: full stack"]
         B1 --> B2
-        B3["~/.bash_profile may re-source vite-plus after bashrc"]
-        B2 --> B3
     end
 ```
 
@@ -486,7 +483,7 @@ Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and wo
 |------|-----|------|------|-------|
 | direnv | `.zshrc` | `.bashrc` | `config.fish` | `command -v` / `type -q` guard; zsh: shell-aware hook |
 | mamba | `.zshrc` | `.bashrc` | `config.fish` | when `mamba` on PATH |
-| mise | `.zshrc` | Omarchy `init` | `config.fish` | |
+| mise | `.zshrc` | Omarchy `init` | `config.fish` | zsh/fish skip `activate` when shims already on PATH |
 | starship | `.zshrc` | Omarchy `init` | `config.fish` | `starship.ex.toml` → `~/.config/starship.toml` (migrate when absent) |
 | zoxide | `.zshrc` | Omarchy `init` | `config.fish` | |
 | fzf | `.zshrc` | Omarchy `init` | `config.fish` | |
@@ -525,12 +522,11 @@ gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
 [ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
 ```
 
-**`~/.bash_profile`** — login bash; sources interactive rc then vite-plus:
+**`~/.bash_profile`** — login bash; sources interactive rc only:
 
 ```bash
 # Managed by ~/.config/shell/bin/migrate.sh
 [[ -f ~/.bashrc ]] && . ~/.bashrc
-[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 ```
 
 After migrate, compare PATH across modes: `zsh -ic path_debug`, `zsh -lc path_debug`, `bash -lc path_debug`.
@@ -576,11 +572,13 @@ Run `bin/check-shell.sh` after migrate to confirm nothing drifted.
 
 | Always (default) | With `--audit` |
 |------------------|----------------|
-| Load-order grep (bash/zsh Omarchy before aliases) | `dev.env` file mode (recommend 600) |
+| Load-order grep (bash/zsh environment hooks before aliases) | `dev.env` file mode (recommend 600) |
 | Reserved names (`ga`, `n`) in repo files | `recover-shell.sh` executable |
 | zsh runtime: `n`/`ga`/`gd` resolve to functions | `lib.sh` present |
-| `personal.sh` chained from `aliases.sh` | |
-| migrate preserve/`--force-rc` policy | |
+| `personal.sh` chained from `aliases.sh` | `check-template-sync.sh` |
+| migrate preserve/`--force-rc`/`--sync-rc` policy | |
+| **PATH contract** vs `core/env.sh` + omarchy | |
+| `path_drop`, `local/overwrite.sh` hook, env re-entry guard | |
 | fish tier-1 hooks (when fish config exists) | |
 | **shellcheck** on every `*.sh` under `~/.config/shell` | |
 | Login shell vs process identity (with `$SHELL` caveat) | |
@@ -630,7 +628,7 @@ flowchart LR
 - [x] **migrate rc policy** — skips hand-edited rc files; refreshes managed ones; `--force-rc` to overwrite.
 - [x] **login dotfiles generated** — migrate creates `~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv` when missing or managed.
 - [x] **secrets via load_secrets_file** — no `set -a` in `personal.sh`; `dev.env` mode 600 recommended.
-- [x] **external loaders hardened** — `source_if_safe` for `~/.local/bin/env`, vite-plus, cargo; no `../bin` paths.
+- [x] **external loaders hardened** — `source_if_safe` for vite-plus; `path_prepend` for cargo; `path_drop` for inherited junk; no `../bin` prepends.
 - [x] **nuclear recovery** — `bin/recover-shell.sh` works without loading rc files.
 
 ---

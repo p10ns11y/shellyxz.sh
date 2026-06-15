@@ -99,7 +99,8 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 ├── environment.example   # Copy → environment (optional pin; omit for auto-detect)
 ├── core/                 # Distro-agnostic (always loaded)
 │   ├── lib.sh            # source_environments, secrets, safety
-│   ├── path.sh           # path_prepend, path_append (idempotent reorder)
+│   ├── path.sh           # path_prepend, path_append, path_drop
+│   ├── path.contract     # PATH build order (validated by check-shell.sh)
 │   ├── env.sh            # PATH manifest + environment loader
 │   ├── aliases.sh
 │   └── functions.sh
@@ -107,7 +108,8 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 │   ├── generic/          # No-op stubs (containers / VPS / CI)
 │   └── omarchy/          # Omarchy desktop integration
 ├── local/
-│   └── personal.sh       # Secrets + work aliases (local overlay)
+│   ├── personal.sh       # Secrets + work aliases (local overlay)
+│   └── overwrite.sh.example  # Rare PATH/export overrides (copy → overwrite.sh)
 ├── templates/            # Canonical dotfiles for migrate.sh
 ├── env.sh, lib.sh, …     # Thin shims → core/
 ├── bin/
@@ -170,11 +172,11 @@ The rc/profile files in `$HOME` are **not** the source of truth. They only wire 
 
 | File | Shell | When it runs |
 |------|-------|--------------|
-| `~/.zshenv` | zsh | Every zsh (scripts too) — cargo, vite-plus |
+| `~/.zshenv` | zsh | Every zsh (scripts too) — sets `$SHELL` only |
 | `~/.zprofile` | zsh | Login zsh only — sources `env.sh` |
 | `~/.zshrc` | zsh | Interactive zsh — full stack |
-| `~/.profile` | POSIX/bash | Login — GPG, `env.sh`, cargo, vite-plus |
-| `~/.bash_profile` | bash | Login bash — sources `~/.bashrc`, vite-plus |
+| `~/.profile` | POSIX/bash | Login — GPG agent + `env.sh` |
+| `~/.bash_profile` | bash | Login bash — sources `~/.bashrc` |
 | `~/.bashrc` | bash | Interactive bash — full stack |
 | `~/.config/fish/config.fish` | fish | Interactive fish — single combined config |
 
@@ -411,4 +413,4 @@ This sets a minimal PATH and prints restore options (latest `backups/*/revert.sh
 
 - This setup treats **Omarchy** as your personal foundation and layers modern tooling on top without fighting it.
 - The goal is **low cognitive load** — you should rarely need to edit `~/.zshrc` or `~/.bashrc` directly.
-- **PATH** is owned by `env.sh` (`path_prepend` / `path_append`; `path_add` aliases prepend). Last `path_prepend` wins. Use `path_debug` in `functions.sh`. Omarchy still prepends its bin dir via envs.
+- **PATH** is owned by `core/env.sh` (`path_prepend` / `path_append`; `path_add` aliases prepend). Canonical order: [`core/path.contract`](core/path.contract) — validated by `bin/check-shell.sh`. Use `path_debug` in `functions.sh`. Omarchy prepends `$OMARCHY_PATH/bin` via `environments/omarchy/env.sh` (lowest among managed segments). Rare machine tweaks: `local/overwrite.sh`.

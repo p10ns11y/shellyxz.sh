@@ -247,7 +247,7 @@ Files fetched by `bootstrap_from_remote()` when missing (authoritative list in `
 
 | Group | Paths |
 |-------|--------|
-| **Core** | `core/{lib,path,env,aliases,functions}.sh`, root shims (`env.sh`, `lib.sh`, …) |
+| **Core** | `core/{lib,path,path.contract,env,aliases,functions}.sh`, root shims (`env.sh`, `lib.sh`, …) |
 | **Environments** | `environments/{generic,omarchy}/*`, `environment.example`, `environments/README.md` |
 | **Templates** | `templates/{zshrc,bashrc,fish.config.fish,login/*,core/*}` |
 | **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-verify-layout.sh` |
