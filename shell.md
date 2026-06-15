@@ -307,6 +307,14 @@ Single source of truth for managed PATH segments. Machine-readable list: [`core/
 
 `generic` preset adds no PATH entries. Debug live order: `path_debug`.
 
+**Not in the contract** (injected after `env.sh` — expected in some sessions):
+
+| Segment | Source | Notes |
+|---------|--------|--------|
+| `tmp/.mount_cursor*/…` | Cursor AppImage | Editor terminal only; ignore for `which` |
+| `~/.local/share/mise/installs/*/bin` | `mise activate` in `.zshrc` | Skipped when mise shims already on PATH |
+| `/condabin`, `~/.local/share/../bin` | Broken inherited PATH | Stripped at start of `env.sh` via `path_drop` |
+
 ---
 
 ## Login vs interactive layers

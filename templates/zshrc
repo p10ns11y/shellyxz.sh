@@ -38,9 +38,12 @@ fi
 
 detect_editor_terminal 2>/dev/null
 if command -v mise &>/dev/null && [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ]; then
-    # mise activate replaces the mise command with a shell function
+    # Shims on PATH (from env.sh) are enough for resolution — activate adds per-install bins
     if ! whence -w mise 2>/dev/null | command grep -q 'function'; then
-        eval "$(mise activate zsh)"
+        case ":$PATH:" in
+            *":${HOME}/.local/share/mise/shims:"*) ;;
+            *) eval "$(mise activate zsh)" ;;
+        esac
     fi
 fi
 

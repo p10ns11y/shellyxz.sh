@@ -20,6 +20,10 @@ export _SHELL_ENV_SH_LOADED=1
 
 export PNPM_HOME="$HOME/.local/share/pnpm"
 
+# Drop known broken inherited segments before building (not a global dedupe pass)
+path_drop "/condabin"
+path_drop "$HOME/.local/share/../bin"
+
 # Environment exports + preset PATH entries (omarchy, generic, …)
 source_environments
 

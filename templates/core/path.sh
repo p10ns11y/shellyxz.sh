@@ -67,4 +67,11 @@ path_append() {
 
 path_add() { path_prepend "$@"; }
 
+# Remove a segment from PATH (exact match). Used to drop inherited junk before building.
+path_drop() {
+    _path_remove_segment "$1"
+    export PATH
+    unset _target
+}
+
 unset _target _rest _scan _p _dir _wrapped 2>/dev/null || true
