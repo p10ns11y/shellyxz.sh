@@ -299,6 +299,83 @@ grep -q 'path_append' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
     && ok 'core/path.sh defines path_append' \
     || warn 'path_append missing'
 
+# PATH contract (core/path.contract vs core/env.sh + omarchy)
+PATH_CONTRACT="$CONFIG_DIR/core/path.contract"
+if [[ -f "$PATH_CONTRACT" ]]; then
+    _pc_prev=0
+    _pc_append_prev=0
+    _pc_append_start="$(line_number "$ENV_FILE" 'path_append ')"
+    _pc_vite_ln="$(line_number "$ENV_FILE" '\.vite-plus/env')"
+    _pc_fail=0
+    while IFS= read -r _pc_line || [[ -n "$_pc_line" ]]; do
+        [[ "$_pc_line" =~ ^# ]] && continue
+        [[ -z "${_pc_line// /}" ]] && continue
+        _pc_kind="${_pc_line%%:*}"
+        _pc_pat="${_pc_line#*:}"
+        _pc_ln=""
+        _pc_target="$ENV_FILE"
+        case "$_pc_kind" in
+            prepend)
+                _pc_ln="$(line_number "$_pc_target" "path_prepend.*${_pc_pat}")"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract prepend missing in env.sh: $_pc_pat"
+                    _pc_fail=1
+                elif [[ -n "$_pc_append_start" && "$_pc_ln" -ge "$_pc_append_start" ]]; then
+                    fail "path.contract prepend after path_append: $_pc_pat"
+                    _pc_fail=1
+                elif [[ "$_pc_ln" -le "$_pc_prev" ]]; then
+                    fail "path.contract prepend out of order: $_pc_pat (line $_pc_ln)"
+                    _pc_fail=1
+                else
+                    _pc_prev="$_pc_ln"
+                fi
+                ;;
+            post_prepend)
+                _pc_ln="$("${GREP[@]}" -nE "path_prepend.*${_pc_pat}" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d: -f1)"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract post_prepend missing: $_pc_pat"
+                    _pc_fail=1
+                elif [[ -n "$_pc_vite_ln" && "$_pc_ln" -le "$_pc_vite_ln" ]]; then
+                    fail "path.contract post_prepend must follow vite-plus/env: $_pc_pat"
+                    _pc_fail=1
+                fi
+                ;;
+            append)
+                _pc_ln="$(line_number "$_pc_target" "path_append.*${_pc_pat}")"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract append missing in env.sh: $_pc_pat"
+                    _pc_fail=1
+                elif [[ "$_pc_append_prev" -gt 0 && "$_pc_ln" -le "$_pc_append_prev" ]]; then
+                    fail "path.contract append out of order: $_pc_pat"
+                    _pc_fail=1
+                else
+                    _pc_append_prev="$_pc_ln"
+                fi
+                ;;
+            omarchy)
+                _pc_target="$CONFIG_DIR/environments/omarchy/env.sh"
+                _pc_ln="$(line_number "$_pc_target" "path_prepend.*${_pc_pat}")"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract omarchy entry missing: $_pc_pat"
+                    _pc_fail=1
+                fi
+                ;;
+            *)
+                warn "path.contract unknown kind: $_pc_kind"
+                ;;
+        esac
+    done < "$PATH_CONTRACT"
+    if [[ "$_pc_fail" -eq 0 ]]; then
+        if [[ "$_pc_prev" -gt 0 ]]; then
+            ok 'path.contract matches core/env.sh (+ omarchy)'
+        else
+            warn 'path.contract: no prepend entries verified'
+        fi
+    fi
+else
+    warn 'core/path.contract missing'
+fi
+
 # migrate rc policy
 grep -q -- '--sync-rc' "$CONFIG_DIR/bin/migrate.sh" \
     && ok 'migrate.sh supports --sync-rc' \

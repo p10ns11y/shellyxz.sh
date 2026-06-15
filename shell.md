@@ -279,6 +279,34 @@ flowchart LR
     path_prepend --> path_append --> exports --> loaders
 ```
 
+### PATH contract
+
+Single source of truth for managed PATH segments. Machine-readable list: [`core/path.contract`](core/path.contract) (validated by `bin/check-shell.sh`).
+
+**Rules:** `path_prepend` / `path_append` in `core/path.sh` are idempotent (remove-then-add). Build order in `core/env.sh` runs low → high; **`which` uses first match** (table below is resolution order). `~/.vite-plus/env` re-promotes its bin; `core/env.sh` re-asserts `$HOME/bin` after. Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do **not** source `~/.cargo/env` or `~/.local/bin/env`.
+
+| Priority (`which`) | Segment | Who prepends | Preset |
+|-------------------:|---------|--------------|--------|
+| 1 | `$HOME/bin` | `core/env.sh` (post vite+ re-assert) | all |
+| 2 | `$HOME/.vite-plus/bin` | `core/env.sh` + `~/.vite-plus/env` | all (if installed) |
+| 3 | `$HOME/.local/bin` | `core/env.sh` | all |
+| 4 | `$HOME/.local/share/mise/shims` | `core/env.sh` | all |
+| 5 | `$HOME/mamba/bin` | `core/env.sh` | all |
+| 6 | `$HOME/.vector/bin` | `core/env.sh` | all |
+| 7 | `$HOME/.grok/bin` | `core/env.sh` | all |
+| 8 | `$HOME/.risc0/bin` | `core/env.sh` | all |
+| 9 | `$HOME/.cargo/bin` | `core/env.sh` | all |
+| 10 | `$PNPM_HOME` (`~/.local/share/pnpm`) | `core/env.sh` | all |
+| 11 | `$HOME/.bun/bin` | `core/env.sh` | all |
+| 12 | `$HOME/.opencode/bin` | `core/env.sh` | all |
+| 13 | `$HOME/.local/share/solana/install/active_release/bin` | `core/env.sh` | all |
+| 14 | `$OMARCHY_PATH/bin` | `environments/omarchy/env.sh` | omarchy |
+| — | inherited system `PATH` | parent process / login | all |
+| ↓ | `$HOME/miniconda/condabin` | `core/env.sh` (`path_append`) | all |
+| ↓ | `/opt/rocm/bin` | `core/env.sh` (`path_append`) | all |
+
+`generic` preset adds no PATH entries. Debug live order: `path_debug`.
+
 ---
 
 ## Login vs interactive layers
@@ -303,7 +331,7 @@ flowchart TD
     end
 ```
 
-**Caveat:** PATH is built in `env.sh` via `path_prepend` (last call = highest priority) and `path_append` (fallbacks). Omarchy envs then prepend `omarchy/bin` again. Login files delegate to `env.sh`. Use `path_debug` when troubleshooting. `path_add` remains as an alias for `path_prepend`.
+**Caveat:** PATH ownership is documented in [PATH contract](#path-contract) (`core/path.contract`). Login files delegate to `env.sh`. Use `path_debug` when troubleshooting.
 
 ---
 

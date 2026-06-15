@@ -68,14 +68,14 @@ bootstrap_from_remote() {
     local rel dest dir url
     local files=(
         lib.sh env.sh aliases.sh functions.sh personal.sh
-        core/lib.sh core/path.sh core/env.sh core/aliases.sh core/functions.sh
+        core/lib.sh core/path.sh core/path.contract core/env.sh core/aliases.sh core/functions.sh
         environments/generic/env.sh environments/generic/bash.sh environments/generic/zsh.sh environments/generic/fish.sh
         environments/omarchy/env.sh environments/omarchy/bash.sh environments/omarchy/zsh.sh environments/omarchy/fish.sh
         environment.example
         local/personal.sh
         templates/zshrc templates/bashrc templates/fish.config.fish
         templates/login/zprofile templates/login/zshenv templates/login/profile templates/login/bash_profile
-        templates/core/lib.sh templates/core/path.sh templates/core/env.sh templates/core/aliases.sh templates/core/functions.sh
+        templates/core/lib.sh templates/core/path.sh templates/core/path.contract templates/core/env.sh templates/core/aliases.sh templates/core/functions.sh
         bin/migrate.sh bin/lib/migrate-common.sh
         bin/tasks/backup.sh bin/tasks/install-tools.sh bin/tasks/install-modules.sh
         bin/tasks/install-rc.sh bin/tasks/scaffold.sh bin/tasks/git-commit.sh

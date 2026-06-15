@@ -1,10 +1,28 @@
 #!/usr/bin/env sh
 # ~/.config/shell/core/path.sh — PATH helpers (POSIX sh).
-# path_prepend / path_append remove existing occurrences of the segment first,
-# then add once — no global dedupe/normalize pass needed.
+# path_prepend / path_append are O(1) when the dir is absent or already positioned.
 
 _path_remove_segment() {
     _target="$1"
+    [ -n "$_target" ] || return 0
+    case ":$PATH:" in
+        *":$_target:"*) ;;
+        *) return 0 ;;
+    esac
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        path=(${path:#${_target}})
+        return 0
+    fi
+    if [ -n "${BASH_VERSION:-}" ]; then
+        _wrapped=":${PATH}:"
+        while case "$_wrapped" in *":${_target}:"*) true;; *) false;; esac; do
+            _wrapped="${_wrapped//:${_target}:/:}"
+        done
+        _wrapped="${_wrapped#:}"
+        PATH="${_wrapped%:}"
+        unset _wrapped
+        return 0
+    fi
     _rest=""
     _scan="$PATH"
     while [ -n "$_scan" ]; do
@@ -14,29 +32,34 @@ _path_remove_segment() {
         esac
         [ -n "$_p" ] || continue
         [ "$_p" = "$_target" ] && continue
-        if [ -z "$_rest" ]; then
-            _rest="$_p"
-        else
-            _rest="$_rest:$_p"
-        fi
+        _rest="${_rest:+$_rest:}$_p"
     done
     PATH="$_rest"
-    unset _target _rest _scan _p
+    unset _rest _scan _p _target _wrapped
 }
 
-# Highest priority: remove dir if present, then prepend once.
 path_prepend() {
     _dir="$1"
     [ -d "$_dir" ] || return
-    _path_remove_segment "$_dir"
+    case ":$PATH:" in
+        ":${_dir}:"*) return 0 ;;
+        *":${_dir}:"*) _path_remove_segment "$_dir" ;;
+        *) export PATH="$_dir${PATH:+:$PATH}"; unset _dir; return 0 ;;
+    esac
     export PATH="$_dir${PATH:+:$PATH}"
     unset _dir
 }
 
-# Lowest priority: remove dir if present, then append once.
 path_append() {
     _dir="$1"
     [ -d "$_dir" ] || return
+    case ":$PATH:" in
+        *":${_dir}:"*) ;;
+        *) export PATH="${PATH:+$PATH:}$_dir"; unset _dir; return 0 ;;
+    esac
+    case "$PATH" in
+        "$_dir"|*:"$_dir") return 0 ;;
+    esac
     _path_remove_segment "$_dir"
     export PATH="${PATH:+$PATH:}$_dir"
     unset _dir
@@ -44,4 +67,4 @@ path_append() {
 
 path_add() { path_prepend "$@"; }
 
-unset _target _rest _scan _p _dir 2>/dev/null || true
+unset _target _rest _scan _p _dir _wrapped 2>/dev/null || true
