@@ -190,13 +190,17 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 ## fzf-preview.sh
 
-**Purpose:** Internal **fzf `--preview`** helper — runs bat with line numbers. Keeps `FZF_DEFAULT_OPTS` in `env.sh` shellcheck-clean.
+**Purpose:** Internal **fzf `--preview`** helper. Files get `bat` with line numbers; Ctrl+R history lines are stripped of their index and highlighted as shell.
 
 ```sh
-~/.config/shell/bin/fzf-preview.sh <file>
+~/.config/shell/bin/fzf-preview.sh <file-or-history-line>
 ```
 
-**Wired by:** `env.sh` when `fzf` + `bat` present and **not** in editor terminal (`SHELL_IN_EDITOR_TERMINAL=no`).
+**Wired by:** `core/env.sh` when `fzf` + `bat` present and **not** in editor terminal (`SHELL_IN_EDITOR_TERMINAL=no`):
+
+- `FZF_CTRL_T_OPTS` — file search preview (right pane)
+- `FZF_CTRL_R_OPTS` — history search preview (bottom pane)
+- `FZF_DEFAULT_OPTS` — layout only (no global preview)
 
 **Do not run manually** unless debugging preview. Requires `bat` on PATH.
 
@@ -214,8 +218,8 @@ source ~/.zshrc
 ### Refresh managed rc templates
 
 ```bash
-~/.config/shell/bin/migrate.sh
-# or if you hand-edited rc files:
+~/.config/shell/bin/migrate.sh --sync-rc   # managed files only
+# or overwrite hand-edited rc files:
 ~/.config/shell/bin/migrate.sh --force-rc
 ```
 
@@ -239,12 +243,15 @@ bash --norc ~/.config/shell/bin/recover-shell.sh
 
 ## Bootstrap file list (remote fetch)
 
-Files fetched by `bootstrap_from_remote()` when missing (see `migrate.sh`):
+Files fetched by `bootstrap_from_remote()` when missing (authoritative list in `bin/lib/migrate-common.sh`):
 
-- `lib.sh`, `env.sh`, `aliases.sh`, `functions.sh`, `personal.sh`
-- `bin/migrate.sh`, `bin/check-shell.sh`, `bin/recover-shell.sh`, `bin/README.md`
-- `bin/agent-verify-layout.sh`, `bin/fzf-preview.sh`
-- `README.md`, `shell.md`, `SHELL-env-var-behavior.md`, `VERIFICATION.md`, `starship.ex.toml`
-- `tmux.verify.conf.ex`, `yazi.ex.toml`, `git.ex.config`, `.gitignore`
+| Group | Paths |
+|-------|--------|
+| **Core** | `core/{lib,path,env,aliases,functions}.sh`, root shims (`env.sh`, `lib.sh`, …) |
+| **Environments** | `environments/{generic,omarchy}/*`, `environment.example`, `environments/README.md` |
+| **Templates** | `templates/{zshrc,bashrc,fish.config.fish,login/*,core/*}` |
+| **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-verify-layout.sh` |
+| **Docs & examples** | `README.md`, `shell.md`, `VERIFICATION.md`, `SHELL-env-var-behavior.md`, `starship.ex.toml`, `yazi.ex.toml`, `git.ex.config`, `.gitignore` |
+| **Local** | `local/personal.sh` |
 
 Files already present are never overwritten.

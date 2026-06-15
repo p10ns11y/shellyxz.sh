@@ -1,10 +1,12 @@
 # Shell environment architecture
 
-How `~/.config/shell/` layers portable environment, Omarchy, and shell-native tooling across **zsh**, **bash**, and **fish**.
+How `~/.config/shell/` composes portable core, environment presets, Omarchy, and shell-native tooling across **zsh**, **bash**, and **fish**.
 
 For day-to-day editing guidance see [README.md](README.md). This document is the **accurate load-order reference** — verified against live dotfiles and `bin/migrate.sh`.
 
-**Prerequisites:** Omarchy (`~/.local/share/omarchy`), direnv (for managed zsh/bash rc), bass (fish only). See [README — Getting started](README.md#getting-started).
+**Prerequisites:** optional `environment` or `SHELL_ENVIRONMENT`, direnv (recommended), bass (fish only). Omarchy is **optional** — enable via `environments/omarchy/`. See [environments/README.md](environments/README.md).
+
+Not to be confused with `~/.profile` (POSIX login) or `templates/login/profile`.
 
 ---
 
@@ -18,19 +20,16 @@ flowchart TB
         profile["~/.profile / ~/.bash_profile"]
     end
 
-    subgraph core["~/.config/shell (git-tracked)"]
-        env["env.sh<br/>PATH, exports, loaders"]
-        aliases["aliases.sh<br/>generic aliases + y()"]
-        personal["personal.sh<br/>work shortcuts"]
-        functions["functions.sh<br/>custom functions"]
+    subgraph core["~/.config/shell/core (always)"]
+        env["core/env.sh<br/>PATH, exports, environments"]
+        aliases["core/aliases.sh"]
+        personal["local/personal.sh"]
+        functions["core/functions.sh"]
     end
 
-    subgraph omarchy["Omarchy (~/.local/share/omarchy)"]
-        oenvs["default/bash/envs"]
-        oaliases["default/bash/aliases"]
-        ofns["default/bash/functions<br/>ga, gd worktrees"]
-        orc["default/bash/rc<br/>bash-only bundle"]
-        oinit["default/bash/init<br/>mise, starship, zoxide, fzf"]
+    subgraph environments["environments/ (opt-in via environment file)"]
+        generic["generic/"]
+        omarchy["omarchy/<br/>env + bash/zsh/fish"]
     end
 
     subgraph shells["Interactive rc files"]
@@ -39,19 +38,15 @@ flowchart TB
         fishcfg["~/.config/fish/config.fish"]
     end
 
-    login --> shells
     zshrc --> env
     bashrc --> env
     fishcfg --> env
 
-    env --> oenvs
-    zshrc --> oaliases
-    zshrc --> ofns
-    bashrc --> orc
-    orc --> oenvs
-    orc --> oaliases
-    orc --> ofns
-    orc --> oinit
+    env --> environments
+
+    zshrc -->|"source_environment_shell"| omarchy
+    bashrc -->|"source_environment_shell"| omarchy
+    fishcfg -->|"SHELL_ENVIRONMENT loop"| omarchy
 
     zshrc --> functions
     bashrc --> functions
@@ -61,7 +56,7 @@ flowchart TB
     fishcfg --> aliases
 ```
 
-**Key idea:** `env.sh` is the portable foundation (including Omarchy envs). Omarchy aliases and functions load next. `functions.sh` and `aliases.sh` load after Omarchy so your overrides win. `personal.sh` chains from the tail of `aliases.sh`. **Bash and zsh integrate Omarchy differently** — modular in zsh, `rc` bundle in bash — but override semantics match.
+**Key idea:** `core/env.sh` loads `environments/*` from `environment` / `SHELL_ENVIRONMENT` (or auto-detect). Rc files call `source_environment_shell` for interactive hooks. `core/functions.sh` and `core/aliases.sh` load after presets so your overrides win.
 
 ---
 
@@ -215,7 +210,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | `bin/check-shell.sh` | Load order, reserved names, shellcheck (`--audit` for permissions) | manual run |
 | `bin/recover-shell.sh` | Nuclear recovery when rc files are broken | manual run |
 | `bin/agent-verify-layout.sh` | tmux verification cockpit layout | `av` / Prefix+V |
-| `bin/fzf-preview.sh` | fzf bat preview helper (internal) | via `env.sh` |
+| `bin/fzf-preview.sh` | fzf preview helper (files + Ctrl+R history) | via `FZF_CTRL_T_OPTS` / `FZF_CTRL_R_OPTS` in `env.sh` |
 | `git.ex.config` | delta snippet → `~/.config/git/verification`; enable with `git config --global include.path …` | migrate copy-when-absent |
 | [bin/README.md](bin/README.md) | Detailed usage for every script in `bin/` | reference |
 
@@ -312,56 +307,53 @@ flowchart TD
 
 ---
 
-## zsh load order (live `~/.zshrc`)
+## zsh load order (managed `~/.zshrc` template)
 
-Recommended daily driver. Omarchy is sourced **modularly** (not via `rc`). Omarchy envs load only via `env.sh` (not duplicated in `.zshrc`).
+Daily driver. Preset env exports load in `env.sh` via `source_environments`; interactive Omarchy hooks load via `source_environment_shell zsh` → `environments/omarchy/zsh.sh`.
 
 ```mermaid
 flowchart TD
-    A["1. env.sh<br/>(includes Omarchy envs)"] --> B["2. direnv hook zsh"]
-    B --> C["3. Omarchy aliases"]
-    C --> D["4. Omarchy functions<br/>ga/gd worktrees, fns/*"]
-    D --> E["5. functions.sh"]
-    E --> F["6. aliases.sh"]
-    F --> G["6a. personal.sh<br/>(chained inside aliases.sh)"]
-    G --> H["7. mamba shell hook zsh"]
-    H --> H2["8. mise activate zsh"]
-    H2 --> I["9. starship init zsh"]
-    I --> J["10. zoxide init zsh"]
-    J --> K["11. fzf --zsh"]
-    K --> L["12. thefuck --alias"]
-    L --> M["13. compinit + history opts"]
-    M --> N["14. grok completions"]
-    N --> O["15. zshconfig, reload"]
-    P["Early return if sourced from bash<br/>(portable bits only)"] -.-> G
+    A["1. env.sh<br/>PATH + source_environments"] --> B["2. direnv hook zsh"]
+    B --> C["3. source_environment_shell zsh<br/>environments/omarchy/zsh.sh"]
+    C --> D["4. functions.sh"]
+    D --> E["5. aliases.sh + personal.sh"]
+    E --> F["6. mamba shell hook zsh"]
+    F --> G["7. mise activate zsh"]
+    G --> H["8. starship init zsh"]
+    H --> I["9. zoxide init zsh"]
+    I --> J["10. fzf --zsh"]
+    J --> K["11. thefuck --alias"]
+    K --> L["12. compinit + history opts"]
+    L --> M["13. grok completions"]
+    M --> N["14. zshconfig, reload"]
+    P["Early return if sourced from bash<br/>(portable bits only)"] -.-> E
 ```
 
 | Step | File / command | Notes |
 |------|----------------|-------|
-| 1 | `env.sh` | Single source for Omarchy envs; `CONDA_CHANGEPS1=false` |
-| 2 | `direnv` | zsh/bash-aware hook if `.zshrc` sourced from bash |
-| 4 | Omarchy `functions` | Defines `ga()` git-worktree helper — **never alias `ga`** |
-| 6 | `aliases.sh` | `ff` = **fastfetch** (wins over Omarchy) |
-| 7–12 | tool inits | mamba → mise → starship → zoxide → fzf → thefuck |
-| — | bash `source` | If `ZSH_VERSION` unset, returns before step 7 (zsh-only inits skipped) |
+| 1 | `env.sh` | `source_environments` loads `environments/<preset>/env.sh`; `CONDA_CHANGEPS1=false` |
+| 2 | `direnv` | zsh/bash-aware hook if `.zshrc` sourced from bash; **requires direnv on PATH** |
+| 3 | `source_environment_shell zsh` | Omarchy: aliases + functions from `environments/omarchy/zsh.sh` — **never alias `ga`** |
+| 5 | `aliases.sh` | `ff` = **fastfetch** (wins over Omarchy) |
+| 6–11 | tool inits | mamba → mise → starship → zoxide → fzf → thefuck |
+| — | bash `source` | If `ZSH_VERSION` unset, returns before step 6 (zsh-only inits skipped) |
 
 ---
 
-## bash load order (live `~/.bashrc`)
+## bash load order (managed `~/.bashrc` template)
 
-Bash uses Omarchy's monolithic `rc` bundle instead of modular parts. Load order now matches zsh override semantics.
+Same portable stack as zsh. Preset hooks via `source_environment_shell bash` → `environments/omarchy/bash.sh` (modular `source_omarchy` parts, or fallback to Omarchy `rc` files).
 
 ```mermaid
 flowchart TD
     A["1. env.sh"] --> B["2. direnv hook bash"]
-    B --> C["3. Omarchy rc"]
-    C --> C1["envs"]
-    C1 --> C2["shell"]
-    C2 --> C3["aliases"]
-    C3 --> C4["functions<br/>ga/gd worktrees"]
-    C4 --> C5["init<br/>mise, starship, zoxide, fzf bash"]
-    C5 --> C6["completions + inputrc"]
-    C6 --> D["4. functions.sh"]
+    B --> C["3. source_environment_shell bash<br/>environments/omarchy/bash.sh"]
+    C --> C1["shell"]
+    C1 --> C2["aliases"]
+    C2 --> C3["functions<br/>ga/gd worktrees"]
+    C3 --> C4["init<br/>mise, starship, zoxide, fzf bash"]
+    C4 --> C5["inputrc"]
+    C5 --> D["4. functions.sh"]
     D --> E["5. aliases.sh + personal.sh"]
     E --> E2["6. mamba shell hook bash"]
     E2 --> F["7. bash history opts"]
@@ -371,22 +363,23 @@ Omarchy functions like `ga()` load **before** `aliases.sh`, so bash does not hit
 
 ---
 
-## Omarchy integration: zsh vs bash
+## Environment presets: zsh vs bash
+
+Both shells use the same rc template shape: `env.sh` → `direnv` → `source_environment_shell` → `functions.sh` → `aliases.sh`. Omarchy differences live in `environments/omarchy/{zsh,bash}.sh`.
 
 ```mermaid
 flowchart LR
-    subgraph zsh_mode["zsh — modular"]
+    subgraph zsh_mode["zsh — environments/omarchy/zsh.sh"]
         z1["env.sh"] --> z2["direnv"]
-        z2 --> z3["aliases"]
-        z3 --> z4["functions"]
-        z4 --> z5["functions.sh"]
-        z5 --> z6["aliases.sh"]
-        z6 --> z7["tool inits in .zshrc"]
+        z2 --> z3["aliases + functions<br/>(modular source_omarchy)"]
+        z3 --> z4["functions.sh"]
+        z4 --> z5["aliases.sh"]
+        z5 --> z6["tool inits in .zshrc"]
     end
 
-    subgraph bash_mode["bash — rc bundle"]
+    subgraph bash_mode["bash — environments/omarchy/bash.sh"]
         b1["env.sh"] --> b2["direnv"]
-        b2 --> b3["rc → envs, shell, aliases, functions, init"]
+        b2 --> b3["shell, aliases, functions, init"]
         b3 --> b4["functions.sh"]
         b4 --> b5["aliases.sh"]
         b5 --> b6["hist opts"]
@@ -395,12 +388,13 @@ flowchart LR
 
 | Concern | zsh | bash |
 |---------|-----|------|
-| Omarchy envs | via `env.sh` only | via `env.sh` + rc (harmless duplicate) |
+| Preset env exports | `env.sh` → `environments/omarchy/env.sh` | same |
+| Omarchy interactive hooks | `environments/omarchy/zsh.sh` (aliases + functions) | `environments/omarchy/bash.sh` (shell + aliases + functions + init) |
 | `ga` worktree fn | Omarchy functions | Omarchy functions (safe order) |
 | `ff` | fastfetch (`aliases.sh` wins) | fastfetch (`aliases.sh` wins) |
-| mise / starship | `.zshrc` | Omarchy `init` inside rc |
+| mise / starship | `.zshrc` | Omarchy `init` inside `environments/omarchy/bash.sh` |
 | thefuck | `.zshrc` only | not loaded |
-| direnv | after `env.sh` | after `env.sh` |
+| direnv | after `env.sh` (requires direnv) | after `env.sh` (requires direnv) |
 
 ---
 
@@ -470,7 +464,7 @@ Fish gets PATH/exports, direnv, `functions.sh`, thefuck, Omarchy aliases, and wo
 
 `bin/migrate.sh` generates login-layer dotfiles when they are **missing** or already **managed** (marker comment present). Hand-edited login files are preserved unless you pass `--force-rc`.
 
-Without these, login shells may miss early PATH, GPG agent, cargo, or vite-plus setup. Templates use conditional `[ -f … ] && . …` for optional loaders (cargo, vite-plus).
+Without these, login shells may miss early PATH or GPG agent setup. Cargo and vite-plus load from `core/env.sh` (vite-plus) — login templates stay minimal.
 
 **`~/.zprofile`** — login zsh only; early PATH via portable env:
 
@@ -484,20 +478,15 @@ Without these, login shells may miss early PATH, GPG agent, cargo, or vite-plus 
 ```bash
 # Managed by ~/.config/shell/bin/migrate.sh
 export SHELL=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 ```
 
-**`~/.profile`** — POSIX login (GPG, env, cargo, vite-plus):
+**`~/.profile`** — POSIX login (GPG + portable env):
 
 ```bash
 # Managed by ~/.config/shell/bin/migrate.sh
-[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 export GPG_TTY=$(tty)
 gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
 [ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-[ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 ```
 
 **`~/.bash_profile`** — login bash; sources interactive rc then vite-plus:
@@ -533,9 +522,10 @@ Re-running `bin/migrate.sh`:
 | Login dotfiles (`~/.zprofile`, `~/.profile`, `~/.bash_profile`, `~/.zshenv`) | **Generated** when missing or managed; **skipped** if hand-edited |
 | `~/.config/starship.toml` | **Copied** from `starship.ex.toml` when absent; existing file preserved |
 | `--force-rc` | Overwrites managed rc and login dotfiles even when hand-edited |
+| `--sync-rc` | Refreshes managed rc/login dotfiles that already have the migrate marker (no `--force-rc` needed) |
 | Dotfile backups | Written to `backups/TIMESTAMP/` (gitignored) with `revert.sh` |
 | `completions/` | Empty placeholder directory created; reserved for future shell completions |
-| Package installs (Arch) | Tries `paru -S yazi thefuck` when missing; warns on failure |
+| Package installs (Arch) | Tries `paru -S yazi thefuck procs difftastic` when missing; warns on failure |
 | Git | `git init` + initial commit if `~/.config/shell/.git` absent; `git add -A` + commit on every run (no-op if clean) |
 
 Managed rc files include the marker comment `Managed by ~/.config/shell/bin/migrate.sh`. Edit `~/.config/shell/*` modules for day-to-day changes; use `--force-rc` when you intentionally want template updates in rc files.

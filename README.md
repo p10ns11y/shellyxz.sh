@@ -20,10 +20,10 @@ Use this path on a **new machine** or after cloning the repo. Existing setups ca
 
 | Requirement | Why |
 |-------------|-----|
-| **Omarchy** at `~/.local/share/omarchy` | `ga`/`gd` worktree helpers, alias layer, bash `rc` bundle |
-| **direnv** (recommended) | Managed rc templates guard `direnv hook` with `command -v direnv` (fish: `type -q`). zsh uses a shell-aware hook when sourcing `.zshrc` from bash |
-| **fish + bass** (fish only) | Fish loads portable modules via the bass plugin; without bass, env/aliases fail silently (`or true`) |
-| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck procs difftastic` when missing; **other distros:** install those manually — see [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros) |
+| **Environment preset** (`environment` or `SHELL_ENVIRONMENT`) | `generic` for containers/VPS/CI; `omarchy` for Omarchy desktop (auto-detected when `~/.local/share/omarchy` exists) |
+| **direnv** (recommended) | Managed rc templates use direnv hooks |
+| **fish + bass** (fish only) | Fish loads portable modules via the bass plugin |
+| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck procs difftastic` when missing; **other distros:** install manually |
 
 ### First install
 
@@ -44,11 +44,16 @@ git clone git@github.com:p10ns11y/shellyxz.sh.git ~/.config/shell
 # 2. Run migration (backs up dotfiles, generates rc + login templates)
 ~/.config/shell/bin/migrate.sh
 
-# 3. Optional: secrets (personal.sh ships from repo; edit for your machine)
-mkdir -p ~/.config/secrets
-# add API keys to ~/.config/secrets/dev.env (loaded by personal.sh)
+# 3. Optional: pin preset (default: auto-detect omarchy or generic)
+cp ~/.config/shell/environment.example ~/.config/shell/environment
+# edit environment: SHELL_ENVIRONMENT=generic   # containers / CI
+# or:                SHELL_ENVIRONMENT=omarchy  # Omarchy desktop
 
-# 4. Reload and verify
+# 4. Optional: secrets (local/personal.sh loads ~/.config/secrets/dev.env)
+mkdir -p ~/.config/secrets
+# add API keys to ~/.config/secrets/dev.env
+
+# 5. Reload and verify
 source ~/.zshrc                            # or: source ~/.bashrc
 git config --global include.path ~/.config/git/verification   # enable delta (lazygit + git pager)
 ~/.config/shell/bin/check-shell.sh
@@ -73,38 +78,46 @@ git config --global include.path ~/.config/git/verification   # enable delta (la
 
 ## Philosophy
 
-- **Minimal duplication** across shells
-- **Single source of truth** for environment and aliases
-- **Respect Omarchy** as your personal base layer
+- **Core + environments** — distro-agnostic `core/` with opt-in `environments/` (Omarchy, generic, custom)
+- **Single source of truth** — `templates/` for migrate; `core/` is canonical
 - **Easy to maintain** long-term
 - **Git tracked** for history and easy syncing across machines
+
+### Containers / VPS (no Omarchy)
+
+```bash
+export SHELL_ENVIRONMENT=generic
+source ~/.config/shell/env.sh
+```
+
+Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 
 ## Directory Structure
 
 ```
 ~/.config/shell/
-├── README.md
-├── VERIFICATION.md           # Agent verification cockpit workflow
-├── human-in-the-loop-workflow.md  # Drills, cockpit tour, messy-diff triage
-├── shell.md                    # Load-order reference and architecture
-├── SHELL-env-var-behavior.md   # Why $SHELL lies; truth seeker; Ghostty gtk-single-instance
-├── starship.ex.toml            # Example Starship config (copy to ~/.config/starship.toml)
-├── tmux.verify.conf.ex         # tmux verify overlay (→ ~/.config/tmux/verify.conf)
-├── yazi.ex.toml                # yazi defaults (→ ~/.config/yazi/yazi.toml)
-├── git.ex.config               # git delta snippet (→ ~/.config/git/verification)
-├── lib.sh              # Safe sourcing helpers (Omarchy, secrets, permissions)
-├── env.sh              # Portable PATH + environment variables
-├── aliases.sh          # Generic aliases + personal.sh chain (bash)
-├── personal.sh         # Your work/personal specific aliases
-├── functions.sh        # Custom functions (bash)
+├── environment.example   # Copy → environment (optional pin; omit for auto-detect)
+├── core/                 # Distro-agnostic (always loaded)
+│   ├── lib.sh            # source_environments, secrets, safety
+│   ├── path.sh           # path_prepend, path_dedupe, path_promote
+│   ├── env.sh            # PATH manifest + environment loader
+│   ├── aliases.sh
+│   └── functions.sh
+├── environments/         # Opt-in per machine (see environments/README.md)
+│   ├── generic/          # No-op stubs (containers / VPS / CI)
+│   └── omarchy/          # Omarchy desktop integration
+├── local/
+│   └── personal.sh       # Secrets + work aliases (local overlay)
+├── templates/            # Canonical dotfiles for migrate.sh
+├── env.sh, lib.sh, …     # Thin shims → core/
 ├── bin/
-│   ├── README.md           # Detailed usage for every script in bin/
-│   ├── migrate.sh      # Master migration / setup script
-│   ├── check-shell.sh  # Load order, shellcheck, reserved names
-│   ├── recover-shell.sh # Nuclear recovery when rc files break
-│   ├── agent-verify-layout.sh  # tmux verification cockpit
-│   └── fzf-preview.sh  # fzf bat preview (internal)
-└── backups/            # Created by migrate.sh (gitignored) — timestamped + revert.sh
+│   ├── migrate.sh        # Orchestrator (~80 lines)
+│   ├── lib/, tasks/      # Modular migrate implementation
+│   ├── check-shell.sh
+│   ├── check-template-sync.sh
+│   ├── scaffold-environment.sh
+│   └── …
+└── backups/              # gitignored
 ```
 
 `backups/` is empty in git; it appears after the first `bin/migrate.sh` run. Use `backups/<timestamp>/revert.sh` to roll back dotfiles.
@@ -113,11 +126,9 @@ git config --global include.path ~/.config/git/verification   # enable delta (la
 
 | File            | Purpose                                      | Edit Frequency | Notes |
 |-----------------|----------------------------------------------|----------------|-------|
-| `lib.sh`        | Safe loaders (Omarchy paths, secrets, permissions) | Rarely         | Sourced by env.sh and personal.sh |
-| `env.sh`        | PATH setup, exports, environment variables   | Rarely         | Sourced by all shells |
-| `aliases.sh`    | Generic useful aliases                       | Occasionally   | bash shebang; sourced by bash, zsh, fish (via bass) |
-| `personal.sh`   | Your work-specific aliases (agrepos, etc.)   | Frequently     | Chained from `aliases.sh` tail only |
-| `functions.sh`  | Custom shell functions (`path_debug`, `reload`) | Rarely      | bash shebang; sourced by bash + zsh rc files |
+| `core/env.sh`   | PATH, exports, environment loading          | Rarely         | Omarchy-agnostic |
+| `environments/*/` | OS / runtime overlays (desktop, container) | Per machine    | See `environments/README.md` |
+| `local/personal.sh` | Work aliases + secrets                   | Frequently     | Chained from `core/aliases.sh` |
 | `bin/migrate.sh`    | One-command setup / migration script         | Rarely         | Regenerates dotfiles; preserves existing modules |
 | `bin/check-shell.sh`| Load order, shellcheck, reserved names, zsh runtime checks | Never | `shellcheck` always; `--audit` adds secrets permissions |
 | `bin/recover-shell.sh` | Nuclear recovery when rc files break      | Never          | Works without sourcing broken rc files |
@@ -146,9 +157,9 @@ Deep dive on `$SHELL` inheritance vs truth seeker: [SHELL-env-var-behavior.md](S
 
 ## Shell files, switching, and workflow
 
-Your config lives in two layers:
+Your config lives in two tiers:
 
-| Layer | Where | What you edit day-to-day |
+| **Tier** | Where | What you edit day-to-day |
 |-------|--------|---------------------------|
 | **Portable modules** | `~/.config/shell/` (git) | `env.sh`, `aliases.sh`, `personal.sh`, `functions.sh` |
 | **Per-shell entrypoints** | `~/.zshrc`, `~/.bashrc`, fish config | Rarely — thin wrappers that `source` the modules |
@@ -254,7 +265,7 @@ You do **not** need to switch often. Pick one default (zsh) and stay there unles
 **Why:**
 - Ubiquitous — available on almost every Unix-like system
 - Required for many scripts and legacy tools
-- Shares the same `env.sh` and `aliases.sh` layer as zsh, with Omarchy loaded via its `rc` bundle
+- Shares the same `env.sh` and `aliases.sh` stack as zsh, with Omarchy loaded via `source_environment_shell bash` → `environments/omarchy/bash.sh`
 
 **When to use:**
 - Writing portable scripts
@@ -281,16 +292,16 @@ You do **not** need to switch often. Pick one default (zsh) and stay there unles
 
 ## How Sourcing Works
 
-Load order is consistent across bash and zsh: Omarchy loads **before** your layer so its functions (like `ga`) are defined first; `aliases.sh` loads **after** so your overrides win.
+Load order is consistent across bash and zsh: environment preset hooks load **before** `aliases.sh` so Omarchy functions (like `ga`) are defined first; `aliases.sh` loads **after** so your overrides win.
 
 ### zsh and bash
 
-1. `env.sh` — PATH, exports, Omarchy envs (`CONDA_CHANGEPS1=false` for Starship conda module)
-2. `direnv` hook — guarded with `command -v direnv`; zsh: zsh/bash-aware when sourced from bash
-3. Omarchy — modular parts in zsh (`aliases`, `functions`); monolithic `rc` in bash
+1. `env.sh` — PATH, exports, `source_environments` (`environments/<preset>/env.sh`; `CONDA_CHANGEPS1=false` for Starship conda module)
+2. `direnv` hook — **requires direnv installed**; zsh template uses zsh/bash-aware hook when sourced from bash
+3. `source_environment_shell zsh|bash` — interactive preset hooks (`environments/omarchy/{zsh,bash}.sh` when `SHELL_ENVIRONMENT=omarchy`)
 4. `functions.sh` — your custom functions
 5. `aliases.sh` — generic aliases
-6. `personal.sh` — chained at the tail of `aliases.sh`
+6. `local/personal.sh` — chained at the tail of `aliases.sh` (root `personal.sh` is a shim)
 7. Shell-native tool inits — **mamba** (when installed), then `mise`, `starship`, `zoxide`, etc.
 
 ### fish (best-effort)
@@ -325,7 +336,7 @@ Do not alias these — Omarchy owns them as functions:
 → Add to `~/.config/shell/aliases.sh`
 
 ### Work / Personal Specific
-→ Add to `~/.config/shell/personal.sh`
+→ Add to `~/.config/shell/local/personal.sh`
 
 ### API keys / secrets
 → `~/.config/secrets/dev.env` (outside git; loaded via `load_secrets_file` in `lib.sh` / `personal.sh`)
@@ -357,7 +368,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 - Script reference: [bin/README.md](bin/README.md) — migrate, check-shell, recover, agent-verify-layout, fzf-preview
 - Add `--audit` for extra permission checks (`dev.env` mode 600, `recover-shell.sh` executable, `lib.sh` present)
 - Run `~/.config/shell/bin/migrate.sh` to refresh **managed** rc files (`~/.zshrc`, `~/.bashrc`, fish config)
-- Hand-edited rc files (no managed marker) are **skipped** — use `bin/migrate.sh --force-rc` to overwrite
+- Hand-edited rc files (no managed marker) are **skipped** — use `bin/migrate.sh --sync-rc` to refresh managed files, or `--force-rc` to overwrite hand-edited ones
 - `bin/migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
@@ -374,7 +385,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 | Duplicate `(env)` on prompt | mamba changeps1 + Starship conda | `CONDA_CHANGEPS1=false` in env.sh; copy `starship.ex.toml`; `conda config --set changeps1 false` |
 | Still bash after `chsh` in Ghostty | gtk-single-instance stale process | `killall ghostty` then Super+Return (Omarchy owns ghostty config) |
 | `check-shell.sh` reports reserved-name violation | `alias ga=`, `alias gd=`, or `alias n=` added | Remove from `aliases.sh` / `personal.sh` |
-| Hand-edited rc not updating | migrate skips non-managed files | `bin/migrate.sh --force-rc` |
+| Hand-edited rc not updating | migrate skips non-managed files | `bin/migrate.sh --sync-rc` or `--force-rc` |
 | Fish missing aliases/PATH | bass not installed | Install bass plugin; or use zsh/bash |
 | `ga`/`gd` missing | Omarchy not at `~/.local/share/omarchy` | Install/sync Omarchy |
 | PATH differs in `zsh` vs `zsh -l` | login dotfiles missing | Run `bin/migrate.sh` (generates `~/.zprofile` when absent) |
