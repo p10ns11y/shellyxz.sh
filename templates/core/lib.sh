@@ -99,11 +99,6 @@ source_environment_shell() {
     unset _shell_part _shell_env _ef
 }
 
-# Deprecated aliases (layers/profile naming)
-resolve_shell_layers() { resolve_shell_environment; }
-source_layers() { source_environments; }
-source_layer_shell() { source_environment_shell "$@"; }
-
 omarchy_file() {
     _part="$1"
     _path="$OMARCHY_ROOT/default/bash/$_part"
