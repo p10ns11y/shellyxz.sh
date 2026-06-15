@@ -187,7 +187,7 @@ flowchart TD
 
 These overrides are **not** standard behavior. They are a deliberate local policy to make `$SHELL` reflect reality in your day-to-day use.
 
-See also: [shell.md — lib.sh helpers](shell.md#libsh-helpers), [README — Maintenance](README.md#maintenance).
+See also: [shell.md — lib.sh helpers](shell.md#libsh-helpers), [README — Maintenance](../README.md#maintenance).
 
 ---
 

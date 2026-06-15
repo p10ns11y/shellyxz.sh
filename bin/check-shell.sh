@@ -400,9 +400,9 @@ grep -q '^vf()' "$FUNCS_FILE" \
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
     && ok 'tmux.conf present' \
     || warn 'tmux.conf missing (run migrate.sh)'
-[[ -f "$CONFIG_DIR/VERIFICATION.md" ]] \
-    && ok 'VERIFICATION.md present' \
-    || warn 'VERIFICATION.md missing'
+[[ -f "$CONFIG_DIR/arch-design/VERIFICATION.md" ]] \
+    && ok 'arch-design/VERIFICATION.md present' \
+    || warn 'arch-design/VERIFICATION.md missing'
 [[ -f "$HOME/.config/nvim/lua/plugins/verification-workflow.lua" ]] \
     && ok 'nvim verification-workflow plugin' \
     || warn 'nvim verification-workflow plugin missing (optional)'

@@ -58,7 +58,7 @@ source ~/.zshrc                            # or: source ~/.bashrc
 git config --global include.path ~/.config/git/verification   # enable delta (lazygit + git pager)
 ~/.config/shell/bin/check-shell.sh
 
-# Verification aliases (after procs/difftastic installed): ps, gdf, gdfs — see VERIFICATION.md
+# Verification aliases (after procs/difftastic installed): ps, gdf, gdfs — see arch-design/VERIFICATION.md
 # Starship: migrate copies starship.ex.toml → ~/.config/starship.toml when absent
 # Mamba/conda: env.sh sets CONDA_CHANGEPS1=false; Starship [conda] module shows (env) inline
 ```
@@ -96,6 +96,8 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 
 ```
 ~/.config/shell/
+├── arch-design/          # Architecture & design docs (shell.md, VERIFICATION, …)
+│   └── README.md         # Index of design docs
 ├── environment.example   # Copy → environment (optional pin; omit for auto-detect)
 ├── core/                 # Distro-agnostic (always loaded)
 │   ├── lib.sh            # source_environments, secrets, safety
@@ -146,7 +148,7 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 
 ### `lib.sh` and secrets (summary)
 
-See [shell.md — lib.sh helpers](shell.md#libsh-helpers) for the full API.
+See [arch-design/shell.md — lib.sh helpers](arch-design/shell.md#libsh-helpers) for the full API.
 
 | Concern | Mechanism |
 |---------|-----------|
@@ -155,7 +157,7 @@ See [shell.md — lib.sh helpers](shell.md#libsh-helpers) for the full API.
 | Secrets | `load_secrets_file` on `~/.config/secrets/dev.env` (mode **600**, `KEY=value` only) |
 | `$SHELL` accuracy | `shell_truth_seeker` in `env.sh` (default on); `SHELL_TRUTH_SEEKER=0` to keep inherited value |
 
-Deep dive on `$SHELL` inheritance vs truth seeker: [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md).
+Deep dive on `$SHELL` inheritance vs truth seeker: [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md).
 
 ## Shell files, switching, and workflow
 
@@ -166,7 +168,7 @@ Your config lives in two tiers:
 | **Portable modules** | `~/.config/shell/` (git) | `env.sh`, `aliases.sh`, `personal.sh`, `functions.sh` |
 | **Per-shell entrypoints** | `~/.zshrc`, `~/.bashrc`, fish config | Rarely — thin wrappers that `source` the modules |
 
-The rc/profile files in `$HOME` are **not** the source of truth. They only wire each shell into `~/.config/shell/`. See [shell.md — Startup files](shell.md#startup-files-what-rc-profile-mean) for the full load-order map.
+The rc/profile files in `$HOME` are **not** the source of truth. They only wire each shell into `~/.config/shell/`. See [arch-design/shell.md — Startup files](arch-design/shell.md#startup-files-what-rc-profile-mean) for the full load-order map.
 
 ### Quick glossary
 
@@ -192,7 +194,7 @@ chsh -s /usr/bin/zsh    # or /usr/bin/bash, /usr/bin/fish
 
 After `chsh`, **log out and back in** (or `exec /usr/bin/zsh -l` in the current tab). Ghostty uses your login shell from passwd; with `gtk-single-instance`, run `killall ghostty` after `chsh` so new windows pick it up (closing windows is not enough). Do not edit `~/.config/ghostty/config` for shell choice — Omarchy maintains it.
 
-**`$SHELL` before config loads** is often stale (inherited from when the terminal tab opened). After `source ~/.zshrc`, `shell_truth_seeker` in `env.sh` sets `$SHELL` to the live interpreter by default. Use `shell_debug`, `echo $0`, or `ps -p $$` when debugging — see [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md).
+**`$SHELL` before config loads** is often stale (inherited from when the terminal tab opened). After `source ~/.zshrc`, `shell_truth_seeker` in `env.sh` sets `$SHELL` to the live interpreter by default. Use `shell_debug`, `echo $0`, or `ps -p $$` when debugging — see [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md).
 
 **Try another shell temporarily** (leaves default unchanged):
 
@@ -374,10 +376,11 @@ source ~/.zshrc   # or: source ~/.bashrc
 - `bin/migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
-- See [shell.md](shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
-- See [VERIFICATION.md](VERIFICATION.md) for agent verification cockpit (`av`, tmux layout, nvim Telescope keymaps, `ps`/`gdf`/`gdfs`, delta via git include)
-- See [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) for repeatable rituals, cockpit tour, and messy agent-diff triage
-- See [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
+- See [arch-design/README.md](arch-design/README.md) for the architecture & design doc index
+- See [arch-design/shell.md](arch-design/shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
+- See [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) for agent verification cockpit (`av`, tmux layout, nvim Telescope keymaps, `ps`/`gdf`/`gdfs`, delta via git include)
+- See [arch-design/human-in-the-loop-workflow.md](arch-design/human-in-the-loop-workflow.md) for repeatable rituals, cockpit tour, and messy agent-diff triage
+- See [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
 
 ## Troubleshooting
 
@@ -393,7 +396,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 | PATH differs in `zsh` vs `zsh -l` | login dotfiles missing | Run `bin/migrate.sh` (generates `~/.zprofile` when absent) |
 | `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
 | All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
-| `agent_verify` refuses in Cursor | editor terminal guard | Use Ghostty/tmux (`t` or Super+Alt+Return); see [VERIFICATION.md](VERIFICATION.md) |
+| `agent_verify` refuses in Cursor | editor terminal guard | Use Ghostty/tmux (`t` or Super+Alt+Return); see [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) |
 | Plain git/lazygit diffs (no color) | `include.path` not set | `git config --global include.path ~/.config/git/verification` |
 | `gdf`/`gdfs` unknown | difftastic not on PATH | `paru -S difftastic` (Arch) or install `difft`; `source ~/.zshrc` |
 

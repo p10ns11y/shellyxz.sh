@@ -2,7 +2,7 @@
 
 Executable helpers for **setup**, **verification**, and **recovery** of `~/.config/shell/`. Run from a working shell unless noted; paths assume `$HOME/.config/shell`.
 
-See also: [README.md](../README.md) (overview), [VERIFICATION.md](../VERIFICATION.md) (cockpit workflow), [human-in-the-loop-workflow.md](../human-in-the-loop-workflow.md) (repeatable drills), [shell.md](../shell.md) (load order).
+See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design/VERIFICATION.md) (cockpit workflow), [human-in-the-loop-workflow.md](../arch-design/human-in-the-loop-workflow.md) (repeatable drills), [shell.md](../arch-design/shell.md) (load order).
 
 ---
 
@@ -30,7 +30,7 @@ git config --global include.path ~/.config/git/verification   # if migrate did n
 ~/.config/shell/bin/check-shell.sh
 ```
 
-Includes verification assets (`agent-verify-layout.sh`, `fzf-preview.sh`, `VERIFICATION.md`, example configs).
+Includes verification assets (`agent-verify-layout.sh`, `fzf-preview.sh`, `arch-design/VERIFICATION.md`, example configs).
 
 ### Path B — curl one-liner (bootstrap)
 
@@ -84,7 +84,7 @@ SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/ma
 
 **Preserves:** existing `env.sh`, `aliases.sh`, `functions.sh`, hand-edited rc files (without `--force-rc`), existing `starship.toml`, tmux/yazi/git configs.
 
-**Arch note:** tries `paru -S yazi thefuck procs difftastic` when `paru` exists; fails softly otherwise. **Other distros:** install those packages manually — see [human-in-the-loop-workflow.md](../human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros).
+**Arch note:** tries `paru -S yazi thefuck procs difftastic` when `paru` exists; fails softly otherwise. **Other distros:** install those packages manually — see [human-in-the-loop-workflow.md](../arch-design/human-in-the-loop-workflow.md#platform-note-arch-vs-other-distros).
 
 **Git delta:** migrate copies `git.ex.config` → `~/.config/git/verification` and sets `git config --global include.path` when not already configured. Re-run manually if needed:
 
@@ -121,7 +121,7 @@ git config --global include.path ~/.config/git/verification
 - Omarchy before `aliases.sh` in bash/zsh rc
 - Reserved names (`ga`, `n`; runtime `gd` in zsh)
 - Login dotfiles delegate to `env.sh`
-- Verification: `FZF_DEFAULT_OPTS`, `agent_verify`, `vf`, `agent-verify-layout.sh`, `tmux.conf`, `VERIFICATION.md`
+- Verification: `FZF_DEFAULT_OPTS`, `agent_verify`, `vf`, `agent-verify-layout.sh`, `tmux.conf`, `arch-design/VERIFICATION.md`
 - Git delta: `include.path` when `~/.config/git/verification` exists; `delta`, `procs`, `difft` on PATH (warn if missing)
 - Optional nvim `verification-workflow.lua` (warn if missing)
 - fish: direnv, `functions.sh`, fzf, thefuck
@@ -155,7 +155,7 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 ## agent-verify-layout.sh
 
-**Purpose:** Create or focus the **verify** tmux window (lazygit + yazi + btop cockpit). See [VERIFICATION.md](../VERIFICATION.md).
+**Purpose:** Create or focus the **verify** tmux window (lazygit + yazi + btop cockpit). See [VERIFICATION.md](../arch-design/VERIFICATION.md).
 
 ```bash
 ~/.config/shell/bin/agent-verify-layout.sh [directory]
@@ -251,7 +251,7 @@ Files fetched by `bootstrap_from_remote()` when missing (authoritative list in `
 | **Environments** | `environments/{generic,omarchy}/*`, `environment.example`, `environments/README.md` |
 | **Templates** | `templates/{zshrc,bashrc,fish.config.fish,login/*,core/*}` |
 | **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-verify-layout.sh` |
-| **Docs & examples** | `README.md`, `shell.md`, `VERIFICATION.md`, `SHELL-env-var-behavior.md`, `starship.ex.toml`, `yazi.ex.toml`, `git.ex.config`, `.gitignore` |
+| **Docs & examples** | `README.md`, `arch-design/{shell,VERIFICATION,SHELL-env-var-behavior}.md`, `starship.ex.toml`, `yazi.ex.toml`, `git.ex.config`, `.gitignore` |
 | **Local** | `local/personal.sh` |
 
 Files already present are never overwritten.

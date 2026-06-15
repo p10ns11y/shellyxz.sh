@@ -250,5 +250,5 @@ Agent finished → Ghostty → t → z → av (spatial)
 ## Related docs
 
 - [VERIFICATION.md](VERIFICATION.md) — philosophy, keys, toolchain setup
-- [bin/README.md](bin/README.md) — migrate, check-shell, agent-verify-layout
+- [bin/README.md](../bin/README.md) — migrate, check-shell, agent-verify-layout
 - [shell.md](shell.md) — load order

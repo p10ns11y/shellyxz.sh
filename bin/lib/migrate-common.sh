@@ -82,8 +82,9 @@ bootstrap_from_remote() {
         bin/check-shell.sh bin/check-template-sync.sh bin/scaffold-environment.sh
         bin/recover-shell.sh bin/README.md
         bin/agent-verify-layout.sh bin/fzf-preview.sh
-        environments/README.md
-        README.md shell.md SHELL-env-var-behavior.md VERIFICATION.md
+        environments/README.md arch-design/README.md
+        README.md arch-design/shell.md arch-design/SHELL-env-var-behavior.md
+        arch-design/VERIFICATION.md arch-design/human-in-the-loop-workflow.md
         starship.ex.toml tmux.verify.conf.ex yazi.ex.toml git.ex.config .gitignore
     )
 

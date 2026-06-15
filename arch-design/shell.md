@@ -2,9 +2,9 @@
 
 How `~/.config/shell/` composes portable core, environment presets, Omarchy, and shell-native tooling across **zsh**, **bash**, and **fish**.
 
-For day-to-day editing guidance see [README.md](README.md). This document is the **accurate load-order reference** — verified against live dotfiles and `bin/migrate.sh`.
+For day-to-day editing guidance see [README.md](../README.md). This document is the **accurate load-order reference** — verified against live dotfiles and `bin/migrate.sh`.
 
-**Prerequisites:** optional `environment` or `SHELL_ENVIRONMENT`, direnv (recommended), bass (fish only). Omarchy is **optional** — enable via `environments/omarchy/`. See [environments/README.md](environments/README.md).
+**Prerequisites:** optional `environment` or `SHELL_ENVIRONMENT`, direnv (recommended), bass (fish only). Omarchy is **optional** — enable via `environments/omarchy/`. See [environments/README.md](../environments/README.md).
 
 Not to be confused with `~/.profile` (POSIX login) or `templates/login/profile`.
 
@@ -212,7 +212,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | `bin/agent-verify-layout.sh` | tmux verification cockpit layout | `av` / Prefix+V |
 | `bin/fzf-preview.sh` | fzf preview helper (files + Ctrl+R history) | via `FZF_CTRL_T_OPTS` / `FZF_CTRL_R_OPTS` in `env.sh` |
 | `git.ex.config` | delta snippet → `~/.config/git/verification`; enable with `git config --global include.path …` | migrate copy-when-absent |
-| [bin/README.md](bin/README.md) | Detailed usage for every script in `bin/` | reference |
+| [bin/README.md](../bin/README.md) | Detailed usage for every script in `bin/` | reference |
 
 ### `lib.sh` helpers
 
@@ -280,7 +280,7 @@ flowchart LR
 
 ### PATH contract
 
-Single source of truth for managed PATH segments. Machine-readable list: [`core/path.contract`](core/path.contract) (validated by `bin/check-shell.sh`).
+Single source of truth for managed PATH segments. Machine-readable list: [`core/path.contract`](../core/path.contract) (validated by `bin/check-shell.sh`).
 
 **Rules:** `path_prepend` / `path_append` in `core/path.sh` skip work when a segment is absent or already at the target position; otherwise remove-then-add. Build order in `core/env.sh` runs low → high; **`which` uses first match** (table below is resolution order after vite+ hook + post `$HOME/bin` re-assert). Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do **not** source `~/.cargo/env` or `~/.local/bin/env`.
 
@@ -637,13 +637,13 @@ flowchart LR
 
 | Path | Purpose |
 |------|---------|
-| [README.md](README.md) | Philosophy, switching shells, where to add aliases, maintenance |
-| [env.sh](env.sh) | Portable environment |
-| [aliases.sh](aliases.sh) | Shared aliases + `personal.sh` chain |
-| [personal.sh](personal.sh) | Work-specific shortcuts |
-| [functions.sh](functions.sh) | Custom functions |
-| [bin/migrate.sh](bin/migrate.sh) | Setup script and dotfile templates |
-| [lib.sh](lib.sh) | Safe sourcing helpers |
-| [bin/recover-shell.sh](bin/recover-shell.sh) | Nuclear recovery |
-| [bin/check-shell.sh](bin/check-shell.sh) | Load-order + shellcheck verification |
+| [README.md](../README.md) | Philosophy, switching shells, where to add aliases, maintenance |
+| [env.sh](../env.sh) | Portable environment |
+| [aliases.sh](../aliases.sh) | Shared aliases + `personal.sh` chain |
+| [personal.sh](../personal.sh) | Work-specific shortcuts |
+| [functions.sh](../functions.sh) | Custom functions |
+| [bin/migrate.sh](../bin/migrate.sh) | Setup script and dotfile templates |
+| [lib.sh](../lib.sh) | Safe sourcing helpers |
+| [bin/recover-shell.sh](../bin/recover-shell.sh) | Nuclear recovery |
+| [bin/check-shell.sh](../bin/check-shell.sh) | Load-order + shellcheck verification |
 | [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) | Why `$SHELL` is stale before config load; truth seeker overrides |

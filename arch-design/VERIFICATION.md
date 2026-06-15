@@ -2,7 +2,7 @@
 
 Human-in-the-loop verification cockpit for agent output. Goal: **insight + action in under 10 seconds** after an agent finishes.
 
-See [README.md](README.md) for shell setup; [shell.md](shell.md) for load order. **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
+See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load order. **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
 
 ---
 
@@ -164,7 +164,7 @@ Aliases are **guarded** (`command -v`); once packages are installed they activat
 git config --global include.path ~/.config/git/verification
 ```
 
-`delta` is expected on `PATH` (`~/.cargo/bin` via `env.sh`, or `pacman -S git-delta`). See [git.ex.config](git.ex.config).
+`delta` is expected on `PATH` (`~/.cargo/bin` via `env.sh`, or `pacman -S git-delta`). See [git.ex.config](../git.ex.config).
 
 **Optional extras**
 
