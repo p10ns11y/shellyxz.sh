@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# ~/.config/shell/local/overwrite.sh
+# Machine-specific PATH / export overrides — copy to overwrite.sh and edit.
+#
+# Sourced once at end of core/env.sh (after vite-plus). Use for rare tweaks only;
+# prefer environments/<preset>/env.sh for preset-wide changes.
+
+# Example: drop a broken conda segment left by an old install
+# case ":$PATH:" in *:/condabin:*) PATH=$(printf '%s' "$PATH" | sed 's|:/condabin||g;s|^/condabin:||;s|^/condabin$||'); export PATH ;; esac
+
+# Example: collapse a non-canonical alias path (only if you actually have it)
+# path_prepend "$HOME/.local/bin"   # re-assert after fixing alias spelling elsewhere

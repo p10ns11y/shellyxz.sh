@@ -5,6 +5,14 @@ set -euo pipefail
 
 CONFIG_DIR="${HOME}/.config/shell"
 AUDIT=false
+ENV_FILE="$CONFIG_DIR/core/env.sh"
+[[ -f "$ENV_FILE" ]] || ENV_FILE="$CONFIG_DIR/env.sh"
+FUNCS_FILE="$CONFIG_DIR/core/functions.sh"
+[[ -f "$FUNCS_FILE" ]] || FUNCS_FILE="$CONFIG_DIR/functions.sh"
+ALIASES_FILE="$CONFIG_DIR/core/aliases.sh"
+[[ -f "$ALIASES_FILE" ]] || ALIASES_FILE="$CONFIG_DIR/aliases.sh"
+LIB_FILE="$CONFIG_DIR/core/lib.sh"
+[[ -f "$LIB_FILE" ]] || LIB_FILE="$CONFIG_DIR/lib.sh"
 for arg in "$@"; do
     case "$arg" in
         --audit) AUDIT=true ;;
@@ -22,8 +30,15 @@ fail() { echo "ERROR: $1"; errors=$((errors + 1)); }
 warn() { echo "WARN:  $1"; warnings=$((warnings + 1)); }
 ok()   { echo "OK:   $1"; }
 
+# Avoid rg-as-grep alias breaking -E patterns (common on Omarchy)
+if command -v grep >/dev/null 2>&1 && grep --version 2>/dev/null | head -1 | grep -qi gnu; then
+    GREP=(grep)
+else
+    GREP=(command grep)
+fi
+
 line_number() {
-    grep -nE "$2" "$1" 2>/dev/null | head -1 | cut -d: -f1
+    "${GREP[@]}" -nE "$2" "$1" 2>/dev/null | head -1 | cut -d: -f1 || true
 }
 
 check_order() {
@@ -63,28 +78,33 @@ else
     warn 'missing ~/.config/secrets/dev.env (optional)'
 fi
 
-# lib.sh wired into env.sh; personal.sh must not use set -a for secrets
-if grep -q 'lib.sh' "$CONFIG_DIR/env.sh" 2>/dev/null; then
-    ok 'env.sh sources lib.sh'
+# lib wired into env; personal must not use set -a
+if grep -q 'lib.sh' "$ENV_FILE" 2>/dev/null || grep -q 'core/lib.sh' "$CONFIG_DIR/env.sh" 2>/dev/null; then
+    ok 'env sources lib.sh'
 else
-    warn 'env.sh does not source lib.sh'
+    warn 'env does not source lib.sh'
 fi
-if grep -qE '^[[:space:]]*set[[:space:]]+-a' "$CONFIG_DIR/personal.sh" 2>/dev/null; then
+_personal="$CONFIG_DIR/local/personal.sh"
+[[ -f "$_personal" ]] || _personal="$CONFIG_DIR/personal.sh"
+if grep -qE '^[[:space:]]*set[[:space:]]+-a' "$_personal" 2>/dev/null; then
     fail 'personal.sh uses set -a for secrets (use load_secrets_file in lib.sh)'
 else
     ok 'personal.sh does not use set -a'
 fi
-if grep -vE '^[[:space:]]*#' "$CONFIG_DIR/env.sh" 2>/dev/null | grep -q '\.\./bin'; then
-    fail 'env.sh contains ../bin path (use ~/.local/bin/env)'
+if grep -vE '^[[:space:]]*#|_local_alias|path_drop' "$ENV_FILE" 2>/dev/null | grep -q '\.\./bin'; then
+    fail 'env contains ../bin PATH (use ~/.local/bin)'
 else
-    ok 'env.sh uses explicit ~/.local/bin/env path'
+    ok 'env has no ../bin PATH entries'
 fi
 
-# Bash: Omarchy rc before aliases.sh (source lines only)
-check_order "$HOME/.bashrc" 'source.*omarchy/default/bash/rc' 'source.*aliases\.sh' 'bash Omarchy before aliases'
-
-# Zsh: Omarchy functions before aliases.sh (source lines only)
-check_order "$HOME/.zshrc" 'source.*omarchy/default/bash/functions' 'source.*aliases\.sh' 'zsh Omarchy functions before aliases'
+# Environment hooks before aliases in rc files
+_env_hook_pat='(source_environment_shell|source_layer_shell|source_omarchy|omarchy/)'
+check_order "$HOME/.bashrc" "$_env_hook_pat" 'aliases\.sh' 'bash environment before aliases'
+check_order "$HOME/.zshrc" "$_env_hook_pat" 'aliases\.sh' 'zsh environment before aliases'
+if "${GREP[@]}" -q 'source_layer_shell' "$HOME/.zshrc" 2>/dev/null \
+    || "${GREP[@]}" -q 'source_layer_shell' "$HOME/.bashrc" 2>/dev/null; then
+    warn 'rc still uses removed source_layer_shell — run: ~/.config/shell/bin/migrate.sh --sync-rc'
+fi
 
 # Login shell identity + current process reality check
 u="${USER:-$(id -un 2>/dev/null || whoami)}"
@@ -144,10 +164,10 @@ else
     fi
 fi
 
-# personal.sh chained from aliases.sh
-grep -q 'personal.sh' "$CONFIG_DIR/aliases.sh" \
-    && ok 'personal.sh chained from aliases.sh' \
-    || fail 'aliases.sh does not source personal.sh'
+# personal chained from aliases
+grep -qE 'personal\.sh|local/personal' "$ALIASES_FILE" \
+    && ok 'personal overlay chained from aliases' \
+    || fail 'aliases does not source personal overlay'
 
 # Never alias ga or n (ignore comment-only lines)
 for reserved in ga n; do
@@ -159,13 +179,19 @@ for reserved in ga n; do
 done
 
 # Runtime verification that reserved names resolve to Omarchy functions in zsh
-# (catches cases where tool inits/direnv/personal set aliases after the early guard)
+# Skip in editor terminals (Omarchy hooks may be reduced; not a config defect)
 if command -v zsh &>/dev/null; then
+    _zsh_rt_env=()
+    if [[ -n "${CURSOR_AGENT:-}" || "${TERM_PROGRAM:-}" == *[Cc]ursor* ]]; then
+        _zsh_rt_env=(SHELL_IN_EDITOR_TERMINAL=yes)
+    fi
     for r in n ga gd; do
-        if zsh -ic "type -w $r 2>/dev/null" 2>/dev/null | grep -q ': function'; then
+        if env "${_zsh_rt_env[@]}" zsh -ic "type -w $r 2>/dev/null" 2>/dev/null | "${GREP[@]}" -q ': function'; then
             ok "zsh runtime: ${r} is function (Omarchy reserved, reload-safe)"
+        elif [[ ${#_zsh_rt_env[@]} -gt 0 ]]; then
+            ok "zsh runtime: ${r} skipped (editor terminal)"
         else
-            warn "zsh runtime: ${r} did not resolve to function (may be aliased)"
+            warn "zsh runtime: ${r} did not resolve to function (run migrate.sh --sync-rc?)"
         fi
     done
 fi
@@ -178,12 +204,33 @@ grep -q 'functions.sh' "$HOME/.zshrc" \
     && ok 'functions.sh sourced in zsh' \
     || warn 'functions.sh not sourced in ~/.zshrc'
 
-# migrate.sh should not overwrite existing modules
-for module in env.sh aliases.sh functions.sh; do
-    grep -q "Keeping existing $module" "$CONFIG_DIR/bin/migrate.sh" \
-        && ok "migrate.sh preserves existing $module" \
-        || warn "migrate.sh may overwrite $module on rerun"
-done
+# migrate preserves core modules
+if grep -q 'install_if_missing' "$CONFIG_DIR/bin/tasks/install-modules.sh" 2>/dev/null; then
+    ok 'migrate uses install_if_missing (preserves existing modules)'
+else
+    warn 'migrate may overwrite modules on rerun'
+fi
+
+grep -q -- '--force-rc' "$CONFIG_DIR/bin/migrate.sh" \
+    && ok 'migrate.sh supports --force-rc' \
+    || warn 'migrate.sh missing --force-rc flag'
+
+# Modular layout
+[[ -f "$CONFIG_DIR/core/env.sh" ]] && ok 'core/env.sh present' || warn 'core/env.sh missing'
+[[ -f "$CONFIG_DIR/environments/generic/env.sh" ]] && ok 'environments/generic present' || warn 'environments/generic missing'
+[[ -f "$CONFIG_DIR/environments/omarchy/env.sh" ]] && ok 'environments/omarchy present' || warn 'environments/omarchy missing'
+grep -q 'resolve_shell_environment' "$LIB_FILE" 2>/dev/null \
+    && ok 'source_environments API in lib.sh' \
+    || warn 'resolve_shell_environment missing from lib.sh'
+grep -q '_path_remove_segment' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
+    && ok 'path_prepend removes-then-adds (idempotent)' \
+    || warn 'path_prepend idempotency helper missing'
+grep -q 'local/overwrite.sh' "$ENV_FILE" 2>/dev/null \
+    && ok 'env.sh supports local/overwrite.sh' \
+    || warn 'local/overwrite.sh hook missing from env.sh'
+grep -q '_SHELL_ENV_SH_LOADED' "$ENV_FILE" 2>/dev/null \
+    && ok 'env re-entry guard present' \
+    || warn 'env missing _SHELL_ENV_SH_LOADED guard'
 
 # Duplicate Omarchy envs in zshrc
 if grep -q 'omarchy/default/bash/envs' "$HOME/.zshrc"; then
@@ -227,7 +274,7 @@ if command -v starship &>/dev/null; then
     else
         warn 'starship installed but ~/.config/starship.toml missing (run migrate or cp starship.ex.toml)'
     fi
-    if grep -q 'CONDA_CHANGEPS1=false' "$CONFIG_DIR/env.sh" 2>/dev/null; then
+    if grep -q 'CONDA_CHANGEPS1=false' "$ENV_FILE" 2>/dev/null; then
         ok 'CONDA_CHANGEPS1=false in env.sh'
     else
         warn 'env.sh missing CONDA_CHANGEPS1=false'
@@ -240,34 +287,111 @@ else
 fi
 
 # path_debug helper
-grep -q 'path_debug' "$CONFIG_DIR/functions.sh" \
+grep -q 'path_debug' "$FUNCS_FILE" \
     && ok 'path_debug defined in functions.sh' \
     || warn 'path_debug missing from functions.sh'
 
 # PATH helpers
-grep -q 'path_prepend' "$CONFIG_DIR/env.sh" \
-    && ok 'env.sh defines path_prepend' \
-    || warn 'env.sh missing path_prepend'
-grep -q 'path_append' "$CONFIG_DIR/env.sh" \
-    && ok 'env.sh defines path_append' \
-    || warn 'env.sh missing path_append'
+grep -q 'path_prepend' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
+    && ok 'core/path.sh defines path_prepend' \
+    || warn 'path_prepend missing'
+grep -q 'path_append' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
+    && ok 'core/path.sh defines path_append' \
+    || warn 'path_append missing'
+
+# PATH contract (core/path.contract vs core/env.sh + omarchy)
+PATH_CONTRACT="$CONFIG_DIR/core/path.contract"
+if [[ -f "$PATH_CONTRACT" ]]; then
+    _pc_prev=0
+    _pc_append_prev=0
+    _pc_append_start="$(line_number "$ENV_FILE" 'path_append ')"
+    _pc_vite_ln="$(line_number "$ENV_FILE" '\.vite-plus/env')"
+    _pc_fail=0
+    while IFS= read -r _pc_line || [[ -n "$_pc_line" ]]; do
+        [[ "$_pc_line" =~ ^# ]] && continue
+        [[ -z "${_pc_line// /}" ]] && continue
+        _pc_kind="${_pc_line%%:*}"
+        _pc_pat="${_pc_line#*:}"
+        _pc_ln=""
+        _pc_target="$ENV_FILE"
+        case "$_pc_kind" in
+            prepend)
+                _pc_ln="$(line_number "$_pc_target" "path_prepend.*${_pc_pat}")"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract prepend missing in env.sh: $_pc_pat"
+                    _pc_fail=1
+                elif [[ -n "$_pc_append_start" && "$_pc_ln" -ge "$_pc_append_start" ]]; then
+                    fail "path.contract prepend after path_append: $_pc_pat"
+                    _pc_fail=1
+                elif [[ "$_pc_ln" -le "$_pc_prev" ]]; then
+                    fail "path.contract prepend out of order: $_pc_pat (line $_pc_ln)"
+                    _pc_fail=1
+                else
+                    _pc_prev="$_pc_ln"
+                fi
+                ;;
+            post_prepend)
+                _pc_ln="$("${GREP[@]}" -nE "path_prepend.*${_pc_pat}" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d: -f1)"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract post_prepend missing: $_pc_pat"
+                    _pc_fail=1
+                elif [[ -n "$_pc_vite_ln" && "$_pc_ln" -le "$_pc_vite_ln" ]]; then
+                    fail "path.contract post_prepend must follow vite-plus/env: $_pc_pat"
+                    _pc_fail=1
+                fi
+                ;;
+            append)
+                _pc_ln="$(line_number "$_pc_target" "path_append.*${_pc_pat}")"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract append missing in env.sh: $_pc_pat"
+                    _pc_fail=1
+                elif [[ "$_pc_append_prev" -gt 0 && "$_pc_ln" -le "$_pc_append_prev" ]]; then
+                    fail "path.contract append out of order: $_pc_pat"
+                    _pc_fail=1
+                else
+                    _pc_append_prev="$_pc_ln"
+                fi
+                ;;
+            omarchy)
+                _pc_target="$CONFIG_DIR/environments/omarchy/env.sh"
+                _pc_ln="$(line_number "$_pc_target" "path_prepend.*${_pc_pat}")"
+                if [[ -z "$_pc_ln" ]]; then
+                    fail "path.contract omarchy entry missing: $_pc_pat"
+                    _pc_fail=1
+                fi
+                ;;
+            *)
+                warn "path.contract unknown kind: $_pc_kind"
+                ;;
+        esac
+    done < "$PATH_CONTRACT"
+    if [[ "$_pc_fail" -eq 0 ]]; then
+        if [[ "$_pc_prev" -gt 0 ]]; then
+            ok 'path.contract matches core/env.sh (+ omarchy)'
+        else
+            warn 'path.contract: no prepend entries verified'
+        fi
+    fi
+else
+    warn 'core/path.contract missing'
+fi
 
 # migrate rc policy
-grep -q -- '--force-rc' "$CONFIG_DIR/bin/migrate.sh" \
-    && ok 'migrate.sh supports --force-rc' \
-    || warn 'migrate.sh missing --force-rc flag'
-grep -q 'should_write_rc' "$CONFIG_DIR/bin/migrate.sh" \
+grep -q -- '--sync-rc' "$CONFIG_DIR/bin/migrate.sh" \
+    && ok 'migrate.sh supports --sync-rc' \
+    || warn 'migrate.sh missing --sync-rc flag'
+grep -q 'should_write_rc' "$CONFIG_DIR/bin/lib/migrate-common.sh" \
     && ok 'migrate.sh preserves hand-edited rc files' \
-    || warn 'migrate.sh may always overwrite rc files'
+    || warn 'migrate rc policy helpers missing from migrate-common.sh'
 
 # Verification workflow
-grep -q 'FZF_DEFAULT_OPTS' "$CONFIG_DIR/env.sh" \
+grep -q 'FZF_DEFAULT_OPTS' "$ENV_FILE" \
     && ok 'env.sh: FZF_DEFAULT_OPTS' \
     || warn 'env.sh: FZF_DEFAULT_OPTS missing'
-grep -q 'agent_verify' "$CONFIG_DIR/functions.sh" \
+grep -q 'agent_verify' "$FUNCS_FILE" \
     && ok 'functions.sh: agent_verify' \
     || warn 'functions.sh: agent_verify missing'
-grep -q '^vf()' "$CONFIG_DIR/functions.sh" \
+grep -q '^vf()' "$FUNCS_FILE" \
     && ok 'functions.sh: vf' \
     || warn 'functions.sh: vf missing'
 [[ -x "$CONFIG_DIR/bin/agent-verify-layout.sh" ]] \
@@ -290,6 +414,14 @@ if [[ -f "$GIT_VERIFY" ]]; then
     else
         warn 'git verification exists but include.path not set — git config --global include.path ~/.config/git/verification'
     fi
+fi
+
+# Verification tools are on PATH after env.sh (~/.cargo/bin, system packages).
+# check-shell often runs from a bare bash subshell — prime PATH like interactive shells.
+if [[ -z "${_CHECK_SHELL_ENV_LOADED:-}" && -f "$ENV_FILE" ]]; then
+    # shellcheck disable=SC1091
+    . "$ENV_FILE" 2>/dev/null || true
+    export _CHECK_SHELL_ENV_LOADED=1
 fi
 command -v delta &>/dev/null \
     && ok 'delta on PATH' \
@@ -315,7 +447,7 @@ if command -v shellcheck &>/dev/null; then
     shellcheck_for_file() {
         local _f="$1" _shell _exclude
         case "$_f" in
-            */lib.sh|*/env.sh|*/personal.sh) _shell="sh" ;;
+            */lib.sh|*/env.sh|*/path.sh|*/personal.sh|*/environments/generic/*) _shell="sh" ;;
             *) _shell="bash" ;;
         esac
         _exclude='SC1090,SC1091'
@@ -334,7 +466,8 @@ fi
 
 if [[ "$AUDIT" == true ]]; then
     [[ -x "$CONFIG_DIR/bin/recover-shell.sh" ]] && ok 'recover-shell.sh is executable' || warn 'recover-shell.sh missing or not executable'
-    [[ -f "$CONFIG_DIR/lib.sh" ]] && ok 'lib.sh present' || fail 'lib.sh missing'
+    [[ -f "$LIB_FILE" ]] && ok 'lib.sh present' || fail 'lib.sh missing'
+    [[ -x "$CONFIG_DIR/bin/check-template-sync.sh" ]] && "$CONFIG_DIR/bin/check-template-sync.sh" || warn 'template sync check failed'
 fi
 
 echo ""

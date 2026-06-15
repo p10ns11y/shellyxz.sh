@@ -1,0 +1,4 @@
+# Managed by ~/.config/shell/bin/migrate.sh
+export GPG_TTY=$(tty)
+gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+[ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"

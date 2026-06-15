@@ -1,0 +1,94 @@
+#!/usr/bin/env zsh
+# Managed by ~/.config/shell/bin/migrate.sh
+# ~/.zshrc — portable core + environment hooks + shell-native inits.
+
+# 1. Portable environment (PATH, exports, environment presets)
+source "$HOME/.config/shell/env.sh"
+
+# 2. Direnv (skip re-hook on source ~/.zshrc)
+if [ -n "${ZSH_VERSION:-}" ]; then
+    if ! typeset -f _direnv_hook >/dev/null 2>&1; then
+        eval "$(direnv hook zsh)"
+    fi
+elif [ -n "${BASH_VERSION:-}" ]; then
+    if ! declare -f _direnv_hook >/dev/null 2>&1; then
+        eval "$(direnv hook bash)"
+    fi
+fi
+
+# 3. Environment hooks (omarchy, generic, …)
+if typeset -f source_environment_shell >/dev/null 2>&1; then
+    source_environment_shell zsh
+fi
+
+# 4. Core functions + aliases
+if [[ -f "$HOME/.config/shell/functions.sh" ]]; then
+    source "$HOME/.config/shell/functions.sh"
+fi
+source "$HOME/.config/shell/aliases.sh"
+
+if [ -z "${ZSH_VERSION:-}" ]; then
+    return 0 2>/dev/null || true
+fi
+
+# 5. Modern tool initialization (guarded — re-sourcing ~/.zshrc must not stack hooks)
+if command -v mamba &>/dev/null && ! typeset -f __mamba_exe >/dev/null 2>&1; then
+    eval "$(mamba shell hook --shell zsh)"
+fi
+
+detect_editor_terminal 2>/dev/null
+if command -v mise &>/dev/null && [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ]; then
+    # Shims on PATH (from env.sh) are enough for resolution — activate adds per-install bins
+    if ! whence -w mise 2>/dev/null | command grep -q 'function'; then
+        case ":$PATH:" in
+            *":${HOME}/.local/share/mise/shims:"*) ;;
+            *) eval "$(mise activate zsh)" ;;
+        esac
+    fi
+fi
+
+if command -v starship &>/dev/null && ! typeset -f prompt_starship_precmd >/dev/null 2>&1; then
+    eval "$(starship init zsh)"
+fi
+
+if command -v zoxide &>/dev/null && ! typeset -f __zoxide_pwd >/dev/null 2>&1; then
+    eval "$(zoxide init zsh)"
+fi
+
+if command -v fzf &>/dev/null && ! typeset -f _fzf_complete >/dev/null 2>&1; then
+    source <(fzf --zsh)
+fi
+
+if command -v thefuck &>/dev/null && ! alias fuck >/dev/null 2>&1; then
+    eval "$(thefuck --alias)"
+fi
+
+# 6. Zsh-specific settings
+setopt HIST_IGNORE_DUPS
+setopt SHARE_HISTORY
+setopt AUTO_CD
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=50000
+SAVEHIST=50000
+
+autoload -Uz compinit
+compinit -C
+
+if [[ -r "$HOME/.grok/completions/zsh/grok.zsh" ]]; then
+    source "$HOME/.grok/completions/zsh/grok.zsh"
+fi
+
+alias zshconfig='$EDITOR ~/.zshrc'
+
+unalias reload 2>/dev/null || true
+reload() {
+    for _name in n ga gd reload; do
+        unalias "$_name" 2>/dev/null || true
+        unfunction "$_name" 2>/dev/null || true
+    done
+    source ~/.zshrc && echo "zshrc reloaded"
+}
+
+for _name in n ga gd reload; do
+    unalias "$_name" 2>/dev/null || true
+done

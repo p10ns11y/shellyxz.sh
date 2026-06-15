@@ -1,17 +1,8 @@
-# Backups (can contain old secrets)
+# Local machine environment preset (copy from environment.example)
+/environment
+
+# Migrate backups (may contain old dotfiles with secrets)
 backups/
 
-# Secrets / Environment files
-.env
-.envrc
-secrets/
-env.secrets.sh
-secrets.sh
-*.key
-*.pem
-*.token
-
-# OS / Editor
-.DS_Store
-*.swp
-*~
+# Optional: uncomment to keep personal overlay out of git
+# local/personal.sh

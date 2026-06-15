@@ -1,0 +1,2 @@
+# Managed by ~/.config/shell/bin/migrate.sh
+export SHELL=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)

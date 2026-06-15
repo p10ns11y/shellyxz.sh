@@ -1,0 +1,16 @@
+# ~/.config/shell/environment
+# Optional machine override — copy to environment only when you need to pin a preset.
+#   cp environment.example environment
+#
+# If this file is absent, auto-detect runs:
+#   omarchy  when ~/.local/share/omarchy exists
+#   generic  otherwise (containers, VPS, CI, any distro)
+#
+# Containers / VPS / CI (force minimal preset):
+#   SHELL_ENVIRONMENT=generic
+#
+# Omarchy desktop (usually unnecessary — auto-detected):
+#   SHELL_ENVIRONMENT=omarchy
+#
+# Runtime override without editing this file:
+#   export SHELL_ENVIRONMENT=generic

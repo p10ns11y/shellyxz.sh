@@ -1,0 +1,3 @@
+# Managed by ~/.config/shell/bin/migrate.sh
+# Login PATH — delegate to portable env
+[ -f "$HOME/.config/shell/env.sh" ] && . "$HOME/.config/shell/env.sh"

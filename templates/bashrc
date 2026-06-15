@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Managed by ~/.config/shell/bin/migrate.sh
+# ~/.bashrc — portable core + environment hooks.
+
+[[ $- != *i* ]] && return
+
+source "$HOME/.config/shell/env.sh"
+if ! declare -f _direnv_hook >/dev/null 2>&1; then
+    eval "$(direnv hook bash)"
+fi
+
+if typeset -f source_environment_shell >/dev/null 2>&1; then
+    source_environment_shell bash
+fi
+
+if [[ -f "$HOME/.config/shell/functions.sh" ]]; then
+    source "$HOME/.config/shell/functions.sh"
+fi
+
+source "$HOME/.config/shell/aliases.sh"
+
+if command -v mamba &>/dev/null && ! declare -f __mamba_exe >/dev/null 2>&1; then
+    eval "$(mamba shell hook --shell bash)"
+fi
+
+shopt -s histappend
+HISTCONTROL=ignoreboth
+HISTSIZE=50000
+HISTFILESIZE=100000

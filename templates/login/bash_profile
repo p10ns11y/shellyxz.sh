@@ -1,0 +1,2 @@
+# Managed by ~/.config/shell/bin/migrate.sh
+[[ -f ~/.bashrc ]] && . ~/.bashrc
