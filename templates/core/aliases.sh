@@ -44,6 +44,7 @@ alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
 alias av='agent_verify'
+alias shellyhow='$HOME/.config/shell/bin/check-shell.sh'
 # n(), ga() may be defined by omarchy layer — do not alias here
 
 alias gs='git status'
