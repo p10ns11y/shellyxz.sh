@@ -5,11 +5,15 @@
 # 1. Portable environment (PATH, exports, environment presets)
 source "$HOME/.config/shell/env.sh"
 
-# 2. Direnv
+# 2. Direnv (skip re-hook on source ~/.zshrc)
 if [ -n "${ZSH_VERSION:-}" ]; then
-    eval "$(direnv hook zsh)"
+    if ! typeset -f _direnv_hook >/dev/null 2>&1; then
+        eval "$(direnv hook zsh)"
+    fi
 elif [ -n "${BASH_VERSION:-}" ]; then
-    eval "$(direnv hook bash)"
+    if ! declare -f _direnv_hook >/dev/null 2>&1; then
+        eval "$(direnv hook bash)"
+    fi
 fi
 
 # 3. Environment hooks (omarchy, generic, …)
@@ -27,29 +31,32 @@ if [ -z "${ZSH_VERSION:-}" ]; then
     return 0 2>/dev/null || true
 fi
 
-# 5. Modern tool initialization
-if command -v mamba &>/dev/null; then
+# 5. Modern tool initialization (guarded — re-sourcing ~/.zshrc must not stack hooks)
+if command -v mamba &>/dev/null && ! typeset -f __mamba_exe >/dev/null 2>&1; then
     eval "$(mamba shell hook --shell zsh)"
 fi
 
 detect_editor_terminal 2>/dev/null
 if command -v mise &>/dev/null && [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ]; then
-    eval "$(mise activate zsh)"
+    # mise activate replaces the mise command with a shell function
+    if ! whence -w mise 2>/dev/null | command grep -q 'function'; then
+        eval "$(mise activate zsh)"
+    fi
 fi
 
-if command -v starship &>/dev/null; then
+if command -v starship &>/dev/null && ! typeset -f prompt_starship_precmd >/dev/null 2>&1; then
     eval "$(starship init zsh)"
 fi
 
-if command -v zoxide &>/dev/null; then
+if command -v zoxide &>/dev/null && ! typeset -f __zoxide_pwd >/dev/null 2>&1; then
     eval "$(zoxide init zsh)"
 fi
 
-if command -v fzf &>/dev/null; then
+if command -v fzf &>/dev/null && ! typeset -f _fzf_complete >/dev/null 2>&1; then
     source <(fzf --zsh)
 fi
 
-if command -v thefuck &>/dev/null; then
+if command -v thefuck &>/dev/null && ! alias fuck >/dev/null 2>&1; then
     eval "$(thefuck --alias)"
 fi
 
