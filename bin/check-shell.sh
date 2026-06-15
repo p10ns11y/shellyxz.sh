@@ -222,12 +222,12 @@ grep -q -- '--force-rc' "$CONFIG_DIR/bin/migrate.sh" \
 grep -q 'resolve_shell_environment' "$LIB_FILE" 2>/dev/null \
     && ok 'source_environments API in lib.sh' \
     || warn 'resolve_shell_environment missing from lib.sh'
-grep -q 'path_promote' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
-    && ok 'path_promote in core/path.sh' \
-    || warn 'path_promote missing'
-grep -q 'path_dedupe' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
-    && ok 'path_dedupe in core/path.sh' \
-    || warn 'path_dedupe missing'
+grep -q '_path_remove_segment' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
+    && ok 'path_prepend removes-then-adds (idempotent)' \
+    || warn 'path_prepend idempotency helper missing'
+grep -q 'local/overwrite.sh' "$ENV_FILE" 2>/dev/null \
+    && ok 'env.sh supports local/overwrite.sh' \
+    || warn 'local/overwrite.sh hook missing from env.sh'
 grep -q '_SHELL_ENV_SH_LOADED' "$ENV_FILE" 2>/dev/null \
     && ok 'env re-entry guard present' \
     || warn 'env missing _SHELL_ENV_SH_LOADED guard'

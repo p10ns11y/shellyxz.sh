@@ -75,11 +75,6 @@ if [[ -r "$HOME/.grok/completions/zsh/grok.zsh" ]]; then
     source "$HOME/.grok/completions/zsh/grok.zsh"
 fi
 
-# PATH: mise/mamba/vite+ hooks may duplicate segments after env.sh
-if typeset -f path_finalize >/dev/null 2>&1; then
-    path_finalize
-fi
-
 alias zshconfig='$EDITOR ~/.zshrc'
 
 unalias reload 2>/dev/null || true

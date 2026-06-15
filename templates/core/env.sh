@@ -11,9 +11,8 @@ SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 
 shell_truth_seeker 2>/dev/null || true
 
-# zprofile + zshrc both source env.sh — second pass only re-asserts priority.
+# zprofile + zshrc both source env.sh — second pass is a no-op for PATH.
 if [ -n "${_SHELL_ENV_SH_LOADED:-}" ]; then
-    path_finalize
     resolve_shell_environment
     return 0 2>/dev/null || true
 fi
@@ -23,9 +22,8 @@ export PNPM_HOME="$HOME/.local/share/pnpm"
 
 # Environment exports + preset PATH entries (omarchy, generic, …)
 source_environments
-path_normalize
 
-# Core PATH — lowest priority first → highest priority last
+# Core PATH — lowest priority first → highest priority last (last prepend wins)
 path_prepend "$HOME/.local/share/solana/install/active_release/bin"
 path_prepend "$HOME/.opencode/bin"
 path_prepend "$HOME/.bun/bin"
@@ -42,8 +40,6 @@ path_prepend "$HOME/bin"
 
 path_append "$HOME/miniconda/condabin"
 path_append "/opt/rocm/bin"
-
-path_dedupe
 
 export CONDA_CHANGEPS1=false
 
@@ -85,7 +81,15 @@ if command -v source_if_safe >/dev/null 2>&1; then
 else
     [ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 fi
-path_finalize
+
+# vite-plus/env re-promotes its bin; re-assert user tool priority explicitly
+path_prepend "$HOME/bin"
+
+# Rare machine-specific PATH/export tweaks (see local/overwrite.sh.example)
+if [ -f "$SHELL_ROOT/local/overwrite.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$SHELL_ROOT/local/overwrite.sh"
+fi
 
 # Re-export environment tag (some tool env hooks may clear unexported state)
 resolve_shell_environment

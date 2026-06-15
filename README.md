@@ -99,7 +99,7 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 ├── environment.example   # Copy → environment (optional pin; omit for auto-detect)
 ├── core/                 # Distro-agnostic (always loaded)
 │   ├── lib.sh            # source_environments, secrets, safety
-│   ├── path.sh           # path_prepend, path_dedupe, path_promote
+│   ├── path.sh           # path_prepend, path_append (idempotent reorder)
 │   ├── env.sh            # PATH manifest + environment loader
 │   ├── aliases.sh
 │   └── functions.sh

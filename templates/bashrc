@@ -23,10 +23,6 @@ if command -v mamba &>/dev/null && ! declare -f __mamba_exe >/dev/null 2>&1; the
     eval "$(mamba shell hook --shell bash)"
 fi
 
-if typeset -f path_finalize >/dev/null 2>&1; then
-    path_finalize
-fi
-
 shopt -s histappend
 HISTCONTROL=ignoreboth
 HISTSIZE=50000
