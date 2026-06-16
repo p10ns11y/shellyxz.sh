@@ -13,6 +13,7 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 | [migrate.sh](#migratesh) | First install, refresh managed rc, scaffold dotfiles | bash, curl (bootstrap), Omarchy recommended | 0 on success; `set -e` aborts on hard errors |
 | [check-shell.sh](#check-shellsh) | After edits or migrate | bash; optional `shellcheck` | 0 if no **errors** (warnings OK) |
 | [recover-shell.sh](#recover-shellsh) | Broken rc / `source` loops | bash only | 0 (informational menu) |
+| [agent-focus-layout.sh](#agent-focus-layoutsh) | Open tmux zen focus window | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
 | [agent-verify-layout.sh](#agent-verify-layoutsh) | Open tmux verification cockpit | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
 | [fzf-preview.sh](#fzf-previewsh) | *(internal)* fzf bat preview | bat | inherits bat exit code |
 
@@ -30,7 +31,7 @@ git config --global include.path ~/.config/git/verification   # if migrate did n
 ~/.config/shell/bin/check-shell.sh
 ```
 
-Includes verification assets (`agent-verify-layout.sh`, `fzf-preview.sh`, `arch-design/VERIFICATION.md`, example configs).
+Includes verification assets (`agent-focus-layout.sh`, `agent-verify-layout.sh`, `fzf-preview.sh`, `arch-design/VERIFICATION.md`, example configs).
 
 ### Path B — curl one-liner (bootstrap)
 
@@ -79,7 +80,7 @@ SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/ma
    - Omarchy `tmux.conf` → `~/.config/tmux/tmux.conf` + `verify.conf` include
    - `yazi.ex.toml` → `~/.config/yazi/yazi.toml`
    - `git.ex.config` → `~/.config/git/verification`
-7. `chmod +x` on `agent-verify-layout.sh`, `fzf-preview.sh`
+7. `chmod +x` on `agent-focus-layout.sh`, `agent-verify-layout.sh`, `fzf-preview.sh`
 8. Attempts `git add -A && git commit` inside `~/.config/shell` (no-op if nothing to commit)
 
 **Preserves:** existing `env.sh`, `aliases.sh`, `functions.sh`, hand-edited rc files (without `--force-rc`), existing `starship.toml`, tmux/yazi/git configs.
@@ -121,7 +122,7 @@ git config --global include.path ~/.config/git/verification
 - Omarchy before `aliases.sh` in bash/zsh rc
 - Reserved names (`ga`, `n`; runtime `gd` in zsh)
 - Login dotfiles delegate to `env.sh`
-- Verification: `FZF_DEFAULT_OPTS`, `agent_verify`, `vf`, `agent-verify-layout.sh`, `tmux.conf`, `arch-design/VERIFICATION.md`
+- Verification: `FZF_DEFAULT_OPTS`, `agent_work`, `agent_verify`, `vf`, layout scripts, `tmux.conf`, `arch-design/VERIFICATION.md`
 - Git delta: `include.path` when `~/.config/git/verification` exists; `delta`, `procs`, `difft` on PATH (warn if missing)
 - Optional nvim `verification-workflow.lua` (warn if missing)
 - fish: direnv, `functions.sh`, fzf, thefuck
@@ -153,6 +154,37 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 ---
 
+---
+
+## agent-focus-layout.sh
+
+**Purpose:** Create or focus the **work** tmux window — single full pane for agent TUIs (Grok Build default). See [VERIFICATION.md](../arch-design/VERIFICATION.md).
+
+```bash
+~/.config/shell/bin/agent-focus-layout.sh [directory] [--continue] [-- command...]
+```
+
+| Arg | Default | Effect |
+|-----|---------|--------|
+| `directory` | `.` | Working directory; stored as `@workflow_dir` on the session |
+| `--continue` / `-c` | — | Launch `grok -c` in the work pane |
+| `-- cmd...` | — | Launch a custom command (e.g. `cx` for Claude) |
+
+**Requirements:** same as agent-verify-layout (tmux, inside tmux).
+
+**Behavior:**
+
+- If window `work` exists → `select-window` (does not interrupt running TUI unless `--continue` or custom cmd)
+- Else creates `work` window and launches `grok` by default
+- Sets `@workflow_mode` to `work` on the session
+
+**Entry points:**
+
+- Shell: `agent_work` / `aw`, `agent_back` (from `functions.sh`)
+- tmux: `Prefix+W` via `~/.config/tmux/verify.conf`
+
+---
+
 ## agent-verify-layout.sh
 
 **Purpose:** Create or focus the **verify** tmux window (lazygit + yazi + btop cockpit). See [VERIFICATION.md](../arch-design/VERIFICATION.md).
@@ -172,10 +204,10 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 **Behavior:**
 
-- If window `verify` exists → `select-window` (idempotent)
+- If window `verify` exists → `select-window` (idempotent; re-runs `agent_scan` when `@workflow_rescan=1`)
 - Else creates `verify` window:
-  - Pane 0 (top-left): shell — run `nvim` here
-  - Pane 1 (right, 38%): `lazygit` if installed
+  - Pane 0 (top-left): shell — `agent_scan`, `gdf`, `vf`
+  - Pane 1 (right, 42%): `lazygit` if installed
   - Pane 2 (left bottom, 40%): `yazi` if installed
   - Pane 3 (below yazi, 35%): `btop` if installed
 
@@ -228,9 +260,11 @@ source ~/.zshrc
 ```bash
 t                    # tmux attach
 z my-project
+aw                   # zen focus (grok)
+# ... agent runs ...
 av                   # or Prefix+V inside tmux
-agent_scan .
-gdf                            # or gdfs for staged; lg for lazygit + delta
+gdf                  # or gdfs for staged; lg for lazygit + delta
+# not happy: aw -c
 ```
 
 ### Nuclear recovery
@@ -250,7 +284,7 @@ Files fetched by `bootstrap_from_remote()` when missing (authoritative list in `
 | **Core** | `core/{lib,path,path.contract,env,aliases,functions}.sh`, root shims (`env.sh`, `lib.sh`, …) |
 | **Environments** | `environments/{generic,omarchy}/*`, `environment.example`, `environments/README.md` |
 | **Templates** | `templates/{zshrc,bashrc,fish.config.fish,login/*,core/*}` |
-| **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-verify-layout.sh` |
+| **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-focus-layout.sh`, `bin/agent-verify-layout.sh` |
 | **Docs & examples** | `README.md`, `arch-design/{shell,VERIFICATION,SHELL-env-var-behavior}.md`, `starship.ex.toml`, `yazi.ex.toml`, `git.ex.config`, `.gitignore` |
 | **Local** | `local/personal.sh` |
 

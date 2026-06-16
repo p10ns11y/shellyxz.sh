@@ -209,6 +209,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | `bin/migrate.sh` | Generates dotfiles, backups; preserves existing modules | manual run |
 | `bin/check-shell.sh` | Load order, reserved names, shellcheck (`--audit` for permissions) | manual run |
 | `bin/recover-shell.sh` | Nuclear recovery when rc files are broken | manual run |
+| `bin/agent-focus-layout.sh` | tmux zen focus layout (`work` window) | `aw` / Prefix+W |
 | `bin/agent-verify-layout.sh` | tmux verification cockpit layout | `av` / Prefix+V |
 | `bin/fzf-preview.sh` | fzf preview helper (files + Ctrl+R history) | via `FZF_CTRL_T_OPTS` / `FZF_CTRL_R_OPTS` in `env.sh` |
 | `git.ex.config` | delta snippet → `~/.config/git/verification`; enable with `git config --global include.path …` | migrate copy-when-absent |

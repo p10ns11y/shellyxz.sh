@@ -2,9 +2,9 @@
 
 Repeatable rituals for reviewing agent output before you commit. This doc is the **muscle-memory playbook**; [VERIFICATION.md](VERIFICATION.md) covers tooling, keymaps, and setup.
 
-**Rule of thumb:** run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor’s integrated terminal refuses `agent_verify` / `av` by design.
+**Rule of thumb:** run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor’s integrated terminal refuses `agent_work` / `agent_verify` (`aw` / `av`) by design.
 
-> **Meta-tooling, on purpose:** you use agents to build tooling that makes *human* review of agent output faster. The loop is: agent changes → you verify in the cockpit → you commit. AI assists; you approve.
+> **Meta-tooling, on purpose:** you use agents to build tooling that makes *human* review of agent output faster. The loop is: agent works in focus mode → you verify in the cockpit → you commit (or send the agent back). AI assists; you approve.
 
 ---
 
@@ -24,6 +24,32 @@ Then: `source ~/.zshrc` and `git config --global include.path ~/.config/git/veri
 
 ---
 
+## Focus → Verify → Loop
+
+Two tmux windows form the agent workflow:
+
+| Window | Command | Purpose |
+|--------|---------|---------|
+| `work` | `aw` / Prefix+W | Zen focus — single full pane for Grok Build (`grok`) or other agent TUIs |
+| `verify` | `av` / Prefix+V | Review cockpit — lazygit, yazi, btop, shell |
+
+**Mnemonic:** **W = Work (zen)** · **V = Verify (cockpit)** · **Z = Zoom (ad-hoc inside any window)**
+
+```bash
+t && z <project> && aw              # full-screen grok in `work`
+# agent runs...
+av                                  # switch to verify (+ auto agent_scan)
+# review: lg, gdf, vf, tt
+# not happy:
+aw -c                               # back to grok --continue in `work`
+# happy:
+# lg → commit → Prefix+d detach
+```
+
+**Omarchy `tdl` / `ic` / `ix`** — different mode: nvim + Claude side-by-side while the agent runs. Use **`aw`** when you want the whole screen for the agent TUI.
+
+---
+
 ## `agent_verify` vs `agent_scan`
 
 | | `agent_verify` (`av`) | `agent_scan` |
@@ -31,7 +57,7 @@ Then: `source ~/.zshrc` and `git config --global include.path ~/.config/git/veri
 | **What** | **Spatial** — arranges panes | **Temporal** — prints a report |
 | **Role** | **Venue** — open the cockpit | **Survey** — run the checklist |
 | **What it does** | Creates/focuses tmux `verify` window: nvim/shell, lazygit, yazi, btop | Prints rg sweep, dust summary, JSON report excerpts |
-| **When** | Once, right after the agent finishes | After the cockpit is open (re-run anytime before commit) |
+| **When** | Once, right after the agent finishes | After the cockpit is open (`av` runs it automatically; re-run anytime) |
 | **Requires** | tmux + native terminal (not Cursor) | Any shell in the project directory |
 | **Alias** | `av` | — |
 
@@ -40,8 +66,10 @@ Then: `source ~/.zshrc` and `git config --global include.path ~/.config/git/veri
 `av` sets up *where* you work; `agent_scan` tells you *what to look at first* in that moment.
 
 ```bash
-t && z <project> && av && agent_scan .
+t && z <project> && aw && av
 ```
+
+`av` runs `agent_scan .` in the shell pane on entry. Re-run `agent_scan .` manually before commit if you made more edits.
 
 ---
 
@@ -74,20 +102,22 @@ After `av`, you get four regions. This matches the tmux + lazygit + delta + diff
 
 ## Core ritual (drill this)
 
-> **Tee-Zed-A-V, scan, look, diff, fix, git.**
+> **Tee-Zed-A-W, verify, look, diff, fix, git.**
 
 | Step | Command | Pane |
 |------|---------|------|
 | 1 | `t` | — |
 | 2 | `z <project>` | — |
-| 3 | `av` | layout |
-| 4 | `agent_scan .` | shell |
+| 3 | `aw` | `work` — full-screen agent |
+| 4 | `av` | `verify` layout (+ auto `agent_scan`) |
 | 5 | `y` | yazi |
 | 6 | `lg` / `gdf` | lazygit / shell |
 | 7 | `vf` / nvim | editor |
 | 8 | `tt` + tests | test window + btop |
 | 9 | `lg` → `c` | lazygit commit |
 | 10 | Prefix+d | detach |
+
+**Not happy with the diff?** `aw -c` (or `agent_back`) returns to `work` with `grok -c`.
 
 ---
 
@@ -223,11 +253,12 @@ Never commit secrets. Read every hunk in `lg` even when `agent_scan` is quiet.
 ## Decision tree
 
 ```
-Agent finished → Ghostty → t → z → av (spatial)
-                    → agent_scan . (temporal)
-                    → noise only? → lg/gdf review → commit
-                    → signal? → vf/nvim fix → re-scan → commit
-                    → tests/security? → slow loop → commit when green
+Start task → Ghostty → t → z → aw (zen agent work)
+Agent done → av (verify cockpit + agent_scan)
+    → noise only? → lg/gdf review → commit
+    → signal? → vf/nvim fix → re-scan → commit
+    → not happy? → aw -c → agent fixes → av again
+    → tests/security? → slow loop → commit when green
 ```
 
 ---
@@ -236,7 +267,9 @@ Agent finished → Ghostty → t → z → av (spatial)
 
 | Situation | Command |
 |-----------|---------|
-| Open cockpit | `av` |
+| Zen agent focus | `aw` / Prefix+W |
+| Open cockpit | `av` / Prefix+V |
+| Back to agent | `aw -c` / `agent_back` |
 | Checklist | `agent_scan .` |
 | Git UI + delta | `lg` |
 | Structural terminal diff | `gdf` / `gdfs` |
