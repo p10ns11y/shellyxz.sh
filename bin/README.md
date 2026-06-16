@@ -188,15 +188,16 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 ## agent-verify-layout.sh
 
-**Purpose:** Create or focus the **verify** tmux window (lazygit + yazi + btop cockpit). See [VERIFICATION.md](../arch-design/VERIFICATION.md).
+**Purpose:** Create or focus the **verify** tmux window. Delegates to `.agents/verification/tmux-layout.sh` when present. See [VERIFICATION.md](../arch-design/VERIFICATION.md).
 
 ```bash
-~/.config/shell/bin/agent-verify-layout.sh [directory]
+~/.config/shell/bin/agent-verify-layout.sh [directory] [--generic]
 ```
 
 | Arg | Default | Effect |
 |-----|---------|--------|
 | `directory` | `.` | Working directory for all panes (`cd` + absolute path) |
+| `--generic` | off | Skip project layout; use generic cockpit |
 
 **Requirements:**
 
@@ -205,8 +206,9 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 **Behavior:**
 
+- If `.agents/verification/tmux-layout.sh` exists and `--generic` not set → `exec` project layout
 - If window `verify` exists → `select-window` (idempotent; runs `agent_scan` only when `av --scan` / `@workflow_rescan=1`)
-- Else creates `verify` window:
+- Else creates generic `verify` window:
   - Pane 0 (top-left): shell — `agent_scan`, `gdf`, `vf`
   - Pane 1 (right, 42%): `lazygit` if installed
   - Pane 2 (left bottom, 40%): `yazi` if installed
@@ -218,6 +220,21 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 - tmux: `Prefix+V` (`C-Space` `V` with Omarchy prefix) via `~/.config/tmux/verify.conf`
 
 **No `--help`** — do not pass `-h` (it is interpreted as a directory).
+
+---
+
+## verify-launch.sh / verify-pane-launch.sh
+
+**Purpose:** Tiered pane launches for project verification cockpits.
+
+| Script | Role |
+|--------|------|
+| `bin/lib/verify-launch.sh` | Library: `verify_launch_pane`, `verify_apply_theme`, `verify_maybe_rescan` |
+| `bin/verify-pane-launch.sh` | In-pane confirm gate for `verify` / `mutate` tiers |
+
+**Tiers:** `monitor`/`watch` auto-launch; `verify` prompts `[y/N]`; `mutate` requires `av --launch-mutate` and typing `YES`.
+
+**Theme:** `tmux.verify-soc-theme.conf.ex` — amber SOC status bar applied by project layouts.
 
 ---
 

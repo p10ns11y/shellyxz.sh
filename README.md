@@ -378,7 +378,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
 - See [arch-design/README.md](arch-design/README.md) for the architecture & design doc index
 - See [arch-design/shell.md](arch-design/shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
-- See [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) for agent workflow (`ab` build + `av` verify cockpit, `av --scan`, tmux Prefix+B/V, nvim Telescope keymaps, `gdf`/`gdfs`, delta via git include)
+- See [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) for agent workflow (`ab` build + `av` verify cockpit, `av --scan`, per-project layouts via distributable [.agents/skills/verification-cockpit](.agents/skills/verification-cockpit/SKILL.md), tmux Prefix+B/V, nvim Telescope keymaps, `gdf`/`gdfs`, delta via git include)
 - See [arch-design/human-in-the-loop-workflow.md](arch-design/human-in-the-loop-workflow.md) for repeatable rituals, cockpit tour, and messy agent-diff triage
 - See [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
 

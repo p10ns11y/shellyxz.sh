@@ -81,6 +81,44 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 +------------------------------------------+
 ```
 
+### Project-specific cockpit
+
+When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (SOC-style mission-control theme, project watch panes). Generate per repo with the [`verification-cockpit` skill](../.agents/skills/verification-cockpit/SKILL.md). **Dogfood:** this shell repo ships [`.agents/verification/`](../.agents/verification/README.md) as a stress test (`check-shell.sh` watch + template sync).
+
+| Artifact | Purpose |
+|----------|---------|
+| `.agents/verification/manifest.yaml` | Pane map + launch tiers |
+| `.agents/verification/tmux-layout.sh` | Layout script (`av` auto-delegates) |
+| `.agents/verification/tmux-theme.conf` | Optional theme overrides |
+| `.cursor/verify` | Symlink → `../.agents/verification` |
+
+**Launch tiers:**
+
+| Tier | On `av` | Examples |
+|------|---------|----------|
+| `monitor` / `watch` | auto-start | `lazygit`, `pnpm test --watch`, `cargo watch -x check` |
+| `verify` | confirm `[y/N]` in pane | `pnpm test`, `cargo test`, `pnpm build` |
+| `mutate` | blocked unless `av --launch-mutate` | `pnpm install`, migrations, deploy |
+
+```
++--------------------+---------------------+
+|   CMD (console)    |   GIT (lazygit)     |
++--------------------+---------------------+
+|   WATCH panes (project test watchers)    |
++--------------------+---------------------+
+|   FILES (yazi)     |   SYS (btop)        |
++--------------------+---------------------+
+```
+
+**Flags:**
+
+| Command | Effect |
+|---------|--------|
+| `av` | Project layout if present, else generic cockpit |
+| `av --scan` | + `agent_scan .` in console pane |
+| `av --generic` | Force generic 4-pane layout |
+| `av --launch-mutate` | Allow mutate-tier confirm prompts |
+
 **Open focus + verify:**
 
 ```bash
@@ -143,6 +181,8 @@ jq '.summary, .issues' report.json | bat -l json
 | `agent_back` | `ab -c` — return to agent with `grok -c` |
 | `agent_verify [dir]` / `av` | tmux verify cockpit |
 | `av --scan` | verify cockpit + `agent_scan .` (opt-in) |
+| `av --generic` | skip project `.agents/verification/` layout |
+| `av --launch-mutate` | allow mutate-tier pane launches |
 | `tt` | New tmux window `test` in current path |
 | `ps` | procs (when installed; replaces POSIX `ps`) |
 | `gdf` / `gdfs` | git diff with difftastic (unstaged / staged) |
