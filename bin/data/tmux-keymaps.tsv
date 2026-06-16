@@ -5,10 +5,12 @@ run	shell	Verify cockpit	av · Prefix+V	~/.config/shell/bin/agent-verify-layout.
 run	shell	Verify + scan	av --scan	AGENT_VERIFY_RESCAN=1 ~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"
 run	shell	Agent continue	ab -c · agent_back	send-keys:agent_back
 run	shell	Structured scan	agent_scan	send-keys:agent_scan
+run	shell	Git diff (delta)	git diff	send-keys:git diff
+run	shell	Git diff staged (delta)	git diff --staged	send-keys:git diff --staged
 run	shell	Difftastic diff	gdf	send-keys:gdf
 run	shell	Fuzzy open file	vf	send-keys:vf
 run	tmux	Zoom pane	Prefix+Z	resize-pane -Z
-run	tmux	Cycle layout	Prefix+Space	next-layout
+run	tmux	Cycle layout	Prefix+Space	cycle-layout
 run	tmux	Reload config	Prefix+q	source-file ~/.config/tmux/tmux.conf
 view	nvim	Verify grep preset	leader va	live_grep TODO|FIXME|panic|unwrap
 view	nvim	Find files (cwd)	leader vf	Telescope find_files
