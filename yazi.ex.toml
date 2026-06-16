@@ -3,7 +3,8 @@
 # Sort by modified in UI: o then m (newest agent artifacts first).
 
 [mgr]
-ratio = [1, 4]
+# parent : current : preview (yazi requires all three)
+ratio = [1, 4, 3]
 sort_by = "mtime"
 sort_reverse = true
 show_hidden = true
