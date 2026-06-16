@@ -55,4 +55,5 @@ if [[ -f "$GIT_VERIF" ]] && command -v git &>/dev/null; then
 fi
 
 chmod +x "$CONFIG_DIR/bin/agent-verify-layout.sh" 2>/dev/null || true
+chmod +x "$CONFIG_DIR/bin/agent-build-layout.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/fzf-preview.sh" 2>/dev/null || true

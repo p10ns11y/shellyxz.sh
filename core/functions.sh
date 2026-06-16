@@ -94,8 +94,8 @@ agent_scan() {
     done
 }
 
-# Open verification cockpit layout in tmux (requires native terminal + active tmux).
-agent_verify() {
+# Refuse cockpit layouts in editor integrated terminals (Cursor phantom-tab UX).
+_agent_tmux_guard() {
     if command -v detect_editor_terminal >/dev/null 2>&1; then
         detect_editor_terminal 2>/dev/null
         if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = yes ]; then
@@ -104,16 +104,93 @@ agent_verify() {
         fi
     fi
     if [ -z "${TMUX:-}" ]; then
-        echo "agent_verify: start tmux first (t or Super+Alt+Return)" >&2
+        echo "Start tmux first (t or Super+Alt+Return)" >&2
         return 1
     fi
-    local dir="${1:-.}"
+}
+
+# Agent build layout — full-pane agent TUI (grok default). Requires native terminal + tmux.
+agent_build() {
+    _agent_tmux_guard || return 1
+    local script="$HOME/.config/shell/bin/agent-build-layout.sh"
+    if [ ! -x "$script" ]; then
+        echo "agent_build: missing $script" >&2
+        return 1
+    fi
+    local dir="." args=() _dir_set=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -c | --continue)
+                args+=(--continue)
+                shift
+                ;;
+            *)
+                if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                    dir="$1"
+                    _dir_set=1
+                    shift
+                else
+                    args+=(-- "$@")
+                    break
+                fi
+                ;;
+        esac
+    done
+    "$script" "$dir" "${args[@]}"
+}
+
+# Deprecated name — use agent_build
+agent_work() {
+    agent_build "$@"
+}
+
+# Return to build window and continue the agent session (grok -c).
+agent_back() {
+    agent_build -c
+}
+
+# Open verification cockpit layout in tmux (requires native terminal + active tmux).
+# Pass --scan to run agent_scan in the shell pane (opt-in; not automatic).
+agent_verify() {
+    _agent_tmux_guard || return 1
+    local dir="." do_scan=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --scan)
+                do_scan=1
+                shift
+                ;;
+            *)
+                if [ "$dir" = . ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                    dir="$1"
+                    shift
+                else
+                    echo "agent_verify: unknown argument: $1" >&2
+                    return 1
+                fi
+                ;;
+        esac
+    done
+    if [ "$dir" = . ]; then
+        local wf
+        wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
+        if [ -n "$wf" ] && [ -d "$wf" ]; then
+            dir="$wf"
+        fi
+        unset wf
+    fi
     local script="$HOME/.config/shell/bin/agent-verify-layout.sh"
     if [ ! -x "$script" ]; then
         echo "agent_verify: missing $script" >&2
         return 1
     fi
-    "$script" "$dir"
+    if [ "$do_scan" = 1 ]; then
+        tmux set-option @workflow_rescan 1
+        AGENT_VERIFY_RESCAN=1 "$script" "$dir"
+    else
+        tmux set-option @workflow_rescan 0
+        "$script" "$dir"
+    fi
 }
 
 # Portable reload helper for the current shell.
