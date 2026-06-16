@@ -59,6 +59,7 @@ chmod +x "$CONFIG_DIR/bin/agent-build-layout.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/fzf-preview.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/tmux-keymap-menu.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/tmux-mode-sync.sh" 2>/dev/null || true
+chmod +x "$CONFIG_DIR/bin/tmux-cycle-layout.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/check-shell-watch.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/verify-workflow-root.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/test/verify-workflow-root.test.sh" 2>/dev/null || true

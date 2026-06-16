@@ -25,8 +25,8 @@ bind -n MouseDown1StatusRight run-shell '~/.config/shell/bin/tmux-keymap-menu.sh
 # Zoom active pane (Prefix+Z) — ad-hoc full width inside any window
 bind Z resize-pane -Z
 
-# Cycle layouts (Prefix+Space) — C-Space is Omarchy prefix; Space is second prefix
-bind Space next-layout
+# Cycle layouts (Prefix+Space) — golden φ on verify window, tmux next-layout elsewhere
+bind Space run-shell '~/.config/shell/bin/tmux-cycle-layout.sh'
 
 # Agent build (Prefix+B) — ab / agent_build
 bind B run-shell '~/.config/shell/bin/agent-build-layout.sh "#{pane_current_path}"'
