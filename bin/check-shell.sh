@@ -416,6 +416,36 @@ if [[ -f "$_VERIFY_CONF" ]]; then
     else
         warn 'tmux verify.conf missing bind B — merge from tmux.verify.conf.ex'
     fi
+    if grep -q 'tmux-keymap-menu' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: keymap menu (Prefix+?)'
+    else
+        warn 'tmux verify.conf missing keymap menu — merge from tmux.verify.conf.ex'
+    fi
+    if grep -q 'tmux-mode-sync' "$_VERIFY_CONF" 2>/dev/null || grep -q 'tmux.status-mode.conf.ex' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: mode display hooks (tmux-mode-sync)'
+    else
+        warn 'tmux verify.conf missing mode display — merge from tmux.verify.conf.ex'
+    fi
+    _status_len="$(tmux show-options -gv status-right-length 2>/dev/null || echo 0)"
+    if [[ "${_status_len:-0}" -ge 100 ]]; then
+        ok "tmux status-right-length: $_status_len (mode bar fits)"
+    else
+        warn "tmux status-right-length $_status_len — need >=100 for mode display (run: tmux-mode-sync.sh apply)"
+    fi
+    unset _status_len
+fi
+[[ -x "$CONFIG_DIR/bin/tmux-keymap-menu.sh" ]] \
+    && ok 'tmux-keymap-menu.sh executable' \
+    || warn 'tmux-keymap-menu.sh missing or not executable'
+[[ -f "$CONFIG_DIR/bin/data/tmux-keymaps.tsv" ]] \
+    && ok 'tmux-keymaps.tsv present' \
+    || warn 'tmux-keymaps.tsv missing'
+if [[ -x "$CONFIG_DIR/bin/test/verify-workflow-root.test.sh" ]]; then
+    if "$CONFIG_DIR/bin/test/verify-workflow-root.test.sh" >/tmp/verify-workflow-root.test.out 2>&1; then
+        ok 'verify_workflow_root tests pass'
+    else
+        warn 'verify_workflow_root tests failed (see /tmp/verify-workflow-root.test.out)'
+    fi
 fi
 unset _VERIFY_CONF
 [[ -f "$CONFIG_DIR/arch-design/VERIFICATION.md" ]] \
