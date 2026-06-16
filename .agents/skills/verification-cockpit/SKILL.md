@@ -65,7 +65,7 @@ Read in order (stop when you have enough signal):
 
 | Tier | Auto on `av`? | Examples |
 |------|---------------|----------|
-| `monitor` | yes | `lazygit`, `yazi`, `btop`, empty console |
+| `monitor` | yes | `lazygit`, empty console — **omit** `yazi`/`btop` unless they surface verify failures |
 | `watch` | yes | `pnpm test --watch`, `cargo watch -x check`, `vitest --watch` |
 | `verify` | confirm `[y/N]` | `pnpm test`, `cargo test`, `pnpm build`, `tsc --noEmit` |
 | `mutate` | blocked unless `av --launch-mutate` + type `YES` | `pnpm install`, migrations, deploy, format-all |
@@ -74,24 +74,65 @@ Read in order (stop when you have enough signal):
 
 Set `risk_profile` in manifest: `low` | `medium` | `high` (from AGENTS.md stability contracts).
 
-### 3. Design layout
+### 3. Design layout (two-pass, golden ratio)
 
-Default: one window `verify`, idempotent (select if exists, create if not).
+**Mandatory:** every pane answers *what failure does this surface?* If it does not, omit it. Prefer four high-signal panes over six decorative ones.
+
+**Golden ratio:** all splits use φ ≈ 1.618 → **62% major / 38% minor** (`bin/lib/verify-layout.sh`). Nest splits so higher priority panes accumulate major shares.
+
+#### Pass 1 — priority → area
+
+Rank panes `priority: 1` (highest) through `N`. Allocate area in golden proportions:
+
+| Prio | Typical pane | Column / band |
+|------|--------------|---------------|
+| 1 | Primary watcher (test/lint/health watch) | Insight column — major width (62%) |
+| 2 | CMD console | Insight column — minor height top (38%) |
+| 3 | GIT (lazygit) | Right column — minor width (38%), full height |
+| 4 | Verify-tier one-shot | Insight column — minor height bottom |
+| 5+ | Second watcher / domain verify | Only if distinct failure signal; split insight stack again |
+
+Use `verify_layout_build_golden_grid` from `verify-layout.sh` for the default 4-pane skeleton.
+
+#### Pass 2 — context → arrangement
+
+Adjust using `space_profile` per pane (manifest + `reference.md`):
+
+| Profile | Output shape | Space rule |
+|---------|--------------|------------|
+| `scroll` | streaming logs, test output | Largest vertical band in insight column |
+| `interactive` | short commands, `agent_scan` | Compact top band (38% height) |
+| `tui-side` | lazygit, tig | Narrow right column (38% width) |
+| `confirm-burst` | build/test on demand | Small bottom band; confirm before run |
+| `omit` | btop, yazi (default) | **Do not include** in verify window |
+
+#### Default golden grid
 
 ```
-+--------------------+---------------------+
-|  CMD (console)     |  GIT (lazygit)      |
-+--------------------+---------------------+
-|  watch pane(s)     |  watch pane(s)      |
-+--------------------+---------------------+
-|  FILES (yazi)      |  SYS (btop)         |
-+--------------------+---------------------+
++---------------------------+------------+
+| CMD (interactive, 38% h)  |            |
+|---------------------------|  GIT 38%   |
+| WATCH (scroll, major)     |  lazygit   |
+|---------------------------|            |
+| VERIFY (confirm, minor)   |            |
++---------------------------+------------+
+     insight column 62%
 ```
 
-- **console** pane: `tier: monitor`, no command — for `agent_scan`, `gdf`, `vf`
-- Add watch panes per stack (FE, Rust, API, etc.)
-- Put full-suite tests in `verify` tier (confirm in pane)
+- **CMD** — `tier: monitor`, no command — `agent_scan`, `gdf`, `vf`
+- **WATCH** — highest-priority watcher for this stack
+- **VERIFY** — full-suite or build; confirm in pane
 - Optional second window `verify-risk` only when many amber/red commands would crowd one window
+
+#### Value audit (before shipping)
+
+```
+- [ ] Each pane has `value:` in manifest — one concrete failure mode
+- [ ] No system monitors (btop) unless debugging perf during verify
+- [ ] No file browser unless verify workflow inspects files
+- [ ] No duplicate signals (two panes showing same test output)
+- [ ] WATCH pane shows live output without manual refresh
+```
 
 ### 4. Write artifacts
 
@@ -111,9 +152,10 @@ Use templates from [templates/](templates/) in this skill directory. Fill `PROJE
 - Args: `[directory]` (default `.`)
 - Must run inside tmux
 - Sets `@workflow_dir`, `@workflow_mode verify`
-- Idempotent: if window `verify` exists → `select-window`, skip pane creation
-- Sources `~/.config/shell/bin/lib/verify-launch.sh`
-- Calls `verify_apply_theme`, `verify_launch_pane`, `verify_maybe_rescan`
+- Idempotent: `verify_layout_ok` — recreate when CMD missing or placeholder panes (FILES/SYS/INSIGHT/VERIFY)
+- Resolves project layout by walking up from cwd for `.agents/verification/tmux-layout.sh`
+- Sources `verify-launch.sh` + `verify-layout.sh`
+- Calls `verify_layout_build_golden_grid`, `verify_apply_theme`, `verify_launch_pane`, `verify_maybe_rescan`
 - Ends with `tmux select-pane` on console
 
 ### 5. Symlink

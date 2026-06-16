@@ -27,15 +27,15 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 |------|----------|-----------|--------------|
 | 1 | `ab` (or Prefix+B) | `agent_build` → `bin/agent-build-layout.sh` | Creates/focuses tmux window `build` (one full pane). Sets `@workflow_dir` and `@workflow_mode build`. On **first** open only: sends `grok`. Renames legacy window `work` → `build` if present. |
 | 2 | *(agent runs)* | Your agent TUI in `build` | No automatic hooks. Other apps/notifications unchanged — this is **one tmux pane**, not OS-level focus mode. |
-| 3 | `av` (or Prefix+V) | `agent_verify` → `bin/agent-verify-layout.sh` | Creates/focuses window `verify` (shell, lazygit, yazi, btop). Updates `@workflow_dir` / `@workflow_mode verify`. **Does not** run `agent_scan` unless you passed `--scan`. |
-| 4 | `av --scan` | same + `agent_scan .` in verify pane 0 | Opt-in rg/dust/JSON sweep. tmux shows brief message: `agent_scan (av --scan)`. |
+| 3 | `av` (or Prefix+V) | `agent_verify` → `bin/agent-verify-layout.sh` | Creates/focuses window `verify` (golden-ratio insight layout; project-specific panes). Updates `@workflow_dir` / `@workflow_mode verify`. **Does not** run `agent_scan` unless you passed `--scan`. |
+| 4 | `av --scan` | same + `agent_scan` in verify CMD pane | Opt-in rg/dust/JSON sweep at workflow root. tmux shows brief message: `agent_scan (av --scan)`. |
 | 5 | `ab -c` / `agent_back` | Build layout + `grok -c` | Returns to `build`; no scan. |
 
 **Session state (tmux options on the session):**
 
 | Option | Set by | Purpose |
 |--------|--------|---------|
-| `@workflow_dir` | build or verify layout | Default directory when `av` is called with `.` |
+| `@workflow_dir` | build or verify layout | Canonical project root (`verify_workflow_root`: layout walk-up → git toplevel → cwd) |
 | `@workflow_mode` | build or verify layout | `build` / `verify` — status bar when `@workflow_status` is `on` |
 | `@workflow_rescan` | `agent_verify --scan` only | Triggers one `agent_scan` in verify shell pane |
 
@@ -100,14 +100,17 @@ When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (
 | `verify` | confirm `[y/N]` in pane | `pnpm test`, `cargo test`, `pnpm build` |
 | `mutate` | blocked unless `av --launch-mutate` | `pnpm install`, migrations, deploy |
 
+**Golden-ratio default** (φ 62% / 38%) — high-priority watchers get major area; omit low-signal panes (btop, yazi) unless they surface verify failures. See `verification-cockpit` skill.
+
 ```
-+--------------------+---------------------+
-|   CMD (console)    |   GIT (lazygit)     |
-+--------------------+---------------------+
-|   WATCH panes (project test watchers)    |
-+--------------------+---------------------+
-|   FILES (yazi)     |   SYS (btop)        |
-+--------------------+---------------------+
++---------------------------+------------+
+| CMD (interactive, minor)  |            |
+|---------------------------|  GIT 38%   |
+| WATCH / CHECK (scroll)    |  lazygit   |
+|---------------------------|            |
+| VERIFY (confirm, minor)   |            |
++---------------------------+------------+
+     insight column 62%
 ```
 
 **Flags:**

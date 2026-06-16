@@ -1,28 +1,35 @@
 # Verification cockpit — PROJECT_NAME
 
-Mission-control tmux layout for post-agent verification in **this project**. Open with `av` in Ghostty + tmux.
+Golden-ratio mission control for post-agent verification. Every pane must answer: **what failure does this surface?**
 
-Generated from `~/.config/shell/.agents/skills/verification-cockpit/` — edit freely for this repo's stack.
+## Layout (φ 62% / 38%)
 
-## Panes
+```
++---------------------------+------------+
+| CMD (interactive, minor)  |            |
+|---------------------------|  GIT 38%   |
+| WATCH (scroll, major)     |  lazygit   |
+|---------------------------|            |
+| VERIFY (confirm, minor)   |            |
++---------------------------+------------+
+```
 
-| Title | Tier | Command | Auto-launch |
-|-------|------|---------|-------------|
-| CMD | monitor | (console) | — |
-| GIT | monitor | lazygit | yes |
-| WATCH | watch | pnpm test --watch | yes |
-| FILES | monitor | yazi | yes |
-| SYS | monitor | btop | yes |
+| Title | Prio | Tier | Command |
+|-------|------|------|---------|
+| WATCH | 1 | watch | pnpm test --watch |
+| CMD | 2 | monitor | (console) |
+| GIT | 3 | monitor | lazygit |
+| VERIFY | 4 | verify | pnpm test (`[y/N]`) |
 
 ## Commands
 
 ```bash
 av                  # open cockpit; watchers start immediately
-av --scan           # + agent_scan in CMD pane
+av --scan           # + agent_scan in CMD
 av --launch-mutate  # allow mutate-tier panes (if any)
 av --generic        # skip this layout; use generic cockpit
 ```
 
 ## Regenerate
 
-Re-run the `verification-cockpit` skill in this project's workspace when `AGENTS.md` verify steps change. Skill source: `~/.config/shell/.agents/skills/verification-cockpit/`.
+Re-run `verification-cockpit` when verify steps change. Skill: `~/.config/shell/.agents/skills/verification-cockpit/`.

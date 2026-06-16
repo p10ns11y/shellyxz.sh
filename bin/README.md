@@ -186,6 +186,27 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 ---
 
+## verify-workflow-root.sh
+
+**Purpose:** Print the canonical project root shared by `ab`, `av`, and `agent_scan` (layout walk-up → git toplevel → cwd).
+
+**Shell (after `reload`):**
+
+```bash
+verify_workflow_root              # from any subdirectory
+verify_workflow_root /path/to/dir # explicit start
+```
+
+**Script (no shell function needed):**
+
+```bash
+~/.config/shell/bin/verify-workflow-root.sh [directory]
+```
+
+`verify-workflow-root.sh` is **not** on `PATH` by default — use the function or full path.
+
+---
+
 ## agent-verify-layout.sh
 
 **Purpose:** Create or focus the **verify** tmux window. Delegates to `.agents/verification/tmux-layout.sh` when present. See [VERIFICATION.md](../arch-design/VERIFICATION.md).
@@ -196,7 +217,7 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 | Arg | Default | Effect |
 |-----|---------|--------|
-| `directory` | `.` | Working directory for all panes (`cd` + absolute path) |
+| `directory` | `.` | Resolved via `verify_workflow_root` before layout (walk-up from cwd) |
 | `--generic` | off | Skip project layout; use generic cockpit |
 
 **Requirements:**
