@@ -6,6 +6,151 @@ set -euo pipefail
 VERIFY_LAUNCH_LIB_DIR="${VERIFY_LAUNCH_LIB_DIR:-$HOME/.config/shell/bin/lib}"
 VERIFY_PANE_LAUNCH="${VERIFY_PANE_LAUNCH:-$HOME/.config/shell/bin/verify-pane-launch.sh}"
 
+# Pane index base for the verify window (0 by default; may be 1 in user tmux config).
+verify_pane_base() {
+    local session="${1:?session}"
+    local win="${session}:verify"
+    tmux show-window-options -gv -t "$win" pane-base-index 2>/dev/null \
+        || tmux show-options -gv pane-base-index 2>/dev/null \
+        || echo 0
+}
+
+# Layout recipes assume pane index 0 — normalize after new-window when session uses pane-base-index 1.
+verify_normalize_pane_indexing() {
+    local session="${1:?session}"
+    tmux set-window-option -t "${session}:verify" pane-base-index 0
+}
+
+# True when verify window has golden-4 structure: CMD pane, no placeholder/low-value panes.
+verify_layout_ok() {
+    local session="${1:?session}"
+    local win="${session}:verify"
+    local wh git_h git_w ww ver=""
+
+    if ! tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'verify'; then
+        return 1
+    fi
+    if ! tmux list-panes -t "$win" -F '#{pane_title}' 2>/dev/null | grep -qx 'CMD'; then
+        return 1
+    fi
+    if tmux list-panes -t "$win" -F '#{pane_title}' 2>/dev/null | grep -qE '^(FILES|SYS|INSIGHT|VERIFY)$'; then
+        return 1
+    fi
+    ver="$(tmux show-option -gv @verify_layout_version 2>/dev/null || echo '')"
+    if [ -n "$ver" ] && [ "$ver" != "golden-4phi" ]; then
+        return 1
+    fi
+    if ! tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | grep -qx '3'; then
+        return 0
+    fi
+    wh="$(tmux display-message -p -t "$win" '#{window_height}')"
+    ww="$(tmux display-message -p -t "$win" '#{window_width}')"
+    git_h="$(tmux display-message -p -t "${win}.3" '#{pane_height}' 2>/dev/null || echo 0)"
+    git_w="$(tmux display-message -p -t "${win}.3" '#{pane_width}' 2>/dev/null || echo 0)"
+    if [ "$git_h" -lt $((wh - 1)) ]; then
+        return 1
+    fi
+    if [ "$git_w" -gt $((ww * 42 / 100)) ]; then
+        return 1
+    fi
+    return 0
+}
+
+# Resolve console pane for agent_scan / final focus. Prints e.g. Work:verify.0
+verify_console_target() {
+    local session="${1:?session}"
+    local win="${session}:verify"
+    local idx=""
+    local base
+
+    if ! tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'verify'; then
+        echo "verify_console_target: missing verify window" >&2
+        return 1
+    fi
+
+    idx="$(tmux list-panes -t "$win" -F '#{pane_index} #{pane_title}' 2>/dev/null \
+        | awk '$2=="CMD"{print $1; exit}')"
+    if [ -n "$idx" ]; then
+        printf '%s' "${win}.${idx}"
+        return 0
+    fi
+
+    base="$(verify_pane_base "$session")"
+    if tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | grep -qx "$base"; then
+        printf '%s' "${win}.${base}"
+        return 0
+    fi
+
+    idx="$(tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | sort -n | head -1)"
+    if [ -n "$idx" ]; then
+        printf '%s' "${win}.${idx}"
+        return 0
+    fi
+
+    echo "verify_console_target: no panes in verify window" >&2
+    return 1
+}
+
+# Drop a broken verify window so layout scripts can recreate it.
+verify_reset_broken_layout() {
+    local session="${1:?session}"
+    if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'verify'; then
+        tmux kill-window -t "${session}:verify"
+    fi
+}
+
+# Walk upward from start_dir for .agents/verification/tmux-layout.sh. Prints repo root.
+verify_find_layout_root() {
+    local start_dir="${1:?start_dir}"
+    local dir
+    dir="$(cd "$start_dir" && pwd)"
+    while [ "$dir" != "/" ]; do
+        if [ -x "$dir/.agents/verification/tmux-layout.sh" ]; then
+            printf '%s' "$dir"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    return 1
+}
+
+# Canonical project root for ab / av / agent_scan — one resolution path for all workflow tools.
+# Order: verification layout root (walk up) → git toplevel → absolute start directory.
+verify_workflow_root() {
+    local start="${1:-.}"
+    local dir="" root=""
+
+    if [ "$start" = . ]; then
+        dir="$(pwd)"
+    elif [ -d "$start" ]; then
+        dir="$(cd "$start" && pwd)"
+    else
+        echo "verify_workflow_root: not a directory: $start" >&2
+        return 1
+    fi
+
+    if root="$(verify_find_layout_root "$dir")"; then
+        printf '%s' "$root"
+        return 0
+    fi
+
+    if root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)"; then
+        printf '%s' "$root"
+        return 0
+    fi
+
+    printf '%s' "$dir"
+}
+
+# Set @workflow_dir to the canonical root. Prints the path.
+verify_set_workflow_dir() {
+    local session="${1:?session}"
+    local root
+    root="$(verify_workflow_root "${2:-.}")"
+    tmux set-option -t "$session" @workflow_dir "$root"
+    printf '%s' "$root"
+}
+
 # Apply SOC theme vars on the tmux session.
 verify_apply_theme() {
     local session="${1:?session}"
@@ -71,9 +216,13 @@ verify_launch_pane() {
 }
 
 # Run agent_scan in the console pane when rescan is requested.
+# Second arg optional — resolved via verify_console_target when omitted.
 verify_maybe_rescan() {
     local session="${1:?session}"
-    local console_target="${2:?console}"
+    local console_target="${2:-}"
+    if [ -z "$console_target" ]; then
+        console_target="$(verify_console_target "$session")"
+    fi
     local rescan=0
 
     local wf_rescan
@@ -85,6 +234,6 @@ verify_maybe_rescan() {
 
     if [ "$rescan" = "1" ]; then
         tmux display-message -d 2500 'agent_scan (av --scan)' 2>/dev/null || true
-        tmux send-keys -t "$console_target" 'agent_scan .' Enter
+        tmux send-keys -t "$console_target" 'agent_scan' Enter
     fi
 }

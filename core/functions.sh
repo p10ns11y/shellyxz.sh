@@ -65,9 +65,25 @@ vf() {
     [ -n "$f" ] && "${EDITOR:-nvim}" "$f"
 }
 
+# Canonical workflow root (layout walk-up → git toplevel → cwd). Used by ab / av / agent_scan.
+_verify_workflow_root() {
+    local script="${SHELL_CONFIG_BIN:-$HOME/.config/shell/bin}/verify-workflow-root.sh"
+    if [ ! -x "$script" ]; then
+        echo "_verify_workflow_root: missing $script" >&2
+        return 1
+    fi
+    "$script" "${1:-.}"
+}
+
+# Print canonical workflow root (optional directory; default pwd with walk-up).
+verify_workflow_root() {
+    _verify_workflow_root "${1:-.}"
+}
+
 # Quick structured scan after agent output (rg + dust + JSON reports).
 agent_scan() {
-    local dir="${1:-.}"
+    local dir
+    dir="$(_verify_workflow_root "${1:-.}")" || return 1
     echo "=== rg sweep ==="
     if command -v rg >/dev/null 2>&1; then
         rg -n 'TODO|FIXME|panic!|unwrap\(|ERROR|error:' "$dir" 2>/dev/null | head -30
@@ -136,6 +152,7 @@ agent_build() {
                 ;;
         esac
     done
+    dir="$(_verify_workflow_root "$dir")" || return 1
     "$script" "$dir" "${args[@]}"
 }
 
@@ -181,14 +198,7 @@ agent_verify() {
                 ;;
         esac
     done
-    if [ "$dir" = . ]; then
-        local wf
-        wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
-        if [ -n "$wf" ] && [ -d "$wf" ]; then
-            dir="$wf"
-        fi
-        unset wf
-    fi
+    dir="$(_verify_workflow_root "$dir")" || return 1
     local script="$HOME/.config/shell/bin/agent-verify-layout.sh"
     if [ ! -x "$script" ]; then
         echo "agent_verify: missing $script" >&2

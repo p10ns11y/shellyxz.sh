@@ -50,8 +50,12 @@ if [ -z "${TMUX:-}" ]; then
     exit 1
 fi
 
+# shellcheck source=/dev/null
+source "$HOME/.config/shell/bin/lib/verify-launch.sh"
+
+DIR="$(verify_workflow_root "$DIR")"
 SESSION="$(tmux display-message -p '#{session_name}')"
-tmux set-option -t "$SESSION" @workflow_dir "$DIR"
+verify_set_workflow_dir "$SESSION" "$DIR" >/dev/null
 tmux set-option -t "$SESSION" @workflow_mode build
 
 BUILD_EXISTS=false
