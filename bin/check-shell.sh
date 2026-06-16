@@ -391,15 +391,30 @@ grep -q 'FZF_DEFAULT_OPTS' "$ENV_FILE" \
 grep -q 'agent_verify' "$FUNCS_FILE" \
     && ok 'functions.sh: agent_verify' \
     || warn 'functions.sh: agent_verify missing'
+grep -q 'agent_work' "$FUNCS_FILE" \
+    && ok 'functions.sh: agent_work' \
+    || warn 'functions.sh: agent_work missing'
 grep -q '^vf()' "$FUNCS_FILE" \
     && ok 'functions.sh: vf' \
     || warn 'functions.sh: vf missing'
 [[ -x "$CONFIG_DIR/bin/agent-verify-layout.sh" ]] \
     && ok 'agent-verify-layout.sh executable' \
     || warn 'agent-verify-layout.sh missing or not executable'
+[[ -x "$CONFIG_DIR/bin/agent-focus-layout.sh" ]] \
+    && ok 'agent-focus-layout.sh executable' \
+    || warn 'agent-focus-layout.sh missing or not executable'
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
     && ok 'tmux.conf present' \
     || warn 'tmux.conf missing (run migrate.sh)'
+_VERIFY_CONF="$HOME/.config/tmux/verify.conf"
+if [[ -f "$_VERIFY_CONF" ]]; then
+    if grep -q 'bind W' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: Prefix+W (work)'
+    else
+        warn 'tmux verify.conf missing bind W — merge from tmux.verify.conf.ex'
+    fi
+fi
+unset _VERIFY_CONF
 [[ -f "$CONFIG_DIR/arch-design/VERIFICATION.md" ]] \
     && ok 'arch-design/VERIFICATION.md present' \
     || warn 'arch-design/VERIFICATION.md missing'

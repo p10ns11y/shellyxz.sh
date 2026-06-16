@@ -81,7 +81,7 @@ bootstrap_from_remote() {
         bin/tasks/install-rc.sh bin/tasks/scaffold.sh bin/tasks/git-commit.sh
         bin/check-shell.sh bin/check-template-sync.sh bin/scaffold-environment.sh
         bin/recover-shell.sh bin/README.md
-        bin/agent-verify-layout.sh bin/fzf-preview.sh
+        bin/agent-verify-layout.sh bin/agent-focus-layout.sh bin/fzf-preview.sh
         environments/README.md arch-design/README.md
         README.md arch-design/shell.md arch-design/SHELL-env-var-behavior.md
         arch-design/VERIFICATION.md arch-design/human-in-the-loop-workflow.md
