@@ -43,7 +43,9 @@ fi
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
-alias aw='agent_work'
+alias ab='agent_build'
+alias af='agent_build'  # legacy — prefer ab (distinct from av)
+alias aw='agent_build'  # legacy
 alias av='agent_verify'
 alias shellyhow='$HOME/.config/shell/bin/check-shell.sh'
 # n(), ga() may be defined by omarchy layer — do not alias here

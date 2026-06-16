@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Zen focus layout for tmux — single full-pane window for agent TUIs (grok, etc.).
-# Usage: agent-focus-layout.sh [directory] [--continue|--no-launch] [-- command...]
+# Agent build layout for tmux — one full-pane window for agent TUIs (grok default).
+# Usage: agent-build-layout.sh [directory] [--continue|--no-launch] [-- command...]
 set -euo pipefail
 
-SCRIPT_NAME="agent-focus-layout"
+SCRIPT_NAME="agent-build-layout"
 DIR="."
 LAUNCH="" # unset | default | continue | no | custom
 CMD=()
@@ -52,33 +52,36 @@ fi
 
 SESSION="$(tmux display-message -p '#{session_name}')"
 tmux set-option -t "$SESSION" @workflow_dir "$DIR"
-tmux set-option -t "$SESSION" @workflow_mode work
+tmux set-option -t "$SESSION" @workflow_mode build
 
-WORK_EXISTS=false
-if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'work'; then
-    WORK_EXISTS=true
-    tmux select-window -t 'work'
+BUILD_EXISTS=false
+if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'build'; then
+    BUILD_EXISTS=true
+    tmux select-window -t 'build'
+elif tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'work'; then
+    tmux rename-window -t 'work' 'build'
+    BUILD_EXISTS=true
+    tmux select-window -t 'build'
 else
-    tmux new-window -n work -c "$DIR"
+    tmux new-window -n build -c "$DIR"
     if [ -z "$LAUNCH" ]; then
         LAUNCH="default"
     fi
 fi
 
-# Resolve first pane in work window (pane-base-index may be 0 or 1).
-_work_pane_target() {
+_build_pane_target() {
     local idx
-    idx="$(tmux list-panes -t '=work' -F '#{pane_index}' | head -1)"
+    idx="$(tmux list-panes -t '=build' -F '#{pane_index}' | head -1)"
     if [ -z "$idx" ]; then
-        echo "$SCRIPT_NAME: no pane in work window" >&2
+        echo "$SCRIPT_NAME: no pane in build window" >&2
         return 1
     fi
-    printf '=work.%s' "$idx"
+    printf '=build.%s' "$idx"
 }
 
-_launch_work_cmd() {
+_launch_build_cmd() {
     local target cmd
-    target="$(_work_pane_target)" || return 1
+    target="$(_build_pane_target)" || return 1
     if [ "$#" -eq 0 ]; then
         cmd='grok'
     else
@@ -92,19 +95,19 @@ _launch_work_cmd() {
 case "$LAUNCH" in
     no | '')
         ;;
-    "continue")
-        _launch_work_cmd grok -c
+    continue)
+        _launch_build_cmd grok -c
         ;;
     custom)
-        _launch_work_cmd "${CMD[@]}"
+        _launch_build_cmd "${CMD[@]}"
         ;;
     default)
-        if [ "$WORK_EXISTS" = false ]; then
-            _launch_work_cmd
+        if [ "$BUILD_EXISTS" = false ]; then
+            _launch_build_cmd
         fi
         ;;
 esac
 
-work_target="$( _work_pane_target )" || exit 1
-tmux select-pane -t "$work_target"
-unset work_target
+build_target="$(_build_pane_target)" || exit 1
+tmux select-pane -t "$build_target"
+unset build_target

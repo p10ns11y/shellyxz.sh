@@ -29,9 +29,7 @@ SESSION="$(tmux display-message -p '#{session_name}')"
 tmux set-option -t "$SESSION" @workflow_dir "$DIR"
 tmux set-option -t "$SESSION" @workflow_mode verify
 
-VERIFY_EXISTS=false
 if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'verify'; then
-    VERIFY_EXISTS=true
     tmux select-window -t 'verify'
 else
     tmux new-window -n verify -c "$DIR"
@@ -61,18 +59,15 @@ else
 fi
 
 RESCAN=0
-if [ "$VERIFY_EXISTS" = false ]; then
+_wf_rescan="$(tmux show-option -gv @workflow_rescan 2>/dev/null || echo 0)"
+if [ "$_wf_rescan" = "1" ] || [ "${AGENT_VERIFY_RESCAN:-0}" = "1" ]; then
     RESCAN=1
-else
-    _wf_rescan="$(tmux show-option -gv @workflow_rescan 2>/dev/null || echo 0)"
-    if [ "$_wf_rescan" = "1" ] || [ "${AGENT_VERIFY_RESCAN:-0}" = "1" ]; then
-        RESCAN=1
-    fi
-    unset _wf_rescan
 fi
+unset _wf_rescan
 tmux set-option -t "$SESSION" @workflow_rescan 0
 
 if [ "$RESCAN" = "1" ]; then
+    tmux display-message -d 2500 'agent_scan (av --scan)' 2>/dev/null || true
     tmux send-keys -t 'verify.0' 'agent_scan .' Enter
 fi
 

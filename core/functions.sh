@@ -109,12 +109,12 @@ _agent_tmux_guard() {
     fi
 }
 
-# Zen focus layout — full-pane agent TUI (grok default). Requires native terminal + tmux.
-agent_work() {
+# Agent build layout — full-pane agent TUI (grok default). Requires native terminal + tmux.
+agent_build() {
     _agent_tmux_guard || return 1
-    local script="$HOME/.config/shell/bin/agent-focus-layout.sh"
+    local script="$HOME/.config/shell/bin/agent-build-layout.sh"
     if [ ! -x "$script" ]; then
-        echo "agent_work: missing $script" >&2
+        echo "agent_build: missing $script" >&2
         return 1
     fi
     local dir="." args=() _dir_set=""
@@ -139,15 +139,38 @@ agent_work() {
     "$script" "$dir" "${args[@]}"
 }
 
-# Return to work window and continue the agent session (grok -c).
+# Deprecated name — use agent_build
+agent_work() {
+    agent_build "$@"
+}
+
+# Return to build window and continue the agent session (grok -c).
 agent_back() {
-    agent_work -c
+    agent_build -c
 }
 
 # Open verification cockpit layout in tmux (requires native terminal + active tmux).
+# Pass --scan to run agent_scan in the shell pane (opt-in; not automatic).
 agent_verify() {
     _agent_tmux_guard || return 1
-    local dir="${1:-.}"
+    local dir="." do_scan=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --scan)
+                do_scan=1
+                shift
+                ;;
+            *)
+                if [ "$dir" = . ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                    dir="$1"
+                    shift
+                else
+                    echo "agent_verify: unknown argument: $1" >&2
+                    return 1
+                fi
+                ;;
+        esac
+    done
     if [ "$dir" = . ]; then
         local wf
         wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
@@ -161,8 +184,13 @@ agent_verify() {
         echo "agent_verify: missing $script" >&2
         return 1
     fi
-    tmux set-option @workflow_rescan 1
-    AGENT_VERIFY_RESCAN=1 "$script" "$dir"
+    if [ "$do_scan" = 1 ]; then
+        tmux set-option @workflow_rescan 1
+        AGENT_VERIFY_RESCAN=1 "$script" "$dir"
+    else
+        tmux set-option @workflow_rescan 0
+        "$script" "$dir"
+    fi
 }
 
 # Portable reload helper for the current shell.
