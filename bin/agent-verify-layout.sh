@@ -1,10 +1,30 @@
 #!/usr/bin/env bash
 # Verification cockpit layout for tmux.
-# Usage: agent-verify-layout.sh [directory]
+# Usage: agent-verify-layout.sh [directory] [--generic]
+# Delegates to .agents/verification/tmux-layout.sh when present.
 set -euo pipefail
 
-DIR="${1:-.}"
+DIR="."
+USE_GENERIC=0
 SCRIPT_NAME="agent-verify-layout"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --generic)
+            USE_GENERIC=1
+            shift
+            ;;
+        *)
+            if [ "$DIR" = . ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                DIR="$1"
+                shift
+            else
+                echo "$SCRIPT_NAME: unknown argument: $1" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
 
 if ! command -v tmux >/dev/null 2>&1; then
     echo "$SCRIPT_NAME: tmux not found" >&2
@@ -24,6 +44,11 @@ if [ "$DIR" = . ]; then
     unset _wf
 fi
 DIR="$(cd "$DIR" && pwd)"
+
+PROJECT_LAYOUT="$DIR/.agents/verification/tmux-layout.sh"
+if [ "$USE_GENERIC" != 1 ] && [ -x "$PROJECT_LAYOUT" ]; then
+    exec "$PROJECT_LAYOUT" "$DIR"
+fi
 
 SESSION="$(tmux display-message -p '#{session_name}')"
 tmux set-option -t "$SESSION" @workflow_dir "$DIR"
@@ -58,17 +83,7 @@ else
     tmux select-layout -t verify main-vertical 2>/dev/null || true
 fi
 
-RESCAN=0
-_wf_rescan="$(tmux show-option -gv @workflow_rescan 2>/dev/null || echo 0)"
-if [ "$_wf_rescan" = "1" ] || [ "${AGENT_VERIFY_RESCAN:-0}" = "1" ]; then
-    RESCAN=1
-fi
-unset _wf_rescan
-tmux set-option -t "$SESSION" @workflow_rescan 0
-
-if [ "$RESCAN" = "1" ]; then
-    tmux display-message -d 2500 'agent_scan (av --scan)' 2>/dev/null || true
-    tmux send-keys -t 'verify.0' 'agent_scan .' Enter
-fi
-
+# shellcheck source=/dev/null
+source "$HOME/.config/shell/bin/lib/verify-launch.sh"
+verify_maybe_rescan "$SESSION" 'verify.0'
 tmux select-pane -t 'verify.0'

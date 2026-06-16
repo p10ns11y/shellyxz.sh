@@ -85,7 +85,7 @@ bootstrap_from_remote() {
         environments/README.md arch-design/README.md
         README.md arch-design/shell.md arch-design/SHELL-env-var-behavior.md
         arch-design/VERIFICATION.md arch-design/human-in-the-loop-workflow.md
-        starship.ex.toml tmux.verify.conf.ex yazi.ex.toml git.ex.config .gitignore
+        starship.ex.toml tmux.verify.conf.ex tmux.verify-soc-theme.conf.ex yazi.ex.toml git.ex.config .gitignore
     )
 
     if ! command -v curl &>/dev/null; then

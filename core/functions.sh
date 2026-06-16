@@ -150,14 +150,24 @@ agent_back() {
 }
 
 # Open verification cockpit layout in tmux (requires native terminal + active tmux).
-# Pass --scan to run agent_scan in the shell pane (opt-in; not automatic).
+# --scan: run agent_scan in console pane (opt-in).
+# --generic: skip project .agents/verification/tmux-layout.sh
+# --launch-mutate: allow mutate-tier panes to prompt for destructive commands
 agent_verify() {
     _agent_tmux_guard || return 1
-    local dir="." do_scan=0
+    local dir="." do_scan=0 use_generic=0 launch_mutate=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --scan)
                 do_scan=1
+                shift
+                ;;
+            --generic)
+                use_generic=1
+                shift
+                ;;
+            --launch-mutate)
+                launch_mutate=1
                 shift
                 ;;
             *)
@@ -184,12 +194,26 @@ agent_verify() {
         echo "agent_verify: missing $script" >&2
         return 1
     fi
+    local args=()
+    if [ "$use_generic" = 1 ]; then
+        args+=(--generic)
+    fi
     if [ "$do_scan" = 1 ]; then
         tmux set-option @workflow_rescan 1
-        AGENT_VERIFY_RESCAN=1 "$script" "$dir"
     else
         tmux set-option @workflow_rescan 0
-        "$script" "$dir"
+    fi
+    local env_args=()
+    if [ "$do_scan" = 1 ]; then
+        env_args+=(AGENT_VERIFY_RESCAN=1)
+    fi
+    if [ "$launch_mutate" = 1 ]; then
+        env_args+=(AGENT_VERIFY_LAUNCH_MUTATE=1)
+    fi
+    if [ "${#env_args[@]}" -gt 0 ]; then
+        env "${env_args[@]}" "$script" "$dir" "${args[@]}"
+    else
+        "$script" "$dir" "${args[@]}"
     fi
 }
 
