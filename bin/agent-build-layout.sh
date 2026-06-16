@@ -58,6 +58,11 @@ SESSION="$(tmux display-message -p '#{session_name}')"
 verify_set_workflow_dir "$SESSION" "$DIR" >/dev/null
 tmux set-option -t "$SESSION" @workflow_mode build
 
+MODE_SYNC="$HOME/.config/shell/bin/tmux-mode-sync.sh"
+if [ -x "$MODE_SYNC" ]; then
+    "$MODE_SYNC" apply-workflow
+fi
+
 BUILD_EXISTS=false
 if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'build'; then
     BUILD_EXISTS=true

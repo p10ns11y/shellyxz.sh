@@ -168,6 +168,15 @@ verify_apply_theme() {
     if [ -n "$project_theme" ] && [ -f "$project_theme" ]; then
         tmux source-file "$project_theme"
     fi
+
+    local mode_sync="${HOME}/.config/shell/bin/tmux-mode-sync.sh"
+    if [ -x "$mode_sync" ]; then
+        if [ -f "$soc_ex" ]; then
+            "$mode_sync" apply-soc
+        else
+            "$mode_sync" apply-workflow
+        fi
+    fi
 }
 
 # Launch a command in a tmux pane according to risk tier.

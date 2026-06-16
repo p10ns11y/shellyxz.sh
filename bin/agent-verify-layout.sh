@@ -75,3 +75,8 @@ fi
 CONSOLE="$(verify_console_target "$SESSION")"
 verify_maybe_rescan "$SESSION" "$CONSOLE"
 tmux select-pane -t "$CONSOLE"
+
+MODE_SYNC="$HOME/.config/shell/bin/tmux-mode-sync.sh"
+if [ -x "$MODE_SYNC" ]; then
+    "$MODE_SYNC" apply-workflow
+fi
