@@ -43,6 +43,7 @@ fi
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
+alias aw='agent_work'
 alias av='agent_verify'
 alias shellyhow='$HOME/.config/shell/bin/check-shell.sh'
 # n(), ga() may be defined by omarchy layer — do not alias here

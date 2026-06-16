@@ -94,8 +94,8 @@ agent_scan() {
     done
 }
 
-# Open verification cockpit layout in tmux (requires native terminal + active tmux).
-agent_verify() {
+# Refuse cockpit layouts in editor integrated terminals (Cursor phantom-tab UX).
+_agent_tmux_guard() {
     if command -v detect_editor_terminal >/dev/null 2>&1; then
         detect_editor_terminal 2>/dev/null
         if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = yes ]; then
@@ -104,16 +104,65 @@ agent_verify() {
         fi
     fi
     if [ -z "${TMUX:-}" ]; then
-        echo "agent_verify: start tmux first (t or Super+Alt+Return)" >&2
+        echo "Start tmux first (t or Super+Alt+Return)" >&2
         return 1
     fi
+}
+
+# Zen focus layout — full-pane agent TUI (grok default). Requires native terminal + tmux.
+agent_work() {
+    _agent_tmux_guard || return 1
+    local script="$HOME/.config/shell/bin/agent-focus-layout.sh"
+    if [ ! -x "$script" ]; then
+        echo "agent_work: missing $script" >&2
+        return 1
+    fi
+    local dir="." args=() _dir_set=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -c | --continue)
+                args+=(--continue)
+                shift
+                ;;
+            *)
+                if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                    dir="$1"
+                    _dir_set=1
+                    shift
+                else
+                    args+=(-- "$@")
+                    break
+                fi
+                ;;
+        esac
+    done
+    "$script" "$dir" "${args[@]}"
+}
+
+# Return to work window and continue the agent session (grok -c).
+agent_back() {
+    agent_work -c
+}
+
+# Open verification cockpit layout in tmux (requires native terminal + active tmux).
+agent_verify() {
+    _agent_tmux_guard || return 1
     local dir="${1:-.}"
+    if [ "$dir" = . ]; then
+        local wf
+        wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
+        if [ -n "$wf" ] && [ -d "$wf" ]; then
+            dir="$wf"
+        fi
+        unset wf
+    fi
     local script="$HOME/.config/shell/bin/agent-verify-layout.sh"
     if [ ! -x "$script" ]; then
         echo "agent_verify: missing $script" >&2
         return 1
     fi
-    "$script" "$dir"
+    tmux set-option @workflow_rescan 1
+    AGENT_VERIFY_RESCAN=1 "$script" "$dir"
 }
 
 # Portable reload helper for the current shell.

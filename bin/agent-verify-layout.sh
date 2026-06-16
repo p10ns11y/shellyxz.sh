@@ -4,7 +4,6 @@
 set -euo pipefail
 
 DIR="${1:-.}"
-DIR="$(cd "$DIR" && pwd)"
 SCRIPT_NAME="agent-verify-layout"
 
 if ! command -v tmux >/dev/null 2>&1; then
@@ -17,33 +16,64 @@ if [ -z "${TMUX:-}" ]; then
     exit 1
 fi
 
-# Idempotent: reuse existing verify window
+if [ "$DIR" = . ]; then
+    _wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
+    if [ -n "$_wf" ] && [ -d "$_wf" ]; then
+        DIR="$_wf"
+    fi
+    unset _wf
+fi
+DIR="$(cd "$DIR" && pwd)"
+
+SESSION="$(tmux display-message -p '#{session_name}')"
+tmux set-option -t "$SESSION" @workflow_dir "$DIR"
+tmux set-option -t "$SESSION" @workflow_mode verify
+
+VERIFY_EXISTS=false
 if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'verify'; then
+    VERIFY_EXISTS=true
     tmux select-window -t 'verify'
-    exit 0
+else
+    tmux new-window -n verify -c "$DIR"
+
+    # Right: lazygit
+    tmux split-window -h -c "$DIR" -p 42
+    if command -v lazygit >/dev/null 2>&1; then
+        tmux send-keys -t 'verify.1' 'lazygit' Enter
+    fi
+
+    # Left column bottom: yazi
+    tmux select-pane -t 'verify.0'
+    tmux split-window -v -c "$DIR" -p 40
+    if command -v yazi >/dev/null 2>&1; then
+        tmux send-keys -t 'verify.2' 'yazi' Enter
+    fi
+
+    # Below yazi: btop
+    tmux select-pane -t 'verify.2'
+    tmux split-window -v -c "$DIR" -p 35
+    if command -v btop >/dev/null 2>&1; then
+        tmux send-keys -t 'verify.3' 'btop' Enter
+    fi
+
+    tmux select-pane -t 'verify.0'
+    tmux select-layout -t verify main-vertical 2>/dev/null || true
 fi
 
-tmux new-window -n verify -c "$DIR"
+RESCAN=0
+if [ "$VERIFY_EXISTS" = false ]; then
+    RESCAN=1
+else
+    _wf_rescan="$(tmux show-option -gv @workflow_rescan 2>/dev/null || echo 0)"
+    if [ "$_wf_rescan" = "1" ] || [ "${AGENT_VERIFY_RESCAN:-0}" = "1" ]; then
+        RESCAN=1
+    fi
+    unset _wf_rescan
+fi
+tmux set-option -t "$SESSION" @workflow_rescan 0
 
-# Right: lazygit
-tmux split-window -h -c "$DIR" -p 38
-if command -v lazygit >/dev/null 2>&1; then
-    tmux send-keys -t 'verify.1' 'lazygit' Enter
+if [ "$RESCAN" = "1" ]; then
+    tmux send-keys -t 'verify.0' 'agent_scan .' Enter
 fi
 
-# Left column bottom: yazi
 tmux select-pane -t 'verify.0'
-tmux split-window -v -c "$DIR" -p 40
-if command -v yazi >/dev/null 2>&1; then
-    tmux send-keys -t 'verify.2' 'yazi' Enter
-fi
-
-# Below yazi: btop
-tmux select-pane -t 'verify.2'
-tmux split-window -v -c "$DIR" -p 35
-if command -v btop >/dev/null 2>&1; then
-    tmux send-keys -t 'verify.3' 'btop' Enter
-fi
-
-tmux select-pane -t 'verify.0'
-tmux select-layout -t verify main-vertical 2>/dev/null || true
