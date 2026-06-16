@@ -2,6 +2,8 @@
 
 Clean, portable, and low-maintenance shell configuration that works across **bash**, **zsh**, and **fish**.
 
+**Why:** Terminal-native agent verification (`ab` / `av`, tmux cockpits) — see [motivation.md](motivation.md).
+
 ## Audience
 
 **This is for advanced users only.** You should already be comfortable fixing a broken shell environment and recovering a system when things go wrong.

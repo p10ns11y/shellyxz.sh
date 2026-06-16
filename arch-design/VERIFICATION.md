@@ -2,7 +2,7 @@
 
 Human-in-the-loop verification cockpit for agent output. Goal: **insight + action in under 10 seconds** after an agent finishes.
 
-See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load order. **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
+See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load order. **Genesis:** [motivation.md](../motivation.md). **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
 
 ---
 
