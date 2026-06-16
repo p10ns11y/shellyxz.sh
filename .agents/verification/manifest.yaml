@@ -1,40 +1,46 @@
 project: shell
 risk_profile: medium
+layout: golden-4
+phi_major: 62
+phi_minor: 38
 
+# Pass 1: priority (1=highest) → proportional golden nesting.
+# Pass 2: space_profile drives split choice (see verification-cockpit skill).
 panes:
+  - id: check-watch
+    title: CHECK:watch
+    tier: watch
+    priority: 1
+    space_profile: scroll
+    cwd: .
+    command: CHECK_WATCH_INTERVAL=90 ~/.config/shell/bin/check-shell-watch.sh
+    fallback_command: CHECK_WATCH_INTERVAL=90 ~/.config/shell/bin/check-shell-watch.sh
+    value: Live shell load-order + guardrail failures
+
   - id: console
     title: CMD
     tier: monitor
+    priority: 2
+    space_profile: interactive
+    value: agent_scan, gdf, manual verify commands
 
   - id: git
     title: GIT
     tier: monitor
+    priority: 3
+    space_profile: tui-side
     command: lazygit
     tool: lazygit
-
-  - id: check-watch
-    title: CHECK:watch
-    tier: watch
-    cwd: .
-    command: watch -n 15 -c ~/.config/shell/bin/check-shell.sh
-    fallback_command: while true; do clear; ~/.config/shell/bin/check-shell.sh; sleep 15; done
+    value: Review agent diffs before commit
 
   - id: template-sync
     title: SYNC
     tier: verify
+    priority: 4
+    space_profile: confirm-burst
     cwd: .
     command: ~/.config/shell/bin/check-template-sync.sh
+    value: Template drift — confirm before running
 
-  - id: files
-    title: FILES
-    tier: monitor
-    command: yazi
-    tool: yazi
-
-  - id: sys
-    title: SYS
-    tier: monitor
-    command: btop
-    tool: btop
-
+# Omitted (low verification value): FILES/yazi, SYS/btop
 # mutate tier (av --launch-mutate): bin/migrate.sh --sync-rc
