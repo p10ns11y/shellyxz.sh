@@ -41,6 +41,21 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 
 **Status bar:** toggle with `tmux set -g @workflow_status off` or use minimal `status-right` in `tmux.verify.conf.ex`.
 
+**Mode indicators** (status-right, applied by `bin/tmux-mode-sync.sh`):
+
+| Label | When |
+|-------|------|
+| `PREFIX` | Prefix key held (C-Space / C-b) |
+| `COPY` | tmux copy mode (`#{pane_in_mode}`) |
+| `INSERT` / `NORMAL` | nvim active pane (`@editor_mode` via verification-workflow plugin + `tmux-mode-sync.sh`) |
+| `ZOOM` | Zoomed pane |
+| `build` / `verify` | `@workflow_mode` when `@workflow_status` is on |
+| `?` | Keymap menu hint — **Prefix+?** or **click status-right** |
+
+`status-right-length` is set to **120** so mode labels are not truncated (default Omarchy `50` hides them).
+
+**Keymap menu:** `~/.config/shell/bin/tmux-keymap-menu.sh` — fzf popup (or tmux `display-menu` fallback). Data: `bin/data/tmux-keymaps.tsv`.
+
 **Mnemonic:** **ab** = agent **b**uild · **av** = agent **v**erify · tmux **B** / **V** (shifted — does not conflict with tmux `b` last-window).
 
 ---
@@ -55,7 +70,8 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 | Build layout script | `bin/agent-build-layout.sh` |
 | Cockpit layout script | `bin/agent-verify-layout.sh` |
 | tmux base | Omarchy → `~/.config/tmux/tmux.conf` |
-| tmux verify bindings | `tmux.verify.conf.ex` → `~/.config/tmux/verify.conf` |
+| tmux verify bindings | `tmux.verify.conf.ex` + `tmux.status-mode.conf.ex` → `~/.config/tmux/verify.conf` |
+| tmux mode display | `bin/tmux-mode-sync.sh` + `bin/lib/tmux-status-mode.sh` |
 | yazi defaults | `yazi.ex.toml` → `~/.config/yazi/yazi.toml` |
 | git delta | `git.ex.config` → `~/.config/git/verification` |
 | nvim Telescope + Harpoon | `~/.config/nvim/lua/plugins/verification-workflow.lua` |
@@ -69,17 +85,7 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 
 **Build window** (`ab` / Prefix+B): single full pane — Grok Build (`grok`) or custom agent command. One tmux pane only — not OS-level “do not disturb”.
 
-**Verify window** (`av` / Prefix+V):
-
-```
-+--------------------+---------------------+
-|   nvim / shell     |   lazygit           |
-+--------------------+---------------------+
-|   yazi (mtime sort)                      |
-+------------------------------------------+
-|   btop                                   |
-+------------------------------------------+
-```
+**Verify window** (`av` / Prefix+V): project layouts use the **golden-ratio insight grid** below. `av --generic` falls back to a sparse 4-pane shell (CMD + empty WATCH/BUILD + lazygit) until you generate `.agents/verification/` with the verification-cockpit skill.
 
 ### Project-specific cockpit
 
@@ -146,6 +152,7 @@ av --scan                      # verify + agent_scan in shell pane
 | `Prefix + v` | Split vertical (pane right) |
 | `Prefix + B` | Agent build (`build` window) |
 | `Prefix + V` | Verification cockpit |
+| `Prefix + ?` | Keymap menu (or click status-right `?`) |
 | `Prefix + Z` | Zoom pane |
 | `Prefix + Space` | Cycle layout |
 | `M-1` … `M-9` | Select window |

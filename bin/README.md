@@ -205,6 +205,39 @@ verify_workflow_root /path/to/dir # explicit start
 
 `verify-workflow-root.sh` is **not** on `PATH` by default — use the function or full path.
 
+**Tests:** `bin/test/verify-workflow-root.test.sh` (also run by `check-shell.sh`).
+
+---
+
+## tmux-mode-sync.sh
+
+**Purpose:** Apply status-bar mode display (`PREFIX` · `COPY` · `INSERT`/`NORMAL` · `ZOOM`) with correct `status-right-length` (120).
+
+```bash
+~/.config/shell/bin/tmux-mode-sync.sh apply workflow   # default bar
+~/.config/shell/bin/tmux-mode-sync.sh apply soc        # verify cockpit theme
+~/.config/shell/bin/tmux-mode-sync.sh set-editor insert|normal|''
+```
+
+Library: `bin/lib/tmux-status-mode.sh` — format string source of truth.
+
+---
+
+## tmux-keymap-menu.sh
+
+**Purpose:** Workflow keymap helper — fzf popup (preferred) or tmux `display-menu` fallback.
+
+```bash
+~/.config/shell/bin/tmux-keymap-menu.sh
+```
+
+| Trigger | Action |
+|---------|--------|
+| `Prefix+?` | Open menu |
+| Click status-right (`?` hint) | Open menu |
+
+Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leader keys.
+
 ---
 
 ## agent-verify-layout.sh
