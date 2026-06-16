@@ -1,0 +1,40 @@
+project: shell
+risk_profile: medium
+
+panes:
+  - id: console
+    title: CMD
+    tier: monitor
+
+  - id: git
+    title: GIT
+    tier: monitor
+    command: lazygit
+    tool: lazygit
+
+  - id: check-watch
+    title: CHECK:watch
+    tier: watch
+    cwd: .
+    command: watch -n 15 -c ~/.config/shell/bin/check-shell.sh
+    fallback_command: while true; do clear; ~/.config/shell/bin/check-shell.sh; sleep 15; done
+
+  - id: template-sync
+    title: SYNC
+    tier: verify
+    cwd: .
+    command: ~/.config/shell/bin/check-template-sync.sh
+
+  - id: files
+    title: FILES
+    tier: monitor
+    command: yazi
+    tool: yazi
+
+  - id: sys
+    title: SYS
+    tier: monitor
+    command: btop
+    tool: btop
+
+# mutate tier (av --launch-mutate): bin/migrate.sh --sync-rc
