@@ -2,7 +2,7 @@
 
 Human-in-the-loop verification cockpit for agent output. Goal: **insight + action in under 10 seconds** after an agent finishes.
 
-See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load order. **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
+See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load order. **Genesis:** [motivation.md](../motivation.md). **Repeatable drills:** [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) (cockpit tour, messy-diff triage, examples).
 
 ---
 
@@ -27,19 +27,34 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 |------|----------|-----------|--------------|
 | 1 | `ab` (or Prefix+B) | `agent_build` → `bin/agent-build-layout.sh` | Creates/focuses tmux window `build` (one full pane). Sets `@workflow_dir` and `@workflow_mode build`. On **first** open only: sends `grok`. Renames legacy window `work` → `build` if present. |
 | 2 | *(agent runs)* | Your agent TUI in `build` | No automatic hooks. Other apps/notifications unchanged — this is **one tmux pane**, not OS-level focus mode. |
-| 3 | `av` (or Prefix+V) | `agent_verify` → `bin/agent-verify-layout.sh` | Creates/focuses window `verify` (shell, lazygit, yazi, btop). Updates `@workflow_dir` / `@workflow_mode verify`. **Does not** run `agent_scan` unless you passed `--scan`. |
-| 4 | `av --scan` | same + `agent_scan .` in verify pane 0 | Opt-in rg/dust/JSON sweep. tmux shows brief message: `agent_scan (av --scan)`. |
+| 3 | `av` (or Prefix+V) | `agent_verify` → `bin/agent-verify-layout.sh` | Creates/focuses window `verify` (golden-ratio insight layout; project-specific panes). Updates `@workflow_dir` / `@workflow_mode verify`. **Does not** run `agent_scan` unless you passed `--scan`. |
+| 4 | `av --scan` | same + `agent_scan` in verify CMD pane | Opt-in rg/dust/JSON sweep at workflow root. tmux shows brief message: `agent_scan (av --scan)`. |
 | 5 | `ab -c` / `agent_back` | Build layout + `grok -c` | Returns to `build`; no scan. |
 
 **Session state (tmux options on the session):**
 
 | Option | Set by | Purpose |
 |--------|--------|---------|
-| `@workflow_dir` | build or verify layout | Default directory when `av` is called with `.` |
+| `@workflow_dir` | build or verify layout | Canonical project root (`verify_workflow_root`: layout walk-up → git toplevel → cwd) |
 | `@workflow_mode` | build or verify layout | `build` / `verify` — status bar when `@workflow_status` is `on` |
 | `@workflow_rescan` | `agent_verify --scan` only | Triggers one `agent_scan` in verify shell pane |
 
 **Status bar:** toggle with `tmux set -g @workflow_status off` or use minimal `status-right` in `tmux.verify.conf.ex`.
+
+**Mode indicators** (status-right, applied by `bin/tmux-mode-sync.sh`):
+
+| Label | When |
+|-------|------|
+| `PREFIX` | Prefix key held (C-Space / C-b) |
+| `COPY` | tmux copy mode (`#{pane_in_mode}`) |
+| `INSERT` / `NORMAL` | nvim active pane (`@editor_mode` via verification-workflow plugin + `tmux-mode-sync.sh`) |
+| `ZOOM` | Zoomed pane |
+| `build` / `verify` | `@workflow_mode` when `@workflow_status` is on |
+| `?` | Keymap menu hint — **Prefix+?** or **click status-right** |
+
+`status-right-length` is set to **120** so mode labels are not truncated (default Omarchy `50` hides them).
+
+**Keymap menu:** `~/.config/shell/bin/tmux-keymap-menu.sh` — fzf popup (or tmux `display-menu` fallback). Data: `bin/data/tmux-keymaps.tsv`.
 
 **Mnemonic:** **ab** = agent **b**uild · **av** = agent **v**erify · tmux **B** / **V** (shifted — does not conflict with tmux `b` last-window).
 
@@ -55,7 +70,8 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 | Build layout script | `bin/agent-build-layout.sh` |
 | Cockpit layout script | `bin/agent-verify-layout.sh` |
 | tmux base | Omarchy → `~/.config/tmux/tmux.conf` |
-| tmux verify bindings | `tmux.verify.conf.ex` → `~/.config/tmux/verify.conf` |
+| tmux verify bindings | `tmux.verify.conf.ex` + `tmux.status-mode.conf.ex` → `~/.config/tmux/verify.conf` |
+| tmux mode display | `bin/tmux-mode-sync.sh` + `bin/lib/tmux-status-mode.sh` |
 | yazi defaults | `yazi.ex.toml` → `~/.config/yazi/yazi.toml` |
 | git delta | `git.ex.config` → `~/.config/git/verification` |
 | nvim Telescope + Harpoon | `~/.config/nvim/lua/plugins/verification-workflow.lua` |
@@ -69,17 +85,48 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 
 **Build window** (`ab` / Prefix+B): single full pane — Grok Build (`grok`) or custom agent command. One tmux pane only — not OS-level “do not disturb”.
 
-**Verify window** (`av` / Prefix+V):
+**Verify window** (`av` / Prefix+V): project layouts use the **golden-ratio insight grid** below. `av --generic` falls back to a sparse 4-pane shell (CMD + empty WATCH/BUILD + lazygit) until you generate `.agents/verification/` with the verification-cockpit skill.
+
+### Project-specific cockpit
+
+When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (SOC-style mission-control theme, project watch panes). Generate per repo with the [`verification-cockpit` skill](../.agents/skills/verification-cockpit/SKILL.md). **Dogfood:** this shell repo ships [`.agents/verification/`](../.agents/verification/README.md) as a stress test (`check-shell.sh` watch + template sync).
+
+| Artifact | Purpose |
+|----------|---------|
+| `.agents/verification/manifest.yaml` | Pane map + launch tiers |
+| `.agents/verification/tmux-layout.sh` | Layout script (`av` auto-delegates) |
+| `.agents/verification/tmux-theme.conf` | Optional theme overrides |
+| `.cursor/verify` | Symlink → `../.agents/verification` |
+
+**Launch tiers:**
+
+| Tier | On `av` | Examples |
+|------|---------|----------|
+| `monitor` / `watch` | auto-start | `lazygit`, `pnpm test --watch`, `cargo watch -x check` |
+| `verify` | confirm `[y/N]` in pane | `pnpm test`, `cargo test`, `pnpm build` |
+| `mutate` | blocked unless `av --launch-mutate` | `pnpm install`, migrations, deploy |
+
+**Golden-ratio default** (φ 62% / 38%) — high-priority watchers get major area; omit low-signal panes (btop, yazi) unless they surface verify failures. See `verification-cockpit` skill.
 
 ```
-+--------------------+---------------------+
-|   nvim / shell     |   lazygit           |
-+--------------------+---------------------+
-|   yazi (mtime sort)                      |
-+------------------------------------------+
-|   btop                                   |
-+------------------------------------------+
++---------------------------+------------+
+| CMD (interactive, minor)  |            |
+|---------------------------|  GIT 38%   |
+| WATCH / CHECK (scroll)    |  lazygit   |
+|---------------------------|            |
+| VERIFY (confirm, minor)   |            |
++---------------------------+------------+
+     insight column 62%
 ```
+
+**Flags:**
+
+| Command | Effect |
+|---------|--------|
+| `av` | Project layout if present, else generic cockpit |
+| `av --scan` | + `agent_scan .` in console pane |
+| `av --generic` | Force generic 4-pane layout |
+| `av --launch-mutate` | Allow mutate-tier confirm prompts |
 
 **Open focus + verify:**
 
@@ -105,6 +152,7 @@ av --scan                      # verify + agent_scan in shell pane
 | `Prefix + v` | Split vertical (pane right) |
 | `Prefix + B` | Agent build (`build` window) |
 | `Prefix + V` | Verification cockpit |
+| `Prefix + ?` | Keymap menu (or click status-right `?`) |
 | `Prefix + Z` | Zoom pane |
 | `Prefix + Space` | Cycle layout |
 | `M-1` … `M-9` | Select window |
@@ -143,6 +191,8 @@ jq '.summary, .issues' report.json | bat -l json
 | `agent_back` | `ab -c` — return to agent with `grok -c` |
 | `agent_verify [dir]` / `av` | tmux verify cockpit |
 | `av --scan` | verify cockpit + `agent_scan .` (opt-in) |
+| `av --generic` | skip project `.agents/verification/` layout |
+| `av --launch-mutate` | allow mutate-tier pane launches |
 | `tt` | New tmux window `test` in current path |
 | `ps` | procs (when installed; replaces POSIX `ps`) |
 | `gdf` / `gdfs` | git diff with difftastic (unstaged / staged) |

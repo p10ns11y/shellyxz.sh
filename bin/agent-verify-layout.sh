@@ -1,10 +1,30 @@
 #!/usr/bin/env bash
-# Verification cockpit layout for tmux.
-# Usage: agent-verify-layout.sh [directory]
+# Generic verification cockpit — golden-ratio fallback when no project layout exists.
+# Usage: agent-verify-layout.sh [directory] [--generic]
+# Delegates to .agents/verification/tmux-layout.sh when present (via verify_workflow_root).
 set -euo pipefail
 
-DIR="${1:-.}"
+DIR="."
+USE_GENERIC=0
 SCRIPT_NAME="agent-verify-layout"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --generic)
+            USE_GENERIC=1
+            shift
+            ;;
+        *)
+            if [ "$DIR" = . ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                DIR="$1"
+                shift
+            else
+                echo "$SCRIPT_NAME: unknown argument: $1" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
 
 if ! command -v tmux >/dev/null 2>&1; then
     echo "$SCRIPT_NAME: tmux not found" >&2
@@ -16,59 +36,47 @@ if [ -z "${TMUX:-}" ]; then
     exit 1
 fi
 
-if [ "$DIR" = . ]; then
-    _wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
-    if [ -n "$_wf" ] && [ -d "$_wf" ]; then
-        DIR="$_wf"
-    fi
-    unset _wf
-fi
-DIR="$(cd "$DIR" && pwd)"
+# shellcheck source=/dev/null
+source "$HOME/.config/shell/bin/lib/verify-launch.sh"
 
+DIR="$(verify_workflow_root "$DIR")"
 SESSION="$(tmux display-message -p '#{session_name}')"
-tmux set-option -t "$SESSION" @workflow_dir "$DIR"
+verify_set_workflow_dir "$SESSION" "$DIR" >/dev/null
 tmux set-option -t "$SESSION" @workflow_mode verify
 
-if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'verify'; then
+PROJECT_LAYOUT="$DIR/.agents/verification/tmux-layout.sh"
+if [ "$USE_GENERIC" != 1 ] && [ -x "$PROJECT_LAYOUT" ]; then
+    exec "$PROJECT_LAYOUT" "$DIR"
+fi
+
+# shellcheck source=/dev/null
+source "$HOME/.config/shell/bin/lib/verify-layout.sh"
+
+if verify_layout_ok "$SESSION"; then
     tmux select-window -t 'verify'
 else
-    tmux new-window -n verify -c "$DIR"
+    verify_layout_build_golden_grid "$SESSION" "$DIR" 1
 
-    # Right: lazygit
-    tmux split-window -h -c "$DIR" -p 42
+    verify_launch_pane 'verify.0' monitor 'CMD' "$DIR" ''
+
     if command -v lazygit >/dev/null 2>&1; then
-        tmux send-keys -t 'verify.1' 'lazygit' Enter
+        verify_launch_pane 'verify.3' monitor 'GIT' "$DIR" lazygit
     fi
 
-    # Left column bottom: yazi
-    tmux select-pane -t 'verify.0'
-    tmux split-window -v -c "$DIR" -p 40
-    if command -v yazi >/dev/null 2>&1; then
-        tmux send-keys -t 'verify.2' 'yazi' Enter
-    fi
+    verify_launch_pane 'verify.1' monitor 'WATCH' "$DIR" ''
+    verify_launch_pane 'verify.2' monitor 'BUILD' "$DIR" ''
 
-    # Below yazi: btop
-    tmux select-pane -t 'verify.2'
-    tmux split-window -v -c "$DIR" -p 35
-    if command -v btop >/dev/null 2>&1; then
-        tmux send-keys -t 'verify.3' 'btop' Enter
-    fi
+    tmux display-message -d 4000 \
+        'Generic verify layout — add .agents/verification/tmux-layout.sh (verification-cockpit skill)'
 
     tmux select-pane -t 'verify.0'
-    tmux select-layout -t verify main-vertical 2>/dev/null || true
 fi
 
-RESCAN=0
-_wf_rescan="$(tmux show-option -gv @workflow_rescan 2>/dev/null || echo 0)"
-if [ "$_wf_rescan" = "1" ] || [ "${AGENT_VERIFY_RESCAN:-0}" = "1" ]; then
-    RESCAN=1
-fi
-unset _wf_rescan
-tmux set-option -t "$SESSION" @workflow_rescan 0
+CONSOLE="$(verify_console_target "$SESSION")"
+verify_maybe_rescan "$SESSION" "$CONSOLE"
+tmux select-pane -t "$CONSOLE"
 
-if [ "$RESCAN" = "1" ]; then
-    tmux display-message -d 2500 'agent_scan (av --scan)' 2>/dev/null || true
-    tmux send-keys -t 'verify.0' 'agent_scan .' Enter
+MODE_SYNC="$HOME/.config/shell/bin/tmux-mode-sync.sh"
+if [ -x "$MODE_SYNC" ]; then
+    "$MODE_SYNC" apply-workflow
 fi
-
-tmux select-pane -t 'verify.0'

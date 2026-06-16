@@ -186,17 +186,72 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 ---
 
-## agent-verify-layout.sh
+## verify-workflow-root.sh
 
-**Purpose:** Create or focus the **verify** tmux window (lazygit + yazi + btop cockpit). See [VERIFICATION.md](../arch-design/VERIFICATION.md).
+**Purpose:** Print the canonical project root shared by `ab`, `av`, and `agent_scan` (layout walk-up → git toplevel → cwd).
+
+**Shell (after `reload`):**
 
 ```bash
-~/.config/shell/bin/agent-verify-layout.sh [directory]
+verify_workflow_root              # from any subdirectory
+verify_workflow_root /path/to/dir # explicit start
+```
+
+**Script (no shell function needed):**
+
+```bash
+~/.config/shell/bin/verify-workflow-root.sh [directory]
+```
+
+`verify-workflow-root.sh` is **not** on `PATH` by default — use the function or full path.
+
+**Tests:** `bin/test/verify-workflow-root.test.sh` (also run by `check-shell.sh`).
+
+---
+
+## tmux-mode-sync.sh
+
+**Purpose:** Apply status-bar mode display (`PREFIX` · `COPY` · `INSERT`/`NORMAL` · `ZOOM`) with correct `status-right-length` (120).
+
+```bash
+~/.config/shell/bin/tmux-mode-sync.sh apply workflow   # default bar
+~/.config/shell/bin/tmux-mode-sync.sh apply soc        # verify cockpit theme
+~/.config/shell/bin/tmux-mode-sync.sh set-editor insert|normal|''
+```
+
+Library: `bin/lib/tmux-status-mode.sh` — format string source of truth.
+
+---
+
+## tmux-keymap-menu.sh
+
+**Purpose:** Workflow keymap helper — fzf popup (preferred) or tmux `display-menu` fallback.
+
+```bash
+~/.config/shell/bin/tmux-keymap-menu.sh
+```
+
+| Trigger | Action |
+|---------|--------|
+| `Prefix+?` | Open menu |
+| Click status-right (`?` hint) | Open menu |
+
+Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leader keys.
+
+---
+
+## agent-verify-layout.sh
+
+**Purpose:** Create or focus the **verify** tmux window. Delegates to `.agents/verification/tmux-layout.sh` when present. See [VERIFICATION.md](../arch-design/VERIFICATION.md).
+
+```bash
+~/.config/shell/bin/agent-verify-layout.sh [directory] [--generic]
 ```
 
 | Arg | Default | Effect |
 |-----|---------|--------|
-| `directory` | `.` | Working directory for all panes (`cd` + absolute path) |
+| `directory` | `.` | Resolved via `verify_workflow_root` before layout (walk-up from cwd) |
+| `--generic` | off | Skip project layout; use generic cockpit |
 
 **Requirements:**
 
@@ -205,8 +260,9 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 **Behavior:**
 
+- If `.agents/verification/tmux-layout.sh` exists and `--generic` not set → `exec` project layout
 - If window `verify` exists → `select-window` (idempotent; runs `agent_scan` only when `av --scan` / `@workflow_rescan=1`)
-- Else creates `verify` window:
+- Else creates generic `verify` window:
   - Pane 0 (top-left): shell — `agent_scan`, `gdf`, `vf`
   - Pane 1 (right, 42%): `lazygit` if installed
   - Pane 2 (left bottom, 40%): `yazi` if installed
@@ -218,6 +274,21 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 - tmux: `Prefix+V` (`C-Space` `V` with Omarchy prefix) via `~/.config/tmux/verify.conf`
 
 **No `--help`** — do not pass `-h` (it is interpreted as a directory).
+
+---
+
+## verify-launch.sh / verify-pane-launch.sh
+
+**Purpose:** Tiered pane launches for project verification cockpits.
+
+| Script | Role |
+|--------|------|
+| `bin/lib/verify-launch.sh` | Library: `verify_launch_pane`, `verify_apply_theme`, `verify_maybe_rescan` |
+| `bin/verify-pane-launch.sh` | In-pane confirm gate for `verify` / `mutate` tiers |
+
+**Tiers:** `monitor`/`watch` auto-launch; `verify` prompts `[y/N]`; `mutate` requires `av --launch-mutate` and typing `YES`.
+
+**Theme:** `tmux.verify-soc-theme.conf.ex` — amber SOC status bar applied by project layouts.
 
 ---
 

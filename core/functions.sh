@@ -65,9 +65,25 @@ vf() {
     [ -n "$f" ] && "${EDITOR:-nvim}" "$f"
 }
 
+# Canonical workflow root (layout walk-up → git toplevel → cwd). Used by ab / av / agent_scan.
+_verify_workflow_root() {
+    local script="${SHELL_CONFIG_BIN:-$HOME/.config/shell/bin}/verify-workflow-root.sh"
+    if [ ! -x "$script" ]; then
+        echo "_verify_workflow_root: missing $script" >&2
+        return 1
+    fi
+    "$script" "${1:-.}"
+}
+
+# Print canonical workflow root (optional directory; default pwd with walk-up).
+verify_workflow_root() {
+    _verify_workflow_root "${1:-.}"
+}
+
 # Quick structured scan after agent output (rg + dust + JSON reports).
 agent_scan() {
-    local dir="${1:-.}"
+    local dir
+    dir="$(_verify_workflow_root "${1:-.}")" || return 1
     echo "=== rg sweep ==="
     if command -v rg >/dev/null 2>&1; then
         rg -n 'TODO|FIXME|panic!|unwrap\(|ERROR|error:' "$dir" 2>/dev/null | head -30
@@ -136,6 +152,7 @@ agent_build() {
                 ;;
         esac
     done
+    dir="$(_verify_workflow_root "$dir")" || return 1
     "$script" "$dir" "${args[@]}"
 }
 
@@ -150,14 +167,24 @@ agent_back() {
 }
 
 # Open verification cockpit layout in tmux (requires native terminal + active tmux).
-# Pass --scan to run agent_scan in the shell pane (opt-in; not automatic).
+# --scan: run agent_scan in console pane (opt-in).
+# --generic: skip project .agents/verification/tmux-layout.sh
+# --launch-mutate: allow mutate-tier panes to prompt for destructive commands
 agent_verify() {
     _agent_tmux_guard || return 1
-    local dir="." do_scan=0
+    local dir="." do_scan=0 use_generic=0 launch_mutate=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --scan)
                 do_scan=1
+                shift
+                ;;
+            --generic)
+                use_generic=1
+                shift
+                ;;
+            --launch-mutate)
+                launch_mutate=1
                 shift
                 ;;
             *)
@@ -171,25 +198,32 @@ agent_verify() {
                 ;;
         esac
     done
-    if [ "$dir" = . ]; then
-        local wf
-        wf="$(tmux show-option -gv @workflow_dir 2>/dev/null || true)"
-        if [ -n "$wf" ] && [ -d "$wf" ]; then
-            dir="$wf"
-        fi
-        unset wf
-    fi
+    dir="$(_verify_workflow_root "$dir")" || return 1
     local script="$HOME/.config/shell/bin/agent-verify-layout.sh"
     if [ ! -x "$script" ]; then
         echo "agent_verify: missing $script" >&2
         return 1
     fi
+    local args=()
+    if [ "$use_generic" = 1 ]; then
+        args+=(--generic)
+    fi
     if [ "$do_scan" = 1 ]; then
         tmux set-option @workflow_rescan 1
-        AGENT_VERIFY_RESCAN=1 "$script" "$dir"
     else
         tmux set-option @workflow_rescan 0
-        "$script" "$dir"
+    fi
+    local env_args=()
+    if [ "$do_scan" = 1 ]; then
+        env_args+=(AGENT_VERIFY_RESCAN=1)
+    fi
+    if [ "$launch_mutate" = 1 ]; then
+        env_args+=(AGENT_VERIFY_LAUNCH_MUTATE=1)
+    fi
+    if [ "${#env_args[@]}" -gt 0 ]; then
+        env "${env_args[@]}" "$script" "$dir" "${args[@]}"
+    else
+        "$script" "$dir" "${args[@]}"
     fi
 }
 

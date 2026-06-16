@@ -33,7 +33,7 @@ Two tmux windows form the agent workflow:
 | Window | Command | Purpose |
 |--------|---------|---------|
 | `build` | `ab` / Prefix+B | Agent build — single full pane for Grok Build (`grok`) or other agent TUIs |
-| `verify` | `av` / Prefix+V | Review cockpit — lazygit, yazi, btop, shell |
+| `verify` | `av` / Prefix+V | Review cockpit — lazygit, yazi, btop, shell (+ project watch panes when `.agents/verification/` exists) |
 
 **Mnemonic:** **ab** = agent **b**uild · **av** = agent **v**erify · tmux **B** / **V** · **Z** = Zoom (ad-hoc inside any window)
 

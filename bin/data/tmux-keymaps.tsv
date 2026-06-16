@@ -1,0 +1,21 @@
+# kind	scope	label	shortcut	command-or-detail
+# kind: run = execute tmux run-shell/send-keys; view = show detail popup
+run	shell	Agent build	ab · Prefix+B	~/.config/shell/bin/agent-build-layout.sh "#{pane_current_path}"
+run	shell	Verify cockpit	av · Prefix+V	~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"
+run	shell	Verify + scan	av --scan	AGENT_VERIFY_RESCAN=1 ~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"
+run	shell	Agent continue	ab -c · agent_back	send-keys:agent_back
+run	shell	Structured scan	agent_scan	send-keys:agent_scan
+run	shell	Git diff (delta)	git diff	send-keys:git diff
+run	shell	Git diff staged (delta)	git diff --staged	send-keys:git diff --staged
+run	shell	Difftastic diff	gdf	send-keys:gdf
+run	shell	Fuzzy open file	vf	send-keys:vf
+run	tmux	Zoom pane	Prefix+Z	resize-pane -Z
+run	tmux	Cycle layout	Prefix+Space	cycle-layout
+run	tmux	Reload config	Prefix+q	source-file ~/.config/tmux/tmux.conf
+view	nvim	Verify grep preset	leader va	live_grep TODO|FIXME|panic|unwrap
+view	nvim	Find files (cwd)	leader vf	Telescope find_files
+view	nvim	Harpoon pin	leader vh	Add current file
+view	nvim	Harpoon menu	leader ht	Toggle harpoon list
+view	nvim	Live grep	leader sg / leader /	Project search
+view	shell	Lazygit review	lg · GIT pane	Git TUI in verify window
+view	shell	Workflow root	verify_workflow_root	Print canonical ab/av cwd

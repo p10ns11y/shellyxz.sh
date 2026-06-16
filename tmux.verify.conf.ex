@@ -5,23 +5,28 @@
 # Key mnemonics (Omarchy prefix = C-Space):
 #   Prefix+B  agent build  (ab)  — full-pane agent TUI in `build` window
 #   Prefix+V  agent verify (av)  — review cockpit in `verify` window
+#   Prefix+?  keymap menu (fzf popup or display-menu) — also click status-right
 #   Prefix+Z  zoom pane (tmux built-in; not agent-specific)
 # B/V are chosen to match shell aliases; they do not override tmux defaults for
 # lower-case b (last window) — these are shifted B and V.
 
-# Workflow label in status bar (set by agent-build / agent-verify layout scripts)
+# Workflow labels (set by agent-build / agent-verify layout scripts)
 # @workflow_mode is build | verify | empty. @workflow_dir holds the project path.
+# Mode bar (PREFIX/COPY/INSERT/NORMAL/ZOOM): tmux.status-mode.conf.ex + tmux-mode-sync.sh
 set -g @workflow_status on
 set -g @workflow_mode ''
-set -g status-right '#{?client_prefix,PREFIX ,}#{?#{==:#{@workflow_status},on},#{@workflow_mode} ,}#[fg=brightblack]#h '
-# Minimal bar: comment line above and use:
-# set -g status-right '#{?client_prefix,PREFIX ,}#[fg=brightblack]#h '
+
+source-file ~/.config/shell/tmux.status-mode.conf.ex
+
+# Keymap helper — Prefix+? or click status-right
+bind ? run-shell '~/.config/shell/bin/tmux-keymap-menu.sh'
+bind -n MouseDown1StatusRight run-shell '~/.config/shell/bin/tmux-keymap-menu.sh'
 
 # Zoom active pane (Prefix+Z) — ad-hoc full width inside any window
 bind Z resize-pane -Z
 
-# Cycle layouts (Prefix+Space) — C-Space is Omarchy prefix; Space is second prefix
-bind Space next-layout
+# Cycle layouts (Prefix+Space) — golden φ on verify window, tmux next-layout elsewhere
+bind Space run-shell '~/.config/shell/bin/tmux-cycle-layout.sh'
 
 # Agent build (Prefix+B) — ab / agent_build
 bind B run-shell '~/.config/shell/bin/agent-build-layout.sh "#{pane_current_path}"'
