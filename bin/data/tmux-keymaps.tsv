@@ -3,8 +3,9 @@
 run	shell	Agent build	ab · Prefix+B	~/.config/shell/bin/agent-build-layout.sh "#{pane_current_path}"
 run	shell	Verify cockpit	av · Prefix+V	~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"
 run	shell	Verify + scan	av --scan	AGENT_VERIFY_RESCAN=1 ~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"
-run	shell	Test cockpit	at	~/.config/shell/bin/agent-test-layout.sh "#{pane_current_path}"
+run	shell	Test cockpit	at · Prefix+T	~/.config/shell/bin/agent-test-layout.sh "#{pane_current_path}"
 run	shell	Test + watch	at --watch	~/.config/shell/bin/agent-test-layout.sh "#{pane_current_path}" --watch
+run	shell	Re-run tests	at --run	~/.config/shell/bin/agent-test-layout.sh "#{pane_current_path}" --run
 run	shell	Agent continue	ab -c · agent_back	send-keys:agent_back
 run	shell	Structured scan	agent_scan	send-keys:agent_scan
 run	shell	Git diff (delta)	git diff	send-keys:git diff

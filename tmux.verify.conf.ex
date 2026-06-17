@@ -33,3 +33,6 @@ bind B run-shell '~/.config/shell/bin/agent-build-layout.sh "#{pane_current_path
 
 # Verification cockpit (Prefix+V) — av / agent_verify
 bind V run-shell '~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"'
+
+# Test cockpit (Prefix+T) — at / agent_test
+bind T run-shell '~/.config/shell/bin/agent-test-layout.sh "#{pane_current_path}"'
