@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 # Test cockpit — btop (major left) + project tests (right shell pane).
-# Usage: agent-test-layout.sh [directory] [--watch]
+# Usage: agent-test-layout.sh [directory] [--watch] [--run]
 set -euo pipefail
 
 DIR="."
 WATCH=0
+RUN_ONLY=0
 SCRIPT_NAME="agent-test-layout"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --watch)
             WATCH=1
+            shift
+            ;;
+        --run)
+            RUN_ONLY=1
             shift
             ;;
         *)
@@ -84,6 +89,18 @@ test_launch_pane() {
 
 if test_layout_ok; then
     tmux select-window -t 'test'
+    if [ "$RUN_ONLY" = 1 ]; then
+        if [ "$WATCH" = 1 ]; then
+            TEST_CMD="$(project_test_cmd "$DIR" watch)"
+        else
+            TEST_CMD="$(project_test_cmd "$DIR" once)"
+        fi
+        tmux send-keys -t "${WIN}.1" C-c 2>/dev/null || true
+        test_launch_pane "${WIN}.1" 'TEST' "$TEST_CMD"
+        tmux select-pane -t "${WIN}.1"
+        tmux display-message -d 2000 'at --run: tests sent to TEST pane' 2>/dev/null || true
+        exit 0
+    fi
 else
     if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'test'; then
         tmux kill-window -t "$WIN"
