@@ -39,26 +39,26 @@ CONFIRM_SPLIT=1
 if verify_layout_ok "$SESSION"; then
     tmux select-window -t 'verify'
 else
-    # Pass 1: primary watcher + CMD in insight column (major); GIT minor column.
-    # Pass 2: WATCH scroll major; CMD minor top; VERIFY confirm minor bottom.
+    # Pass 1: GIT major left column; ops stack minor right column.
+    # Pass 2: VERIFY confirm minor top; WATCH scroll major center; CMD minor bottom-right.
     # Omit FILES/SYS unless they answer a specific verify question (see skill value audit).
     verify_layout_build_golden_grid "$SESSION" "$ROOT" "$CONFIRM_SPLIT"
 
-    verify_launch_pane 'verify.0' monitor 'CMD' "$ROOT" ''
-
     if command -v lazygit >/dev/null 2>&1; then
-        verify_launch_pane 'verify.3' monitor 'GIT' "$ROOT" lazygit
+        verify_launch_pane 'verify.0' monitor 'GIT' "$ROOT" lazygit
     fi
 
-    verify_launch_pane 'verify.1' watch 'WATCH' "$ROOT" 'pnpm test --watch'
+    verify_launch_pane 'verify.2' watch 'WATCH' "$ROOT" 'pnpm test --watch'
 
     if [ "$CONFIRM_SPLIT" = "1" ]; then
-        verify_launch_pane 'verify.2' verify 'VERIFY' "$ROOT" 'pnpm test'
+        verify_launch_pane 'verify.1' verify 'VERIFY' "$ROOT" 'pnpm test'
     fi
+
+    verify_launch_pane 'verify.3' monitor 'CMD' "$ROOT" ''
 
     tmux set-option -t "$SESSION" @verify_layout_version golden-4phi
 
-    tmux select-pane -t 'verify.0'
+    tmux select-pane -t 'verify.3'
 fi
 
 CONSOLE="$(verify_console_target "$SESSION")"

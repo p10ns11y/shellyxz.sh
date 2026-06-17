@@ -5,23 +5,23 @@ Golden-ratio layout for **shell config verification** — every pane surfaces a 
 ## Layout (φ 62% / 38%)
 
 ```
-+---------------------------+------------+
-| CMD (38% h)               |            |
-|---------------------------|  GIT 38% w |
-| CHECK:watch (~38% h)      |  full h    |
-|---------------------------|            |
-| SYNC (~24% h)             |            |
-+---------------------------+------------+
-     insight column ~62% w
++----------------------------+------------------+
+|                            | SYNC (minor top) |
+|  GIT / lazygit 62% w       |------------------|
+|  full height               | CHECK:watch      |
+|                            |------------------|
+|                            | CMD (minor bot.) |
++----------------------------+------------------+
+     git column 62%              ops column 38%
 ```
 
-Pane indices: `0=CMD` `1=CHECK:watch` `2=SYNC` `3=GIT` (tmux reindexes during splits).
+Pane indices: `0=GIT` `1=SYNC` `2=CHECK:watch` `3=CMD` (tmux reindexes during splits).
 
 | Title | Prio | Space | What you learn |
 |-------|------|-------|----------------|
 | CHECK:watch | 1 | scroll | `check-shell-watch.sh` — full run first, then every 90s (no clear; scroll up for errors) |
-| CMD | 2 | interactive | `agent_scan`, `gdf`, manual checks |
-| GIT | 3 | tui-side | Uncommitted agent changes |
+| CMD | 2 | interactive | `agent_scan`, `gdf`, manual checks — bottom-right for mouse reach |
+| GIT | 3 | tui-side | Uncommitted agent changes — major left column |
 | SYNC | 4 | confirm | Managed template drift (`[y/N]` to run) |
 
 **Dropped:** `yazi` and `btop` — useful elsewhere, not post-agent verification.
@@ -39,3 +39,21 @@ av --generic        # skip dogfood layout
 ## Regenerate
 
 Re-run `verification-cockpit` skill when verify workflow changes. Reference: `.agents/skills/verification-cockpit/`.
+
+## at tests (priority cockpit)
+
+`tests.yaml` defines what `at` runs — top `max_run` by priority; the rest are listed as available.
+
+| Prio | id | at runs | What |
+|------|-----|---------|------|
+| 1 | shellcheck | yes | `check-shell.sh --shellcheck-only` |
+| 2 | workflow-root | yes | `bin/test/verify-workflow-root.test.sh` |
+| 3 | load-order | listed only | full `check-shell.sh` |
+
+```bash
+at              # top 2 from tests.yaml
+at --watch      # same, every 60s
+bin/run-project-tests.sh   # without tmux
+```
+
+Agents: edit `.agents/verification/tests.yaml` — mirror for other stacks (`package.json`, `Cargo.toml`, `pytest`).

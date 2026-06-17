@@ -41,12 +41,12 @@ After `verify_layout_build_golden_grid` (see `bin/lib/verify-layout.sh`):
 
 | Index | Role | Approx area |
 |-------|------|-------------|
-| 0 | CMD | 38% h × 62% w — top-left |
-| 1 | watch / insight | 38% h × 62% w — middle-left (φ major of stack) |
-| 2 | verify / confirm | 24% h × 62% w — bottom-left (φ minor of stack) |
-| 3 | git | 38% w — full-height right |
+| 0 | git | 62% w — full-height left |
+| 1 | verify / confirm | 38% h × 38% w — top-right (φ minor) |
+| 2 | watch / insight | φ major of right stack — center-right |
+| 3 | CMD | φ minor of right stack — bottom-right (default focus) |
 
-tmux reindexes panes during splits; do not assign GIT to index 1. Never run `select-layout main-vertical` after build — it destroys φ geometry.
+tmux reindexes panes during splits; assign GIT to index 0 after build. Never run `select-layout main-vertical` after build — it destroys φ geometry.
 
 ## Tier behavior
 

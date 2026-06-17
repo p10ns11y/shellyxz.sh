@@ -38,24 +38,23 @@ SYNC_CMD="${HOME}/.config/shell/bin/check-template-sync.sh"
 if verify_layout_ok "$SESSION"; then
     tmux select-window -t 'verify'
 else
-    # Pass 1: CHECK:watch (prio 1) + CMD (2) get insight column; GIT (3) minor column.
-    # Pass 2: CHECK scrolls (major stack); CMD short (minor top); SYNC confirm (minor bottom).
+    # Pass 1: GIT (lazygit) major left column; ops stack minor right column.
+    # Pass 2: SYNC confirm (minor top); CHECK:watch (major center); CMD (minor bottom-right).
     # Omitted: FILES/yazi, SYS/btop — no verification signal for this repo.
     verify_layout_build_golden_grid "$SESSION" "$ROOT" 1
     tmux set-window-option -t verify history-limit 100000
 
-    verify_launch_pane 'verify.0' monitor 'CMD' "$ROOT" ''
-
     if command -v lazygit >/dev/null 2>&1; then
-        verify_launch_pane 'verify.3' monitor 'GIT' "$ROOT" lazygit
+        verify_launch_pane 'verify.0' monitor 'GIT' "$ROOT" lazygit
     fi
 
-    verify_launch_pane 'verify.1' watch 'CHECK:watch' "$ROOT" "$WATCH_CMD"
-    verify_launch_pane 'verify.2' verify 'SYNC' "$ROOT" "$SYNC_CMD"
+    verify_launch_pane 'verify.1' verify 'SYNC' "$ROOT" "$SYNC_CMD"
+    verify_launch_pane 'verify.2' watch 'CHECK:watch' "$ROOT" "$WATCH_CMD"
+    verify_launch_pane 'verify.3' monitor 'CMD' "$ROOT" ''
 
     tmux set-option -t "$SESSION" @verify_layout_version golden-4phi
 
-    tmux select-pane -t 'verify.0'
+    tmux select-pane -t 'verify.3'
 fi
 
 CONSOLE="$(verify_console_target "$SESSION")"

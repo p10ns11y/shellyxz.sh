@@ -227,6 +227,37 @@ agent_verify() {
     fi
 }
 
+# Test cockpit — btop left + project tests right (at / agent_test). Requires native terminal + tmux.
+agent_test() {
+    _agent_tmux_guard || return 1
+    local script="$HOME/.config/shell/bin/agent-test-layout.sh"
+    if [ ! -x "$script" ]; then
+        echo "agent_test: missing $script" >&2
+        return 1
+    fi
+    local dir="." args=() _dir_set=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --watch)
+                args+=(--watch)
+                shift
+                ;;
+            *)
+                if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                    dir="$1"
+                    _dir_set=1
+                    shift
+                else
+                    echo "agent_test: unknown argument: $1" >&2
+                    return 1
+                fi
+                ;;
+        esac
+    done
+    dir="$(_verify_workflow_root "$dir")" || return 1
+    "$script" "$dir" "${args[@]}"
+}
+
 # Portable reload helper for the current shell.
 # Works in bash and zsh. In zsh, ~/.zshrc overrides this with an enhanced
 # version that pre-clears 'n'/'ga'/'gd'/'reload' (and runs unfunction) before

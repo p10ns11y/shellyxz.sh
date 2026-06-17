@@ -40,18 +40,22 @@ verify_layout_ok() {
     if [ -n "$ver" ] && [ "$ver" != "golden-4phi" ]; then
         return 1
     fi
-    if ! tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | grep -qx '3'; then
-        return 0
-    fi
     wh="$(tmux display-message -p -t "$win" '#{window_height}')"
     ww="$(tmux display-message -p -t "$win" '#{window_width}')"
-    git_h="$(tmux display-message -p -t "${win}.3" '#{pane_height}' 2>/dev/null || echo 0)"
-    git_w="$(tmux display-message -p -t "${win}.3" '#{pane_width}' 2>/dev/null || echo 0)"
+    git_h="$(tmux display-message -p -t "${win}.0" '#{pane_height}' 2>/dev/null || echo 0)"
+    git_w="$(tmux display-message -p -t "${win}.0" '#{pane_width}' 2>/dev/null || echo 0)"
     if [ "$git_h" -lt $((wh - 1)) ]; then
         return 1
     fi
-    if [ "$git_w" -gt $((ww * 42 / 100)) ]; then
+    if [ "$git_w" -lt $((ww * 58 / 100)) ]; then
         return 1
+    fi
+    if tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | grep -qx '3'; then
+        local cmd_h
+        cmd_h="$(tmux display-message -p -t "${win}.3" '#{pane_height}' 2>/dev/null || echo 0)"
+        if [ "$cmd_h" -ge "$((wh - 1))" ]; then
+            return 1
+        fi
     fi
     return 0
 }
@@ -185,7 +189,8 @@ verify_launch_pane() {
     local target="${1:?target}"
     local tier="${2:?tier}"
     local title="${3:-}"
-    local cwd="${4:-.}"
+    # shellcheck disable=SC2034
+    local cwd="${4:-.}"  # pane cwd via tmux split -c; param kept for callers
     local cmd="${5:-}"
 
     if [ -n "$title" ]; then
@@ -193,27 +198,26 @@ verify_launch_pane() {
     fi
 
     if [ -z "$cmd" ]; then
-        tmux send-keys -t "$target" "cd $(printf '%q' "$cwd")" Enter
         return 0
     fi
 
     case "$tier" in
         monitor | watch)
-            tmux send-keys -t "$target" "cd $(printf '%q' "$cwd") && $cmd" Enter
+            tmux send-keys -t "$target" "$cmd" Enter
             ;;
         verify)
             tmux send-keys -t "$target" \
-                "cd $(printf '%q' "$cwd") && $(printf '%q' "$VERIFY_PANE_LAUNCH") verify $(printf '%q' "$cmd")" \
+                "$(printf '%q' "$VERIFY_PANE_LAUNCH") verify $(printf '%q' "$cmd")" \
                 Enter
             ;;
         mutate)
             if [ "${AGENT_VERIFY_LAUNCH_MUTATE:-0}" = "1" ]; then
                 tmux send-keys -t "$target" \
-                    "cd $(printf '%q' "$cwd") && $(printf '%q' "$VERIFY_PANE_LAUNCH") mutate $(printf '%q' "$cmd")" \
+                    "$(printf '%q' "$VERIFY_PANE_LAUNCH") mutate $(printf '%q' "$cmd")" \
                     Enter
             else
                 tmux send-keys -t "$target" \
-                    "cd $(printf '%q' "$cwd") && echo '[BLOCKED] mutate tier — blocked by default. Use: av --launch-mutate'" \
+                    "echo '[BLOCKED] mutate tier — blocked by default. Use: av --launch-mutate'" \
                     Enter
             fi
             ;;
