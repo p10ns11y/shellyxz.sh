@@ -70,6 +70,9 @@ path_append() {
 
 path_add() { path_prepend "$@"; }
 
+# shellcheck disable=SC1091
+. "${SHELL_ROOT:-$HOME/.config/shell}/core/path-resolve.sh"
+
 # Remove a segment from PATH (exact match). Used to drop inherited junk before building.
 path_drop() {
     _path_remove_segment "$1"

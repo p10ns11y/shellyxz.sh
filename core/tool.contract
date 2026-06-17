@@ -1,0 +1,6 @@
+# tool.contract — hybrid command pins (execution) + shadow warnings (which)
+# Applied by tool_contract_apply in core/env.sh; scanned by path_shadow_report
+
+pin:clear:/usr/bin/clear
+pin:tput:/usr/bin/tput
+warn_shadow:clear tput stty reset

@@ -68,19 +68,20 @@ bootstrap_from_remote() {
     local rel dest dir url
     local files=(
         lib.sh env.sh aliases.sh functions.sh personal.sh
-        core/lib.sh core/path.sh core/path.contract core/env.sh core/aliases.sh core/functions.sh
+        core/lib.sh core/path.sh core/path-resolve.sh core/path.contract core/tool.contract core/env.sh core/aliases.sh core/functions.sh
         environments/generic/env.sh environments/generic/bash.sh environments/generic/zsh.sh environments/generic/fish.sh
         environments/omarchy/env.sh environments/omarchy/bash.sh environments/omarchy/zsh.sh environments/omarchy/fish.sh
         environment.example
         local/personal.sh
         templates/zshrc templates/bashrc templates/fish.config.fish
         templates/login/zprofile templates/login/zshenv templates/login/profile templates/login/bash_profile
-        templates/core/lib.sh templates/core/path.sh templates/core/path.contract templates/core/env.sh templates/core/aliases.sh templates/core/functions.sh
+        templates/core/lib.sh templates/core/path.sh templates/core/path-resolve.sh templates/core/path.contract templates/core/tool.contract templates/core/env.sh templates/core/aliases.sh templates/core/functions.sh
+        templates/tool-init.manifest
         bin/migrate.sh bin/lib/migrate-common.sh
         bin/tasks/backup.sh bin/tasks/install-tools.sh bin/tasks/install-modules.sh
         bin/tasks/install-rc.sh bin/tasks/scaffold.sh bin/tasks/git-commit.sh
         bin/check-shell.sh bin/check-template-sync.sh bin/scaffold-environment.sh
-        bin/recover-shell.sh bin/README.md
+        bin/capture-shell-init.sh bin/recover-shell.sh bin/README.md
         bin/agent-verify-layout.sh bin/agent-build-layout.sh bin/fzf-preview.sh
         environments/README.md arch-design/README.md
         README.md arch-design/shell.md arch-design/SHELL-env-var-behavior.md
