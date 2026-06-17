@@ -169,7 +169,7 @@ Hyprland: **Super+Alt+Return** → tmux.
 2. **Verify** — `av` (opens cockpit; run `av --scan` for checklist sweep)
 3. **Visual sweep** — `y` → sort modified (`o` `m` in yazi if not using `yazi.ex.toml` defaults)
 4. **Review diffs** — `lg` (lazygit + delta) or `gdf` / `gdfs` (difftastic in terminal)
-5. **Targeted tests** — `tt` for new test window; watch btop pane
+5. **Targeted tests** — `tt` (one-shot) or `tt --watch`; btop left, tests right
 6. **Fix loop** — `vf` or `rg --vimgrep 'pat' src/ \| nvim -q -`; `ab -c` if agent must continue; `thefuck` for rushed commands
 7. **Close loop** — commit in lazygit; detach tmux (`Prefix+d` default detach)
 
@@ -193,7 +193,7 @@ jq '.summary, .issues' report.json | bat -l json
 | `av --scan` | verify cockpit + `agent_scan .` (opt-in) |
 | `av --generic` | skip project `.agents/verification/` layout |
 | `av --launch-mutate` | allow mutate-tier pane launches |
-| `tt` | New tmux window `test` in current path |
+| `tt` / `tt --watch` | Test window: btop 62% left, project tests right (pnpm/cargo/check-shell) |
 | `ps` | procs (when installed; replaces POSIX `ps`) |
 | `gdf` / `gdfs` | git diff with difftastic (unstaged / staged) |
 | `eff` | Omarchy: fzf → editor |

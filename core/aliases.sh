@@ -36,9 +36,6 @@ fi
 if command -v procs &>/dev/null; then
     alias ps='procs'
 fi
-if command -v tmux &>/dev/null; then
-    alias tt='tmux new-window -n test -c "#{pane_current_path}"'
-fi
 
 alias cls='clear'
 alias ff='fastfetch'
@@ -47,6 +44,7 @@ alias ab='agent_build'
 alias af='agent_build'  # legacy — prefer ab (distinct from av)
 alias aw='agent_build'  # legacy
 alias av='agent_verify'
+alias tt='agent_test'
 alias shellyhow='$HOME/.config/shell/bin/check-shell.sh'
 # n(), ga() may be defined by omarchy layer — do not alias here
 

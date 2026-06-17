@@ -82,7 +82,7 @@ alias zshconfig='$EDITOR ~/.zshrc'
 
 unalias reload 2>/dev/null || true
 reload() {
-    for _name in n ga gd reload; do
+    for _name in n ga gd reload tt; do
         unalias "$_name" 2>/dev/null || true
         unfunction "$_name" 2>/dev/null || true
     done

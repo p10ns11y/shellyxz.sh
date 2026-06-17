@@ -189,7 +189,8 @@ verify_launch_pane() {
     local target="${1:?target}"
     local tier="${2:?tier}"
     local title="${3:-}"
-    local cwd="${4:-.}"
+    # shellcheck disable=SC2034
+    local cwd="${4:-.}"  # pane cwd via tmux split -c; param kept for callers
     local cmd="${5:-}"
 
     if [ -n "$title" ]; then
@@ -197,27 +198,26 @@ verify_launch_pane() {
     fi
 
     if [ -z "$cmd" ]; then
-        tmux send-keys -t "$target" "cd $(printf '%q' "$cwd")" Enter
         return 0
     fi
 
     case "$tier" in
         monitor | watch)
-            tmux send-keys -t "$target" "cd $(printf '%q' "$cwd") && $cmd" Enter
+            tmux send-keys -t "$target" "$cmd" Enter
             ;;
         verify)
             tmux send-keys -t "$target" \
-                "cd $(printf '%q' "$cwd") && $(printf '%q' "$VERIFY_PANE_LAUNCH") verify $(printf '%q' "$cmd")" \
+                "$(printf '%q' "$VERIFY_PANE_LAUNCH") verify $(printf '%q' "$cmd")" \
                 Enter
             ;;
         mutate)
             if [ "${AGENT_VERIFY_LAUNCH_MUTATE:-0}" = "1" ]; then
                 tmux send-keys -t "$target" \
-                    "cd $(printf '%q' "$cwd") && $(printf '%q' "$VERIFY_PANE_LAUNCH") mutate $(printf '%q' "$cmd")" \
+                    "$(printf '%q' "$VERIFY_PANE_LAUNCH") mutate $(printf '%q' "$cmd")" \
                     Enter
             else
                 tmux send-keys -t "$target" \
-                    "cd $(printf '%q' "$cwd") && echo '[BLOCKED] mutate tier — blocked by default. Use: av --launch-mutate'" \
+                    "echo '[BLOCKED] mutate tier — blocked by default. Use: av --launch-mutate'" \
                     Enter
             fi
             ;;
