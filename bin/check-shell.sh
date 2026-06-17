@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Verify shell load order and reserved-name guardrails.
-# Usage: check-shell.sh [--audit]
+# Usage: check-shell.sh [--audit] [--shellcheck-only]
 set -euo pipefail
 
 CONFIG_DIR="${HOME}/.config/shell"
 AUDIT=false
+SHELLCHECK_ONLY=false
 ENV_FILE="$CONFIG_DIR/core/env.sh"
 [[ -f "$ENV_FILE" ]] || ENV_FILE="$CONFIG_DIR/env.sh"
 FUNCS_FILE="$CONFIG_DIR/core/functions.sh"
@@ -16,9 +17,11 @@ LIB_FILE="$CONFIG_DIR/core/lib.sh"
 for arg in "$@"; do
     case "$arg" in
         --audit) AUDIT=true ;;
+        --shellcheck-only) SHELLCHECK_ONLY=true ;;
         -h|--help)
-            echo "Usage: check-shell.sh [--audit]"
-            echo "  --audit  Extra checks: dev.env permissions, recover-shell.sh executable, lib.sh present"
+            echo "Usage: check-shell.sh [--audit] [--shellcheck-only]"
+            echo "  --audit            Extra checks: dev.env permissions, recover-shell.sh executable, lib.sh present"
+            echo "  --shellcheck-only  Static analysis on *.sh only (at priority tier)"
             exit 0
             ;;
     esac
@@ -29,6 +32,38 @@ warnings=0
 fail() { echo "ERROR: $1"; errors=$((errors + 1)); }
 warn() { echo "WARN:  $1"; warnings=$((warnings + 1)); }
 ok()   { echo "OK:   $1"; }
+
+run_shellcheck_checks() {
+    if command -v shellcheck &>/dev/null; then
+        shellcheck_for_file() {
+            local _f="$1" _shell _exclude
+            case "$_f" in
+                */lib.sh|*/env.sh|*/path.sh|*/personal.sh|*/environments/generic/*) _shell="sh" ;;
+                *) _shell="bash" ;;
+            esac
+            _exclude='SC1090,SC1091'
+            if shellcheck -s "$_shell" -x -S warning -e "$_exclude" "$_f" >/dev/null 2>&1; then
+                ok "shellcheck: ${_f#$CONFIG_DIR/}"
+            else
+                fail "shellcheck: ${_f#$CONFIG_DIR/} (run: shellcheck -s $_shell -x ${_f})"
+            fi
+        }
+        while IFS= read -r -d '' _scf; do
+            shellcheck_for_file "$_scf"
+        done < <(find "$CONFIG_DIR" -name '*.sh' -print0 2>/dev/null)
+    else
+        warn 'shellcheck not installed (optional: pacman -S shellcheck)'
+    fi
+}
+
+if [[ "$SHELLCHECK_ONLY" == true ]]; then
+    echo "=== shellcheck ==="
+    run_shellcheck_checks
+    echo ""
+    echo "=== summary: $errors error(s), $warnings warning(s) ==="
+    [[ "$errors" -eq 0 ]]
+    exit $?
+fi
 
 # Avoid rg-as-grep alias breaking -E patterns (common on Omarchy)
 if command -v grep >/dev/null 2>&1 && grep --version 2>/dev/null | head -1 | grep -qi gnu; then
@@ -491,26 +526,7 @@ if [[ -f "$FISH_CFG" ]]; then
 fi
 
 # Static analysis via shellcheck (install: pacman -S shellcheck)
-if command -v shellcheck &>/dev/null; then
-    shellcheck_for_file() {
-        local _f="$1" _shell _exclude
-        case "$_f" in
-            */lib.sh|*/env.sh|*/path.sh|*/personal.sh|*/environments/generic/*) _shell="sh" ;;
-            *) _shell="bash" ;;
-        esac
-        _exclude='SC1090,SC1091'
-        if shellcheck -s "$_shell" -x -S warning -e "$_exclude" "$_f" >/dev/null 2>&1; then
-            ok "shellcheck: ${_f#$CONFIG_DIR/}"
-        else
-            fail "shellcheck: ${_f#$CONFIG_DIR/} (run: shellcheck -s $_shell -x ${_f})"
-        fi
-    }
-    while IFS= read -r -d '' _scf; do
-        shellcheck_for_file "$_scf"
-    done < <(find "$CONFIG_DIR" -name '*.sh' -print0 2>/dev/null)
-else
-    warn 'shellcheck not installed (optional: pacman -S shellcheck)'
-fi
+run_shellcheck_checks
 
 if [[ "$AUDIT" == true ]]; then
     [[ -x "$CONFIG_DIR/bin/recover-shell.sh" ]] && ok 'recover-shell.sh is executable' || warn 'recover-shell.sh missing or not executable'

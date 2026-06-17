@@ -39,3 +39,21 @@ av --generic        # skip dogfood layout
 ## Regenerate
 
 Re-run `verification-cockpit` skill when verify workflow changes. Reference: `.agents/skills/verification-cockpit/`.
+
+## at tests (priority cockpit)
+
+`tests.yaml` defines what `at` runs — top `max_run` by priority; the rest are listed as available.
+
+| Prio | id | at runs | What |
+|------|-----|---------|------|
+| 1 | shellcheck | yes | `check-shell.sh --shellcheck-only` |
+| 2 | workflow-root | yes | `bin/test/verify-workflow-root.test.sh` |
+| 3 | load-order | listed only | full `check-shell.sh` |
+
+```bash
+at              # top 2 from tests.yaml
+at --watch      # same, every 60s
+bin/run-project-tests.sh   # without tmux
+```
+
+Agents: edit `.agents/verification/tests.yaml` — mirror for other stacks (`package.json`, `Cargo.toml`, `pytest`).

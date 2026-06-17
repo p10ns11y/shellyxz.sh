@@ -36,7 +36,6 @@ fi
 if command -v procs &>/dev/null; then
     alias ps='procs'
 fi
-
 alias cls='clear'
 alias ff='fastfetch'
 alias lg='lazygit'
@@ -44,7 +43,8 @@ alias ab='agent_build'
 alias af='agent_build'  # legacy — prefer ab (distinct from av)
 alias aw='agent_build'  # legacy
 alias av='agent_verify'
-alias tt='agent_test'
+alias at='agent_test'
+alias tt='agent_test'  # legacy — prefer at (matches ab / av)
 alias shellyhow='$HOME/.config/shell/bin/check-shell.sh'
 # n(), ga() may be defined by omarchy layer — do not alias here
 

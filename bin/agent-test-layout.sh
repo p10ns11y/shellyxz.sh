@@ -113,6 +113,6 @@ fi
 tmux select-pane -t "${WIN}.1"
 if [ "$CREATED" = 1 ]; then
     tmux display-message -d 2000 \
-        "$([ "$WATCH" = 1 ] && echo 'test window: watch mode' || echo 'test window: one-shot')" \
+        "$([ "$WATCH" = 1 ] && echo 'at: watch mode' || echo 'at: one-shot')" \
         2>/dev/null || true
 fi

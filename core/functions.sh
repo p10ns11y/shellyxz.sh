@@ -227,7 +227,7 @@ agent_verify() {
     fi
 }
 
-# Test cockpit — btop left + project tests right (tt). Requires native terminal + tmux.
+# Test cockpit — btop left + project tests right (at / agent_test). Requires native terminal + tmux.
 agent_test() {
     _agent_tmux_guard || return 1
     local script="$HOME/.config/shell/bin/agent-test-layout.sh"

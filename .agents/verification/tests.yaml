@@ -1,0 +1,26 @@
+# at test cockpit — priority-ordered runners (agents: edit for your project).
+# run-project-tests.sh executes top max_run by priority; lists the rest.
+max_run: 2
+
+tests:
+  - id: shellcheck
+    priority: 1
+    command: ~/.config/shell/bin/check-shell.sh --shellcheck-only
+    label: shellcheck static analysis on *.sh
+
+  - id: workflow-root
+    priority: 2
+    command: ~/.config/shell/bin/test/verify-workflow-root.test.sh
+    label: verify_workflow_root unit tests
+
+  - id: load-order
+    priority: 3
+    command: ~/.config/shell/bin/check-shell.sh
+    label: full shell audit (load order, tools, templates)
+
+# Auto-discovery when this file is absent:
+#   package.json → pnpm test / pnpm test --watch
+#   Cargo.toml   → cargo test / cargo watch -x test
+#   pyproject.toml or pytest.ini → pytest
+#   bin/test/*.test.sh → unit scripts (sorted)
+#   bin/check-shell.sh --shellcheck-only → shellcheck tier

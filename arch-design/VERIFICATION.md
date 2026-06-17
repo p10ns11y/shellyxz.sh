@@ -65,7 +65,7 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 | Tool / concern | Where it lives |
 |----------------|----------------|
 | PATH, fzf defaults | `env.sh` |
-| `top`, `lg`, `ff`, `y`, `ab`, `av`, guarded `cat`/`grep`/`find`/`ps`, `gdf`/`gdfs` | `aliases.sh` |
+| `top`, `lg`, `ff`, `y`, `ab`, `av`, `at`, guarded `cat`/`grep`/`find`/`ps`, `gdf`/`gdfs` | `aliases.sh` |
 | `vf`, `agent_scan`, `agent_build`, `agent_verify`, `agent_back` | `functions.sh` |
 | Build layout script | `bin/agent-build-layout.sh` |
 | Cockpit layout script | `bin/agent-verify-layout.sh` |
@@ -169,7 +169,7 @@ Hyprland: **Super+Alt+Return** → tmux.
 2. **Verify** — `av` (opens cockpit; run `av --scan` for checklist sweep)
 3. **Visual sweep** — `y` → sort modified (`o` `m` in yazi if not using `yazi.ex.toml` defaults)
 4. **Review diffs** — `lg` (lazygit + delta) or `gdf` / `gdfs` (difftastic in terminal)
-5. **Targeted tests** — `tt` (one-shot) or `tt --watch`; btop left, tests right
+5. **Targeted tests** — `at` (one-shot) or `at --watch`; btop left, tests right
 6. **Fix loop** — `vf` or `rg --vimgrep 'pat' src/ \| nvim -q -`; `ab -c` if agent must continue; `thefuck` for rushed commands
 7. **Close loop** — commit in lazygit; detach tmux (`Prefix+d` default detach)
 
@@ -193,7 +193,8 @@ jq '.summary, .issues' report.json | bat -l json
 | `av --scan` | verify cockpit + `agent_scan .` (opt-in) |
 | `av --generic` | skip project `.agents/verification/` layout |
 | `av --launch-mutate` | allow mutate-tier pane launches |
-| `tt` / `tt --watch` | Test window: btop 62% left, project tests right (pnpm/cargo/check-shell) |
+| `agent_test [dir]` / `at` | tmux test window (btop + priority tests; `tt` legacy) |
+| `at --watch` | test window + periodic re-run |
 | `ps` | procs (when installed; replaces POSIX `ps`) |
 | `gdf` / `gdfs` | git diff with difftastic (unstaged / staged) |
 | `eff` | Omarchy: fzf → editor |
