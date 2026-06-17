@@ -28,21 +28,22 @@ Then: `source ~/.zshrc` and `git config --global include.path ~/.config/git/veri
 
 ## Build → Verify → Loop
 
-Two tmux windows form the agent workflow:
+Three tmux windows form the agent workflow:
 
 | Window | Command | Purpose |
 |--------|---------|---------|
 | `build` | `ab` / Prefix+B | Agent build — single full pane for Grok Build (`grok`) or other agent TUIs |
-| `verify` | `av` / Prefix+V | Review cockpit — lazygit, yazi, btop, shell (+ project watch panes when `.agents/verification/` exists) |
+| `verify` | `av` / Prefix+V | Review cockpit — lazygit (major left), watch panes, shell CMD (bottom-right) |
+| `test` | `at` | Test cockpit — btop left, priority tests right (see `.agents/verification/tests.yaml`) |
 
-**Mnemonic:** **ab** = agent **b**uild · **av** = agent **v**erify · tmux **B** / **V** · **Z** = Zoom (ad-hoc inside any window)
+**Mnemonic:** **ab** = agent **b**uild · **av** = agent **v**erify · **at** = agent **t**est · tmux **B** / **V** · **Z** = Zoom (ad-hoc inside any window)
 
 ```bash
 t && z <project> && ab              # full-screen grok in `build`
 # agent runs...
 av                                  # verify layout only
 av --scan                           # verify + agent_scan checklist
-# review: lg, gdf, vf, tt
+# review: lg, gdf, vf, at
 # not happy:
 ab -c                               # back to grok --continue in `build`
 ```
@@ -57,7 +58,7 @@ ab -c                               # back to grok --continue in `build`
 |--|----------------------|--------------|
 | **What** | **Spatial** — arranges panes | **Temporal** — prints a report |
 | **Role** | **Venue** — open the cockpit | **Survey** — run the checklist |
-| **What it does** | Creates/focuses tmux `verify` window: nvim/shell, lazygit, yazi, btop | Prints rg sweep, dust summary, JSON report excerpts |
+| **What it does** | Creates/focuses tmux `verify` window: lazygit, watch panes, shell CMD | Prints rg sweep, dust summary, JSON report excerpts |
 | **When** | After the agent finishes | When you want a checklist (`av --scan` or manual) |
 | **Requires** | tmux + native terminal (not Cursor) | Any shell in the project directory |
 | **Alias** | `av` | — |
@@ -76,28 +77,32 @@ Use `av --scan` when you want the checklist; plain `av` only opens the cockpit. 
 
 ## Cockpit tour (what each pane is for)
 
-After `av`, you get four regions. This matches the tmux + lazygit + delta + difftastic layout in practice:
+After `av`, you get the golden φ verify grid (this repo dogfoods `.agents/verification/`):
 
 ```
-+--------------------+---------------------+
-|  shell / nvim      |  lazygit            |  ← lg: stage, diff, commit
-+--------------------+---------------------+
-|  yazi              |  (lazygit continues)|
-+------------------------------------------+
-|  btop              |                     |  ← ps/tt: tests & load
-+------------------------------------------+
++----------------------------+------------------+
+|                            | SYNC (minor top) |
+|  lazygit 62% w             |------------------|
+|  full height               | CHECK:watch      |
+|                            |------------------|
+|                            | CMD (minor bot.) |
++----------------------------+------------------+
 ```
 
 | Pane | Tool | Your job there |
 |------|------|----------------|
-| Top-left | shell / nvim | `agent_scan .`, `gdf`, `vf`, `check-shell.sh`, edits |
-| Top-right | lazygit | File list, **delta** diffs, stage (`space`), commit (`c`) |
-| Bottom-left | yazi | Visual sweep — what changed, sorted by mtime |
-| Bottom-right | btop | Watch CPU/RAM while `tt` runs tests |
+| Left | lazygit | File list, **delta** diffs, stage (`space`), commit (`c`) |
+| Right top | SYNC / confirm | Template drift, one-shot verify (`[y/N]`) |
+| Right center | CHECK:watch | `check-shell-watch.sh` — live guardrail output |
+| Right bottom | shell / CMD | `agent_scan .`, `gdf`, `vf`, edits — default focus |
 
-**tmux window:** `2:verify` (or `verify` window name). **Zoom:** Prefix+Z on a pane when you need full width (e.g. `gdf` side-by-side, or `ff` before splitting).
+**Test window (`at`):** separate `test` window — btop left (62%), priority tests right. Top 2 from `tests.yaml`; full audit via `shellyhow` or `bin/run-project-tests.sh --all`.
+
+**tmux window:** `verify` (and `test` when you run `at`). **Zoom:** Prefix+Z on a pane when you need full width (e.g. `gdf` side-by-side).
 
 **Narrow panes:** `ff` (fastfetch) truncates in thin panes — run it full-width before `av`, or use `fastfetch --logo none`.
+
+**Visual file sweep:** use `y` (yazi) in a separate pane or window — not in the default verify layout.
 
 ---
 
@@ -111,10 +116,10 @@ After `av`, you get four regions. This matches the tmux + lazygit + delta + diff
 | 2 | `z <project>` | — |
 | 3 | `ab` | `build` — full-screen agent |
 | 4 | `av --scan` | `verify` layout + optional `agent_scan` |
-| 5 | `y` | yazi |
+| 5 | `y` | yazi (optional visual sweep) |
 | 6 | `lg` / `gdf` | lazygit / shell |
 | 7 | `vf` / nvim | editor |
-| 8 | `tt` + tests | test window + btop |
+| 8 | `at` | `test` window — btop + priority tests |
 | 9 | `lg` → `c` | lazygit commit |
 | 10 | Prefix+d | detach |
 
@@ -217,8 +222,8 @@ lazygit: stage **by concern** — e.g. commit 1 toolchain (`aliases.sh`, `check-
 ```bash
 t && z my-project && av
 agent_scan .
-check-shell.sh               # or project test command in tt window
-# fix → agent_scan . → gdf → tt → lg
+bin/run-project-tests.sh      # or shellyhow for full audit
+# fix → agent_scan . → gdf → at → lg
 ```
 
 Do not `lg` commit until checks you care about are green.
@@ -259,7 +264,7 @@ Agent done → av --scan (or av then agent_scan .)
     → noise only? → lg/gdf review → commit
     → signal? → vf/nvim fix → re-scan → commit
     → not happy? → ab -c → agent fixes → av again
-    → tests/security? → slow loop → commit when green
+    → tests/security? → at / shellyhow → commit when green
 ```
 
 ---
@@ -270,6 +275,7 @@ Agent done → av --scan (or av then agent_scan .)
 |-----------|---------|
 | Agent build | `ab` / Prefix+B |
 | Open cockpit | `av` / Prefix+V |
+| Test cockpit | `at` (`tt` legacy) |
 | Scan checklist | `av --scan` or `agent_scan .` |
 | Back to agent | `ab -c` / `agent_back` |
 | Checklist | `agent_scan .` |
@@ -278,7 +284,8 @@ Agent done → av --scan (or av then agent_scan .)
 | Fuzzy open | `vf` |
 | Zoom pane | Prefix+Z |
 | Config file peek | `vf` → type `tmux` / `migrate` |
-| Validate shell repo | `check-shell.sh` |
+| Validate shell repo | `check-shell.sh` / `shellyhow` |
+| Priority tests only | `at` or `bin/run-project-tests.sh` |
 
 ---
 

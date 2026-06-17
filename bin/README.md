@@ -15,6 +15,8 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 | [recover-shell.sh](#recover-shellsh) | Broken rc / `source` loops | bash only | 0 (informational menu) |
 | [agent-build-layout.sh](#agent-build-layoutsh) | Open tmux agent build window | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
 | [agent-verify-layout.sh](#agent-verify-layoutsh) | Open tmux verification cockpit | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
+| [agent-test-layout.sh](#agent-test-layoutsh) | Open tmux test cockpit (`at`) | **Inside tmux**, tmux on PATH; `python3` for runner | 0 on success; 1 if not in tmux |
+| [run-project-tests.sh](#run-project-testssh) | Priority tests without tmux | `python3` on PATH | 0 if tests pass |
 | [fzf-preview.sh](#fzf-previewsh) | *(internal)* fzf bat preview | bat | inherits bat exit code |
 
 ---
@@ -274,6 +276,42 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 - tmux: `Prefix+V` (`C-Space` `V` with Omarchy prefix) via `~/.config/tmux/verify.conf`
 
 **No `--help`** — do not pass `-h` (it is interpreted as a directory).
+
+---
+
+## agent-test-layout.sh
+
+**Purpose:** Create or focus the **test** tmux window — btop (major left) + priority test runner (right). See [`.agents/verification/tests.yaml`](../.agents/verification/tests.yaml).
+
+```bash
+~/.config/shell/bin/agent-test-layout.sh [directory] [--watch]
+```
+
+| Arg | Default | Effect |
+|-----|---------|--------|
+| `directory` | `.` | Resolved via `verify_workflow_root` |
+| `--watch` | off | Periodic re-run via `run-project-tests.sh --watch` |
+
+**Entry points:** `agent_test` / `at` (shell); `tt` legacy alias.
+
+**Requirements:** tmux, inside tmux; `python3` for `run-project-tests.sh` manifest parsing.
+
+---
+
+## run-project-tests.sh
+
+**Purpose:** Priority-ordered test runner for `at`. Reads `.agents/verification/tests.yaml` (`max_run` + priority list); auto-discovers `package.json`, `Cargo.toml`, `bin/test/*.test.sh` when manifest absent.
+
+```bash
+~/.config/shell/bin/run-project-tests.sh [directory] [--watch] [--all]
+```
+
+| Flag | Effect |
+|------|--------|
+| `--watch` | Re-run on `TEST_WATCH_INTERVAL` (default 60s) |
+| `--all` | Run every test in manifest (ignore `max_run`) |
+
+**Requires:** `python3` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
 
 ---
 
