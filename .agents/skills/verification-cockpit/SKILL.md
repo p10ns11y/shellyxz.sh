@@ -86,11 +86,11 @@ Rank panes `priority: 1` (highest) through `N`. Allocate area in golden proporti
 
 | Prio | Typical pane | Column / band |
 |------|--------------|---------------|
-| 1 | Primary watcher (test/lint/health watch) | Insight column — major width (62%) |
-| 2 | CMD console | Insight column — minor height top (38%) |
-| 3 | GIT (lazygit) | Right column — minor width (38%), full height |
-| 4 | Verify-tier one-shot | Insight column — minor height bottom |
-| 5+ | Second watcher / domain verify | Only if distinct failure signal; split insight stack again |
+| 1 | Primary watcher (test/lint/health watch) | Ops column — major height in right stack |
+| 2 | CMD console | Ops column — minor height bottom-right (default focus) |
+| 3 | GIT (lazygit) | Left column — major width (62%), full height |
+| 4 | Verify-tier one-shot | Ops column — minor height top-right |
+| 5+ | Second watcher / domain verify | Only if distinct failure signal; split ops stack again |
 
 Use `verify_layout_build_golden_grid` from `verify-layout.sh` for the default 4-pane skeleton.
 
@@ -100,23 +100,23 @@ Adjust using `space_profile` per pane (manifest + `reference.md`):
 
 | Profile | Output shape | Space rule |
 |---------|--------------|------------|
-| `scroll` | streaming logs, test output | Largest vertical band in insight column |
-| `interactive` | short commands, `agent_scan` | Compact top band (38% height) |
-| `tui-side` | lazygit, tig | Narrow right column (38% width) |
+| `scroll` | streaming logs, test output | Largest vertical band in ops stack (right center) |
+| `interactive` | short commands, `agent_scan` | Compact bottom band (38% height), bottom-right |
+| `tui-side` | lazygit, tig | Major left column (62% width), full height |
 | `confirm-burst` | build/test on demand | Small bottom band; confirm before run |
 | `omit` | btop, yazi (default) | **Do not include** in verify window |
 
 #### Default golden grid
 
 ```
-+---------------------------+------------+
-| CMD (interactive, 38% h)  |            |
-|---------------------------|  GIT 38%   |
-| WATCH (scroll, major)     |  lazygit   |
-|---------------------------|            |
-| VERIFY (confirm, minor)   |            |
-+---------------------------+------------+
-     insight column 62%
++----------------------------+------------------+
+|                            | VERIFY (minor)   |
+|  GIT (tui-side, 62% w)     |------------------|
+|  lazygit full height       | WATCH (scroll)   |
+|                            |------------------|
+|                            | CMD (interactive)|
++----------------------------+------------------+
+     git column 62%              ops column 38%
 ```
 
 - **CMD** — `tier: monitor`, no command — `agent_scan`, `gdf`, `vf`

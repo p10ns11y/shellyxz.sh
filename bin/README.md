@@ -262,11 +262,11 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 
 - If `.agents/verification/tmux-layout.sh` exists and `--generic` not set → `exec` project layout
 - If window `verify` exists → `select-window` (idempotent; runs `agent_scan` only when `av --scan` / `@workflow_rescan=1`)
-- Else creates generic `verify` window:
-  - Pane 0 (top-left): shell — `agent_scan`, `gdf`, `vf`
-  - Pane 1 (right, 42%): `lazygit` if installed
-  - Pane 2 (left bottom, 40%): `yazi` if installed
-  - Pane 3 (below yazi, 35%): `btop` if installed
+- Else creates generic `verify` window (golden φ grid):
+  - Pane 0 (left, 62%): `lazygit` if installed
+  - Pane 1 (right top): `BUILD` placeholder
+  - Pane 2 (right center): `WATCH` placeholder
+  - Pane 3 (right bottom): shell — `agent_scan`, `gdf`, `vf` (default focus)
 
 **Entry points:**
 

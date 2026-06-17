@@ -40,18 +40,22 @@ verify_layout_ok() {
     if [ -n "$ver" ] && [ "$ver" != "golden-4phi" ]; then
         return 1
     fi
-    if ! tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | grep -qx '3'; then
-        return 0
-    fi
     wh="$(tmux display-message -p -t "$win" '#{window_height}')"
     ww="$(tmux display-message -p -t "$win" '#{window_width}')"
-    git_h="$(tmux display-message -p -t "${win}.3" '#{pane_height}' 2>/dev/null || echo 0)"
-    git_w="$(tmux display-message -p -t "${win}.3" '#{pane_width}' 2>/dev/null || echo 0)"
+    git_h="$(tmux display-message -p -t "${win}.0" '#{pane_height}' 2>/dev/null || echo 0)"
+    git_w="$(tmux display-message -p -t "${win}.0" '#{pane_width}' 2>/dev/null || echo 0)"
     if [ "$git_h" -lt $((wh - 1)) ]; then
         return 1
     fi
-    if [ "$git_w" -gt $((ww * 42 / 100)) ]; then
+    if [ "$git_w" -lt $((ww * 58 / 100)) ]; then
         return 1
+    fi
+    if tmux list-panes -t "$win" -F '#{pane_index}' 2>/dev/null | grep -qx '3'; then
+        local cmd_h
+        cmd_h="$(tmux display-message -p -t "${win}.3" '#{pane_height}' 2>/dev/null || echo 0)"
+        if [ "$cmd_h" -ge "$((wh - 1))" ]; then
+            return 1
+        fi
     fi
     return 0
 }

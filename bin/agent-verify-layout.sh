@@ -57,19 +57,18 @@ if verify_layout_ok "$SESSION"; then
 else
     verify_layout_build_golden_grid "$SESSION" "$DIR" 1
 
-    verify_launch_pane 'verify.0' monitor 'CMD' "$DIR" ''
-
     if command -v lazygit >/dev/null 2>&1; then
-        verify_launch_pane 'verify.3' monitor 'GIT' "$DIR" lazygit
+        verify_launch_pane 'verify.0' monitor 'GIT' "$DIR" lazygit
     fi
 
-    verify_launch_pane 'verify.1' monitor 'WATCH' "$DIR" ''
-    verify_launch_pane 'verify.2' monitor 'BUILD' "$DIR" ''
+    verify_launch_pane 'verify.1' monitor 'BUILD' "$DIR" ''
+    verify_launch_pane 'verify.2' monitor 'WATCH' "$DIR" ''
+    verify_launch_pane 'verify.3' monitor 'CMD' "$DIR" ''
 
     tmux display-message -d 4000 \
         'Generic verify layout — add .agents/verification/tmux-layout.sh (verification-cockpit skill)'
 
-    tmux select-pane -t 'verify.0'
+    tmux select-pane -t 'verify.3'
 fi
 
 CONSOLE="$(verify_console_target "$SESSION")"

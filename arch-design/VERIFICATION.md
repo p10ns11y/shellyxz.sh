@@ -109,14 +109,14 @@ When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (
 **Golden-ratio default** (φ 62% / 38%) — high-priority watchers get major area; omit low-signal panes (btop, yazi) unless they surface verify failures. See `verification-cockpit` skill.
 
 ```
-+---------------------------+------------+
-| CMD (interactive, minor)  |            |
-|---------------------------|  GIT 38%   |
-| WATCH / CHECK (scroll)    |  lazygit   |
-|---------------------------|            |
-| VERIFY (confirm, minor)   |            |
-+---------------------------+------------+
-     insight column 62%
++----------------------------+------------------+
+|                            | SYNC (minor top) |
+|  GIT / lazygit 62% w       |------------------|
+|  full height               | WATCH / CHECK    |
+|                            |------------------|
+|                            | CMD (minor bot.) |
++----------------------------+------------------+
+     git column 62%              ops column 38%
 ```
 
 **Flags:**
