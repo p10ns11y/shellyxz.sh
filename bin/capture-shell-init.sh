@@ -40,6 +40,7 @@ warn() { printf '[capture] WARN: %s\n' "$1" >&2; }
 
 classify_line() {
     local line="$1"
+    # shellcheck disable=SC2016
     case "$line" in
         *'export PATH='*|*'PATH='*|*path_prepend*|*'.cargo/env'*|*'.local/bin/env'*|*'.vite-plus/env'*)
             echo "path.contract / core/env.sh"
@@ -47,7 +48,10 @@ classify_line() {
         alias\ *)
             echo "core/aliases.sh"
             ;;
-        *'eval "$(mamba '*|*'eval "$(mise '*|*'eval "$(starship '*|*'eval "$(zoxide '*|*'eval "$(thefuck '*|*'eval "$(direnv '*|*'fzf --zsh'*)
+        *'eval "$(mamba '*|*'eval "$(mise '*|*'eval "$(starship '*|*'eval "$(zoxide '*|*'eval "$(thefuck '*|*'eval "$(direnv '*)
+            echo "templates/zshrc (tool-init.manifest)"
+            ;;
+        *'fzf --zsh'*)
             echo "templates/zshrc (tool-init.manifest)"
             ;;
         export\ *)
@@ -99,12 +103,7 @@ scan_rc() {
         [[ "$line" =~ ^[[:space:]]*# ]] && continue
         [[ -z "${line// /}" ]] && continue
         case "$line" in
-            *"$MANAGED_MARKER"*|source\ \"\$HOME/.config/shell/*|source\ \"\$HOME/.config/shell/*)
-                continue
-                ;;
-        esac
-        case "$line" in
-            *'config/shell/env.sh'*|*'config/shell/functions.sh'*|*'config/shell/aliases.sh'*|*source_environment_shell*|*path_contract_reassert*)
+            *"$MANAGED_MARKER"*|*'config/shell/env.sh'*|*'config/shell/functions.sh'*|*'config/shell/aliases.sh'*|*source_environment_shell*|*path_contract_reassert*)
                 continue
                 ;;
         esac
@@ -130,7 +129,9 @@ parse_install_log() {
 
 apply_capture() {
     warn "--apply: manual review recommended for first run; use --dry-run output"
-    local backup="${CONFIG_DIR}/backups/$(date +%Y%m%d-%H%M%S)"
+    local backup ts
+    ts=$(date +%Y%m%d-%H%M%S)
+    backup="${CONFIG_DIR}/backups/${ts}"
     mkdir -p "$backup"
     for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
         [[ -f "$rc" ]] && cp -a "$rc" "$backup/" && log "Backed up $rc → $backup/"

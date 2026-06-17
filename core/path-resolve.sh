@@ -174,6 +174,8 @@ path_contract_reassert() {
     path_contract_apply --phase environment:core:append
     path_contract_apply --phase post_vite
     path_deny_sweep
+    path_dedupe
+    tool_contract_apply
 }
 
 _path_contract_collect_phase_prepends() {
@@ -295,6 +297,24 @@ path_contract_verify() {
     return "$_fail"
 }
 
+_tool_pinned_path() {
+    _c="$1"
+    [ -f "$TOOL_CONTRACT" ] || return 1
+    while IFS= read -r _line || [ -n "$_line" ]; do
+        case "$_line" in
+            pin:"$_c":*)
+                _p="${_line#pin:}"
+                _p="${_p#"${_c}":}"
+                if [ -x "$_p" ]; then
+                    printf '%s\n' "$_p"
+                    return 0
+                fi
+                ;;
+        esac
+    done < "$TOOL_CONTRACT"
+    return 1
+}
+
 tool_contract_apply() {
     [ -f "$TOOL_CONTRACT" ] || return 0
     while IFS= read -r _line || [ -n "$_line" ]; do
@@ -305,15 +325,33 @@ tool_contract_apply() {
                 _cmd="${_rest%%:*}"
                 _bin="${_rest#*:}"
                 [ -x "$_bin" ] || continue
-                if [ -n "${ZSH_VERSION:-}" ]; then
-                    alias "$_cmd=$_bin" 2>/dev/null || true
-                elif [ -n "${BASH_VERSION:-}" ]; then
-                    alias "$_cmd=$_bin" 2>/dev/null || true
+                if [ -n "${ZSH_VERSION:-}" ] || [ -n "${BASH_VERSION:-}" ]; then
+                    # shellcheck disable=SC2139
+                    eval "${_cmd}() { \"${_bin}\" \"\$@\"; }"
+                else
+                    # shellcheck disable=SC2139
+                    eval "alias ${_cmd}='${_bin}'" 2>/dev/null || true
                 fi
                 ;;
             warn_shadow:*) ;;
         esac
     done < "$TOOL_CONTRACT"
+
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        # shellcheck disable=SC2329
+        tool_contract_which() {
+            _p="$(_tool_pinned_path "$1" 2>/dev/null || true)"
+            if [ -n "$_p" ]; then
+                printf '%s\n' "$_p"
+                return 0
+            fi
+            whence -p "$1" 2>/dev/null || command which "$@"
+        }
+        if ! whence which 2>/dev/null | grep -q 'function'; then
+            # shellcheck disable=SC2329
+            which() { tool_contract_which "$@"; }
+        fi
+    fi
 }
 
 path_shadow_report() {
@@ -336,12 +374,17 @@ path_shadow_report() {
                     while IFS= read -r _pline || [ -n "$_pline" ]; do
                         case "$_pline" in
                             pin:"$_cmd":*)
-                                _pin="${_pline#pin:${_cmd}:}"
+                                _pin="${_pline#pin:}"
+                                _pin="${_pin#"${_cmd}":}"
                                 ;;
                         esac
                     done < "$TOOL_CONTRACT"
                     [ -z "$_pin" ] && continue
-                    _resolved=$(command -v "$_cmd" 2>/dev/null || true)
+                    if [ -n "${ZSH_VERSION:-}" ]; then
+                        _resolved=$(whence -p "$_cmd" 2>/dev/null || true)
+                    else
+                        _resolved=$(command -v "$_cmd" 2>/dev/null || true)
+                    fi
                     [ -z "$_resolved" ] && continue
                     [ "$_resolved" = "$_pin" ] && continue
                     printf 'shadow: %s resolves to %s (pinned: %s)\n' "$_cmd" "$_resolved" "$_pin" >&2

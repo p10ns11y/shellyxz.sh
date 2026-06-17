@@ -11,12 +11,18 @@ SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 
 shell_truth_seeker 2>/dev/null || true
 
-# zprofile + zshrc both source env.sh — second pass is a no-op for PATH.
+# zprofile + zshrc both source env.sh — second pass skips PATH rebuild only.
+# PID guard: ignore _SHELL_ENV_SH_LOADED leaked from a parent shell (old export bug).
 if [ -n "${_SHELL_ENV_SH_LOADED:-}" ]; then
-    resolve_shell_environment
-    return 0 2>/dev/null || true
+    if [ "${_SHELL_ENV_SH_LOADED_PID:-}" = "$$" ]; then
+        resolve_shell_environment
+        tool_contract_apply 2>/dev/null || true
+        return 0 2>/dev/null || true
+    fi
+    unset _SHELL_ENV_SH_LOADED
 fi
-export _SHELL_ENV_SH_LOADED=1
+_SHELL_ENV_SH_LOADED=1
+_SHELL_ENV_SH_LOADED_PID=$$
 
 export PNPM_HOME="$HOME/.local/share/pnpm"
 
@@ -70,6 +76,7 @@ fi
 
 path_contract_apply --phase post_vite
 path_deny_sweep
+path_dedupe
 tool_contract_apply
 
 # Rare machine-specific PATH/export tweaks (see local/overwrite.sh.example)

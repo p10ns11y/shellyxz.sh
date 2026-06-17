@@ -12,6 +12,7 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 |--------|-------------|---------------|-----------|
 | [migrate.sh](#migratesh) | First install, refresh managed rc, scaffold dotfiles | bash, curl (bootstrap), Omarchy recommended | 0 on success; `set -e` aborts on hard errors |
 | [check-shell.sh](#check-shellsh) | After edits or migrate | bash; optional `shellcheck` | 0 if no **errors** (warnings OK) |
+| [capture-shell-init.sh](#capture-shell-initsh) | After installer pollutes `~/.zshrc` | bash | 0 |
 | [recover-shell.sh](#recover-shellsh) | Broken rc / `source` loops | bash only | 0 (informational menu) |
 | [agent-build-layout.sh](#agent-build-layoutsh) | Open tmux agent build window | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
 | [agent-verify-layout.sh](#agent-verify-layoutsh) | Open tmux verification cockpit | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
@@ -128,9 +129,24 @@ git config --global include.path ~/.config/git/verification
 - Git delta: `include.path` when `~/.config/git/verification` exists; `delta`, `procs`, `difft` on PATH (warn if missing)
 - Optional nvim `verification-workflow.lua` (warn if missing)
 - fish: direnv, `functions.sh`, fzf, thefuck
+- **PATH contract v2:** `path.contract`, `path-resolve.sh`, runtime `zsh -lic path_contract_verify`, `tool.contract` shadow scan
 - **shellcheck** on all `*.sh` (warns if `shellcheck` not installed — `pacman -S shellcheck`)
 
 **Exit:** `0` only when `errors=0`. Warnings do not fail the script.
+
+---
+
+## capture-shell-init.sh
+
+**Purpose:** Detect installer pollution in `~/.zshrc` / `~/.bashrc` and route lines to the correct module (`path.contract`, `aliases.sh`, `functions.sh`, managed rc template).
+
+```bash
+~/.config/shell/bin/capture-shell-init.sh [--dry-run] [--apply] [--force] [--since-install LOG]
+```
+
+After a tool install adds PATH or `eval "$(foo init"` to rc: run `--dry-run`, move entries per output, then `check-shell.sh` and `path_check`.
+
+Registry of managed inits: `templates/tool-init.manifest`.
 
 ---
 
