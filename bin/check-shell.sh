@@ -465,6 +465,13 @@ grep -q '^vf()' "$FUNCS_FILE" \
 [[ -x "$CONFIG_DIR/bin/agent-build-layout.sh" ]] \
     && ok 'agent-build-layout.sh executable' \
     || warn 'agent-build-layout.sh missing or not executable'
+VERIFY_LAUNCH="$CONFIG_DIR/bin/lib/verify-launch.sh"
+grep -q 'agent_strict_path_check' "$VERIFY_LAUNCH" 2>/dev/null \
+    && ok 'verify-launch.sh has agent strict PATH helpers' \
+    || warn 'verify-launch.sh missing agent strict PATH (SN-3)'
+grep -q 'path_contract_apply_core_only' "$PATH_RESOLVE" 2>/dev/null \
+    && ok 'path-resolve.sh has path_contract_apply_core_only' \
+    || warn 'path-resolve.sh missing path_contract_apply_core_only'
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
     && ok 'tmux.conf present' \
     || warn 'tmux.conf missing (run migrate.sh)'
@@ -552,6 +559,20 @@ command -v difft &>/dev/null \
 
 # fish tier-1 tools
 FISH_CFG="$HOME/.config/fish/config.fish"
+
+# Doc triage + skills collapse (SN-6)
+[[ -f "$CONFIG_DIR/PLUGIN.md" ]] && ok 'PLUGIN.md present (kernel boundary)' || warn 'PLUGIN.md missing'
+CURSOR_SKILLS="$CONFIG_DIR/.cursor/skills"
+AGENTS_SKILLS="$CONFIG_DIR/.agents/skills"
+if [[ -L "$CURSOR_SKILLS" ]] && [[ "$(readlink -f "$CURSOR_SKILLS" 2>/dev/null)" == "$(readlink -f "$AGENTS_SKILLS" 2>/dev/null)" ]]; then
+    ok '.cursor/skills symlinks to .agents/skills'
+elif [[ -d "$AGENTS_SKILLS" ]]; then
+    warn '.cursor/skills should symlink to .agents/skills (duplicate skill trees)'
+fi
+[[ -f "$CONFIG_DIR/local/omarchy.sh.example" ]] \
+    && ok 'local/omarchy.sh.example present' \
+    || warn 'local/omarchy.sh.example missing (Omarchy overlay pattern)'
+
 if [[ -f "$FISH_CFG" ]]; then
     grep -q 'direnv hook fish' "$FISH_CFG" && ok 'fish: direnv hooked' || warn 'fish: direnv missing'
     grep -q 'functions.sh' "$FISH_CFG" && ok 'fish: functions.sh sourced' || warn 'fish: functions.sh missing'

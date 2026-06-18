@@ -16,6 +16,12 @@ alias agrepos="cd ~/Work/agents/public-agenc-repos/"
 alias agcore="cd ~/Work/agents/public-agenc-repos/agenc-core"
 alias agproto="cd ~/Work/agents/public-agenc-repos/agenc-protocol"
 
+# Optional Omarchy desktop overlay (copy local/omarchy.sh.example → local/omarchy.sh)
+if [ -f "$HOME/.config/shell/local/omarchy.sh" ]; then
+    # shellcheck disable=SC1091
+    . "$HOME/.config/shell/local/omarchy.sh"
+fi
+
 # Verification cockpit — agent build TUI (plugin; see PLUGIN.md)
 export SHELL_AGENT_BUILD_CMD="${SHELL_AGENT_BUILD_CMD:-grok}"
 export SHELL_AGENT_BUILD_CONTINUE_CMD="${SHELL_AGENT_BUILD_CONTINUE_CMD:-grok -c}"
