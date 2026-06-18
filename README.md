@@ -418,4 +418,4 @@ This sets a minimal PATH and prints restore options (latest `backups/*/revert.sh
 
 - This setup treats **Omarchy** as your personal foundation and layers modern tooling on top without fighting it.
 - The goal is **low cognitive load** — you should rarely need to edit `~/.zshrc` or `~/.bashrc` directly.
-- **PATH** is owned by `core/env.sh` (`path_prepend` / `path_append`; `path_add` aliases prepend). Canonical order: [`core/path.contract`](core/path.contract) — validated by `bin/check-shell.sh`. Use `path_debug` in `functions.sh`. Omarchy prepends `$OMARCHY_PATH/bin` via `environments/omarchy/env.sh` (lowest among managed segments). Rare machine tweaks: `local/overwrite.sh`.
+- **PATH** is owned by `core/path.contract` + `core/path-resolve.sh` (`path_contract_apply` in `env.sh`). Runtime verify: `path_check` or `path_contract_verify`. Installer drift: `bin/capture-shell-init.sh --dry-run`. See [arch-design/shell.md](arch-design/shell.md#path-contract-v2).
