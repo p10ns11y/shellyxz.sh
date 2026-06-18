@@ -390,11 +390,27 @@ flowchart LR
 
 ### SN-6 · Doc triage + skills collapse
 
-| ID | Action |
-|----|--------|
-| SN-6a | Canonical 3: `README.md`, `arch-design/shell.md`, `PLUGIN.md` |
-| SN-6b | `.cursor/skills` → symlink `.agents/skills` |
-| SN-6c | Omarchy → `local/omarchy.sh` overlay (preset stays thin in core) |
+| ID | Action | Status |
+|----|--------|--------|
+| SN-6a | Canonical 3: `README.md`, `arch-design/shell.md`, `PLUGIN.md` | **Done** |
+| SN-6b | `.cursor/skills` → symlink `.agents/skills` | **Done** |
+| SN-6c | Omarchy → `local/omarchy.sh` overlay (preset stays thin in core) | **Done** |
+
+---
+
+### SN-TS · Per-project tmux session (`ts` / optional `tls`) — planned
+
+**Problem:** Omarchy `t` attaches to one session (`Work`). Multi-repo work hijacks the same `build`/`verify` windows; `ab`/`av`/`at` share one cockpit.
+
+| File | Work |
+|------|------|
+| `core/functions.sh` | `ts()` attach-or-create session from `verify_workflow_root` / git basename |
+| `arch-design/VERIFICATION.md` | Document `t` vs `ts` |
+| `local/personal.sh` | Optional alias override |
+
+**Done when:** `ts` from repo A and repo B yields two attachable sessions; `ab` in each keeps isolated windows.
+
+**Deferred:** `tls` (rich session list with `@workflow_dir`) — only if `tmux ls` becomes insufficient.
 
 ---
 
@@ -422,12 +438,14 @@ gantt
   section Now
   SN-1 Dogfood gate           :done, sn1, 2026-06-18, 1d
   section Week 1
-  SN-2 direnv project fragment :sn2, 2026-06-19, 3d
-  SN-6 Doc triage             :sn6, after sn2, 2d
+  SN-2 direnv project fragment :done, sn2, 2026-06-19, 3d
+  SN-6 Doc triage             :done, sn6, after sn2, 2d
   section Week 2
-  SN-3 Agent strict PATH      :sn3, after sn6, 2d
-  SN-5 Bridge py optional      :sn5, after sn3, 3d
-  SN-7 Bridge MCP surface      :sn7, after sn5, 5d
+  SN-3 Agent strict PATH      :done, sn3, after sn6, 2d
+  SN-5 Bridge py optional      :done, sn5, after sn3, 3d
+  SN-7 Bridge MCP surface      :done, sn7, after sn5, 5d
+  section Next
+  SN-TS Per-project tmux ts    :sn-ts, 2026-06-25, 2d
   section Later
   SN-4 plugins/ modular pack  :sn4, 2026-07-01, 5d
 ```
@@ -454,6 +472,11 @@ gantt
 | 2 | `SHELL_AGENT_BUILD_CMD` | `agent-build-layout.sh`, `local/personal.sh` |
 | 3 | `PLUGIN.md` | kernel vs plugin contract |
 | 4 | Overlay invariant | `check-shell.sh` line-order guard |
+| 5 | SN-2 `phase:project` direnv fragment | `path-contract-project.sh`, `path-resolve.sh` |
+| 6 | SN-3 agent strict PATH | `agent-build-layout.sh`, `tool.contract`, `PLUGIN.md` |
+| 7 | SN-6 doc triage + omarchy overlay | `arch-design/README.md`, `local/omarchy.sh.example` |
+| 8 | SN-5 sh test discovery | `parse-project-tests-discover.sh`, `run-project-tests.sh` |
+| 9 | SN-7 cockpit-mcp headless verbs | `bin/cockpit-mcp.sh`, `VERIFICATION.md` |
 
 ---
 
