@@ -6,35 +6,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/parse-project-tests.sh"
 
-# Run a manifest command without bare eval (repo-local YAML; allowlisted runners).
+# Run a manifest command (allowlist lives in parse-project-tests.py).
 run_manifest_command() {
     local cmd="$1"
-    local first="${cmd%% *}"
-
-    case "$first" in
-        # shellcheck disable=SC2016
-        ""|*';'*|*'|'*|*'`'*|*'$('*|*'>'*|*'<'*)
-            echo "run-project-tests: rejected command: $cmd" >&2
-            return 1
-            ;;
-    esac
-
-    case "$first" in
-        bin/*|./*|/*)
-            bash -c "$cmd"
-            return
-            ;;
-    esac
-
-    case "$first" in
-        pnpm|npm|cargo|pytest|python|python3|bash|sh|echo)
-            bash -c "$cmd"
-            return
-            ;;
-    esac
-
-    echo "run-project-tests: command not allowlisted: $first" >&2
-    return 1
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "run-project-tests: python3 is required to run manifest commands" >&2
+        return 1
+    fi
+    python3 "${SCRIPT_DIR}/parse-project-tests.py" --run-cmd "$cmd"
 }
 
 project_test_cmd() {

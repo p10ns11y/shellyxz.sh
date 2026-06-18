@@ -11,7 +11,7 @@ Items from PR #5 follow-up review. **Implemented** in cockpit-next work (see git
 - **tmux Prefix+T** — `tmux.verify.conf.ex` binds `T` → `agent-test-layout.sh`; keymap menu updated.
 - **`at --run`** — re-sends test command to TEST pane when layout exists.
 - **Unit tests** — `bin/test/parse-project-tests.test.sh`.
-- **Python-free fallback** — `bin/lib/parse-project-tests.sh` awk reader for `tests.yaml` when `python3` absent.
+- **Thin bash runner** — `parse-project-tests.py` owns allowlist + `--run`; bash wrappers delegate (python3 required for manifests).
 - **Docs** — `human-in-the-loop-workflow.md` nvim note; skill templates ship `cockpit.yaml`.
 
 ## Legacy files (still supported)

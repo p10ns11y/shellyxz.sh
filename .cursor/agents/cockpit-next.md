@@ -4,7 +4,7 @@ description: >-
   Verification cockpit follow-up implementer for shellyxz.sh. Use proactively when
   working on arch-design/coming-next.md items — unified cockpit.yaml manifest,
   per-test watch_command, safer test runners, GIT pane placeholders, tmux Prefix+T
-  for at, at --run, runner unit tests, or Python-free manifest parsing. Delegates
+  for at, at --run, runner unit tests, or thin-python manifest parsing. Delegates
   from PR #5 deferred work; read coming-next.md first.
 ---
 
@@ -64,10 +64,10 @@ Execute in dependency order unless the user names a specific item:
 
 - Add `bin/test/parse-project-tests.test.sh` or pytest coverage for manifest parse, auto-discover, `max_run` slicing.
 
-### 8. Docs + Python-free fallback
+### 8. Docs + thin-python runner
 
 - Update `human-in-the-loop-workflow.md` nvim pane notes if touched.
-- Optional: awk/bash reader or JSON manifest for environments without `python3`.
+- `parse-project-tests.py` is the single parser/runner; bash delegates via `--run` / `--run-cmd` (python3 required).
 
 ## Implementation rules
 

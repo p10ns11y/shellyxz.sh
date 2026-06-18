@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# parse-project-tests.test.sh — parser + allowlist smoke tests.
+# parse-project-tests.test.sh — parser + allowlist + runner smoke tests.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PARSER="$ROOT/bin/lib/parse-project-tests.py"
 FAIL=0
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -15,6 +16,17 @@ assert_ok() {
     else
         printf 'FAIL %s\n' "$desc" >&2
         FAIL=$((FAIL + 1))
+    fi
+}
+
+assert_fail() {
+    local desc="$1"
+    shift
+    if "$@" >/dev/null 2>&1; then
+        printf 'FAIL %s (expected failure)\n' "$desc" >&2
+        FAIL=$((FAIL + 1))
+    else
+        printf 'ok   %s\n' "$desc"
     fi
 }
 
@@ -35,20 +47,29 @@ mkdir -p "$TMP/.agents/verification"
 cp "$ROOT/.agents/verification/cockpit.yaml" "$TMP/.agents/verification/"
 
 assert_contains 'cockpit.yaml parses shellcheck' shellcheck \
-    python3 "$ROOT/bin/lib/parse-project-tests.py" --root "$TMP"
+    python3 "$PARSER" --root "$TMP"
 
 assert_contains 'tests.yaml fallback' shellcheck \
-    python3 "$ROOT/bin/lib/parse-project-tests.py" "$ROOT/.agents/verification/tests.yaml" "$ROOT"
+    python3 "$PARSER" "$ROOT/.agents/verification/tests.yaml" "$ROOT"
 
 # shellcheck source=/dev/null
 source "$ROOT/bin/lib/parse-project-tests.sh"
 assert_contains 'bash wrapper returns json' max_run \
     parse_project_tests_json "$ROOT"
 
+assert_ok 'python allowlisted absolute path' \
+    python3 "$PARSER" --run-cmd "$ROOT/bin/check-shell.sh --help"
+
+assert_fail 'python reject shell metachar' \
+    python3 "$PARSER" --run-cmd "echo ok; rm -rf /"
+
+assert_contains 'python --run summary' 'at summary' \
+    python3 "$PARSER" --run --root "$TMP"
+
 # shellcheck source=/dev/null
 source "$ROOT/bin/lib/project-tests.sh"
-assert_ok 'allowlisted absolute path' run_manifest_command "$ROOT/bin/check-shell.sh --help"
-assert_ok 'reject shell metachar' sh -c '! run_manifest_command "echo ok; rm -rf /"'
+assert_ok 'bash delegates allowlist to python' run_manifest_command "$ROOT/bin/check-shell.sh --help"
+assert_fail 'bash delegates reject metachar' run_manifest_command "echo ok; rm -rf /"
 
 echo "=== $FAIL failure(s) ==="
 [[ "$FAIL" -eq 0 ]]

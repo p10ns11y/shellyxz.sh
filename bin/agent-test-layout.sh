@@ -8,6 +8,11 @@ WATCH=0
 RUN_ONLY=0
 SCRIPT_NAME="agent-test-layout"
 
+# Golden-ratio test layout (matches cockpit.yaml btop-test / phi 62:38).
+readonly LAYOUT_PHI_MAJOR=62
+readonly LAYOUT_PHI_MINOR=38
+readonly LAYOUT_PHI_SLACK=4
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --watch)
@@ -68,7 +73,7 @@ test_layout_ok() {
     if [ "$btop_h" -lt $((wh - 1)) ]; then
         return 1
     fi
-    if [ "$btop_w" -lt $((ww * 58 / 100)) ]; then
+    if [ "$btop_w" -lt $((ww * (LAYOUT_PHI_MAJOR - LAYOUT_PHI_SLACK) / 100)) ]; then
         return 1
     fi
     return 0
@@ -107,10 +112,10 @@ else
     fi
     tmux new-window -n test -c "$DIR"
     tmux set-window-option -t "$WIN" pane-base-index 0
-    tmux split-window -h -t "$WIN" -c "$DIR" -p 38
+    tmux split-window -h -t "$WIN" -c "$DIR" -p "$LAYOUT_PHI_MINOR"
 
     w="$(tmux display-message -p -t "$WIN" '#{window_width}')"
-    tmux resize-pane -t "${WIN}.0" -x $((w * 62 / 100))
+    tmux resize-pane -t "${WIN}.0" -x $((w * LAYOUT_PHI_MAJOR / 100))
 
     if command -v btop >/dev/null 2>&1; then
         test_launch_pane "${WIN}.0" 'BTOP' btop
