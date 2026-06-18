@@ -3,5 +3,5 @@
 # Tokens prefixed with PWD/ resolve relative to the repo root (not $HOME).
 
 phase:project
-append:PWD/bin
+prepend:PWD/bin
 append:PWD/node_modules/.bin
