@@ -5,4 +5,4 @@ Full blueprint cards, evolution diagrams, and evidence for shipped work. The liv
 | Doc | PR | Summary |
 |-----|-----|---------|
 | [path-contract-v2-pr6.md](path-contract-v2-pr6.md) | [#6](https://github.com/p10ns11y/shellyxz.sh/pull/6) | PATH contract v2, local overlay, PLUGIN boundary |
-| [sprint-jun-2026-pr8.md](sprint-jun-2026-pr8.md) | [#8](https://github.com/p10ns11y/shellyxz.sh/pull/8) | direnv project PATH, strict agent mode, sh tests, cockpit-mcp |
+| [sprint-jun-2026-pr8.md](sprint-jun-2026-pr8.md) | [#8](https://github.com/p10ns11y/shellyxz.sh/pull/8) **merged** | direnv project PATH, strict agent mode, sh tests, cockpit-mcp |

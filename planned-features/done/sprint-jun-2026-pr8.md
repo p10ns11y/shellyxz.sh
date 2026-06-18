@@ -1,7 +1,24 @@
 # Done — Sprint Jun 2026: kernel bridge (PR #8)
 
-**Branch:** `sn-2-direnv-project-fragment` · **PR:** [#8](https://github.com/p10ns11y/shellyxz.sh/pull/8)  
+**Branch:** `sn-2-direnv-project-fragment` · **PR:** [#8](https://github.com/p10ns11y/shellyxz.sh/pull/8) · **Status:** merged to `master`  
 **Depends on:** [path-contract-v2-pr6.md](path-contract-v2-pr6.md)
+
+---
+
+## Merge checklist (PR #8)
+
+- [x] SN-1 dogfood gate
+- [x] SN-2 `phase:project` + direnv hook
+- [x] SN-3 agent strict PATH + `ab --strict`
+- [x] SN-5 sh test discovery (python optional)
+- [x] SN-6 doc triage + omarchy overlay example
+- [x] SN-7 `cockpit-mcp.sh` headless verbs
+- [x] `tool_contract_which` alias/function fix
+- [x] Doc split (`architecture.md` / `coming-next` / `planned-features/done/`)
+- [x] Mermaid parse fix (`shell.md`)
+- [x] `capture-shell-init` false-positive fix (managed + login rc)
+- [x] `PLUGIN.md` strict PATH portability (`PATH_CONTRACT_STRICT_BASE`, `pin:git`)
+- [x] `architecture.md` scorecard + guardrails current post-merge
 
 ---
 
@@ -33,6 +50,20 @@ gantt
 | — | `which` alias fix | `1891f57` | `path-resolve.sh` |
 | SN-5 | sh test discovery | `50f4e52` | `parse-project-tests-discover.sh` |
 | SN-7 | cockpit-mcp headless | `c589765` | `bin/cockpit-mcp.sh`, `VERIFICATION.md` |
+| — | Doc split + architecture living doc | `4bfedc6` | `arch-design/architecture.md`, `planned-features/done/` |
+| — | Mermaid parse fix | `0d204d2` | `arch-design/shell.md` |
+| — | capture-shell-init false positives | `c0496d9` | `bin/capture-shell-init.sh`, tests |
+| — | PR #8 merge close-out (docs) | `876abf0` | `PLUGIN.md`, backlog triage |
+
+---
+
+## Post-merge follow-ups (backlog)
+
+| ID | Item | Tracking |
+|----|------|----------|
+| SN-TS | Per-project tmux `ts` | [coming-next.md](../../arch-design/coming-next.md) |
+| SN-8 | Unified `discover_tests` → JSON | PR #8 review; [coming-next.md](../../arch-design/coming-next.md) |
+| SN-4 | Physical `plugins/verification/` split | [coming-next.md](../../arch-design/coming-next.md) |
 
 ---
 

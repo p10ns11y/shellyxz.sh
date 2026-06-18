@@ -4,7 +4,7 @@
 **Update this file** when kernel or verification bridge shape changes on `master`.  
 **Backlog:** [coming-next.md](coming-next.md) · **Shipped epics:** [../planned-features/done/](../planned-features/done/)
 
-*Last updated: 2026-06-18*
+*Last updated: 2026-06-18 (post–PR #8 merge)*
 
 ---
 
@@ -120,6 +120,7 @@ flowchart LR
   end
   subgraph open["Open"]
     TS[ts per-project tmux]
+    D8[discover_tests JSON SN-8]
     SP[plugins/ physical split]
   end
   shipped --> open
@@ -164,9 +165,10 @@ flowchart TD
 | Kernel polluted by agent/vendor | PLUGIN.md + local overlay | **Done** |
 | Overlay rank regression | `check-shell` invariant | **Done** |
 | direnv vs contract collision | Precedence + `phase:project` | **Done** |
-| Cockpit stuck on one TUI | Manifest-first; tmux one renderer | **Partial** — headless MCP CLI shipped |
+| Cockpit stuck on one TUI | Manifest-first; tmux one renderer | **Done** — headless `cockpit-mcp.sh` shipped (PR #8) |
 | Cockpit stuck on one agent | `SHELL_AGENT_BUILD_CMD` + MCP | **In progress** |
 | One tmux session all projects | `ts` per-repo session | **Planned** — [coming-next](coming-next.md) SN-TS |
+| Test discovery drift (py/sh) | Single JSON emitter | **Planned** — SN-8 |
 
 ---
 

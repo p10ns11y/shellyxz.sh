@@ -84,3 +84,12 @@ Agents run arbitrary shell commands; shadowed `git` / `clear` / `python` (conda,
 **Kernel default unchanged** — strict mode is opt-in via plugin (`agent-build-layout.sh`). Uses `path_contract_apply_core_only` (skips `local/path.contract` overlay) then `tool.contract` shadow pins.
 
 Unset `SHELL_AGENT_STRICT_PATH` or leave tmux to return to normal PATH in new shells.
+
+**Portability:** `path_contract_apply_core_only` resets PATH to `PATH_CONTRACT_STRICT_BASE` (default `/usr/local/bin:/usr/bin:/bin`) before applying `core/path.contract` only. `core/tool.contract` pins `git` at `/usr/bin/git` — correct on typical Arch/FHS layouts; Nix, Homebrew, or minimal images may need overrides:
+
+```bash
+export PATH_CONTRACT_STRICT_BASE="/usr/bin:/bin"   # before ab --strict
+# or adjust pin:git in local/tool.contract overlay when you add one
+```
+
+Strict-mode shadow warnings on `git` after override are expected until the pin matches your layout.
