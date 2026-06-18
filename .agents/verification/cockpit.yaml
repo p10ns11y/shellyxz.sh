@@ -1,0 +1,65 @@
+# Unified verification cockpit manifest — layouts + test runners (ab/av/at).
+# Legacy: manifest.yaml + tests.yaml remain valid; readers prefer cockpit.yaml.
+
+project: shell
+risk_profile: medium
+
+cockpits:
+  verify:
+    layout: golden-4phi-r
+    phi_major: 62
+    phi_minor: 38
+    panes:
+      - id: check-watch
+        title: CHECK:watch
+        tier: watch
+        priority: 1
+        space_profile: scroll
+        cwd: .
+        command: CHECK_WATCH_INTERVAL=90 ~/.config/shell/bin/check-shell-watch.sh
+        fallback_command: CHECK_WATCH_INTERVAL=90 ~/.config/shell/bin/check-shell-watch.sh
+        value: Live shell load-order + guardrail failures
+
+      - id: console
+        title: CMD
+        tier: monitor
+        priority: 2
+        space_profile: interactive
+        value: agent_scan, gdf, manual verify commands
+
+      - id: git
+        title: GIT
+        tier: monitor
+        priority: 3
+        space_profile: tui-side
+        command: lazygit
+        tool: lazygit
+        value: Review agent diffs before commit
+
+      - id: template-sync
+        title: SYNC
+        tier: verify
+        priority: 4
+        space_profile: confirm-burst
+        cwd: .
+        command: ~/.config/shell/bin/check-template-sync.sh
+        value: Template drift — confirm before running
+
+  test:
+    layout: btop-test
+    max_run: 2
+    tests:
+      - id: shellcheck
+        priority: 1
+        command: ~/.config/shell/bin/check-shell.sh --shellcheck-only
+        label: shellcheck static analysis on *.sh
+
+      - id: workflow-root
+        priority: 2
+        command: ~/.config/shell/bin/test/verify-workflow-root.test.sh
+        label: verify_workflow_root unit tests
+
+      - id: load-order
+        priority: 3
+        command: ~/.config/shell/bin/check-shell.sh
+        label: full shell audit (load order, tools, templates)

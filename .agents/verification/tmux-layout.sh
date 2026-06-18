@@ -46,6 +46,8 @@ else
 
     if command -v lazygit >/dev/null 2>&1; then
         verify_launch_pane 'verify.0' monitor 'GIT' "$ROOT" lazygit
+    else
+        verify_launch_pane 'verify.0' monitor 'GIT' "$ROOT" "echo 'install lazygit (optional: paru -S lazygit)'"
     fi
 
     verify_launch_pane 'verify.1' verify 'SYNC' "$ROOT" "$SYNC_CMD"

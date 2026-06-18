@@ -1,83 +1,59 @@
-# Coming next (follow-up PRs)
+# Coming next
 
-Deferred from [PR #5 — Improve verify layout](https://github.com/p10ns11y/shellyxz.sh/pull/5) review. Not blocking merge.
+Backlog from [test-of-travelled-time-from-future.md](test-of-travelled-time-from-future.md). Kernel/plugin boundary: [PLUGIN.md](../PLUGIN.md).
 
-## Architecture
-
-### Unified `cockpit.yaml` manifest
-
-Today:
-
-- `manifest.yaml` — verify pane map (`av`)
-- `tests.yaml` — priority test runners (`at`)
-
-**Proposal:** single `.agents/verification/cockpit.yaml` with `cockpits.verify` and `cockpits.test` sections — each defining a **layout** (pane arrangement), not a raw tmux window:
-
-```yaml
-# sketch — names TBD
-cockpits:
-  verify:
-    layout: golden-4phi-r    # matches verify-layout.sh vocabulary
-    panes: [...]             # today: manifest.yaml
-  test:
-    layout: btop-test        # btop 62% left + TEST pane right
-    tests: [...]             # today: tests.yaml (max_run, priority)
-```
-
-The verification-cockpit skill generates both layout scripts in one pass. tmux still creates/focuses windows named `verify` and `test`; the manifest describes **layouts** (geometry + pane roles), not tmux primitives.
-
-**Terminology:** prefer `layout` / `cockpit` over `window` in manifests and docs — aligns with `verify-layout.sh`, `golden-4phi-r layout`, and the existing verification-cockpit skill. Reserve `window` for tmux runtime only (e.g. “focuses the `test` window”).
-
-**Why:** fewer agent tokens per scaffold, one source of truth for ab/av/at workflow.
-
-### Per-test `watch_command`
-
-`tests.yaml` supports `watch_command` but `run-project-tests.sh` only loops full `run_once` in `--watch` mode.
-
-**Proposal:** honor `watch_command` per entry when present (e.g. `pnpm test --watch` vs `cargo watch -x test`).
-
-## Safety & robustness
-
-### Safer test execution than `eval`
-
-`run-project-tests.sh` uses `eval "$cmd"` on manifest commands (trusted, repo-local YAML).
-
-**Proposal:** run via `bash -c` with quoted manifest fields, or a small allowlist of runner prefixes (`bin/`, `pnpm`, `cargo`, `pytest`).
-
-### Empty GIT pane when lazygit missing
-
-Verify layout allocates 62% left column for GIT; without `lazygit`, pane 0 is blank but passes geometry checks.
-
-**Proposal:** launch a placeholder (`echo 'install lazygit'`) or collapse to 3-pane layout when GIT unavailable.
-
-## UX & keymaps
-
-### tmux Prefix bind for `at`
-
-Shell alias `at` exists; no Prefix+T (or similar) in `tmux.verify.conf.ex` yet.
-
-**Proposal:** `bind T run-shell '.../agent-test-layout.sh "#{pane_current_path}"'` + keymap menu entry (partially done in `tmux-keymaps.tsv`).
-
-### Re-run tests on existing `test` cockpit
-
-`at` is idempotent — focuses the tmux `test` window without re-running tests.
-
-**Proposal:** `at --run` sends test command to TEST pane when the layout already exists.
-
-## Testing & docs
-
-### Unit tests for test runner
-
-Add `bin/test/parse-project-tests.test.sh` or pytest for `parse-project-tests.py` (manifest parse, auto-discover, `max_run` slicing).
-
-### `human-in-the-loop-workflow.md` nvim pane
-
-Doc still references nvim in verify CMD pane; many users run nvim in a separate window. Optional: add `eff` / Omarchy nvim split to ritual table.
-
-### Python-free fallback
-
-For minimal environments without `python3`, parse `tests.yaml` with a constrained awk/bash reader or ship manifest as JSON.
+*Last updated: 2026-06-18*
 
 ---
 
-*Last updated: 2026-06-17 — terminology: layouts + cockpits (not windows in manifests).*
+## Done (path-contract-v2 PR)
+
+1. **`local/path.contract` overlay** — personal `prepend:` lines moved out of `core/path.contract`; `path-resolve.sh` applies core then local.
+2. **`SHELL_AGENT_BUILD_CMD`** — `agent-build-layout.sh` uses env vars; defaults in `local/personal.sh`.
+3. **`PLUGIN.md`** — kernel vs plugin boundary (replaces lightweight `SPLIT.md`).
+
+---
+
+## Near-term (next PRs)
+
+- Move verification tree to `plugins/verification/` or separate repo (physical split)
+- Freeze `cockpit.yaml` spec — no new pane types without external user
+- `environments/omarchy/path.overlay` for Omarchy-only PATH (alternative to `local/path.contract`)
+- Collapse `.cursor/skills` → symlink to `.agents/skills`
+- README / doc triage toward canonical set (`README.md`, `arch-design/shell.md`, `PLUGIN.md` + plugin docs)
+
+---
+
+## Cockpit scope discipline (not layout UX cuts)
+
+**Constraint:** If tmux layouts stay, navigation infrastructure stays with them.
+
+**Keep as plugin core (do not archive):**
+
+- Keymap menu TSV + `tmux-keymap-menu.sh` (Prefix+? discoverability)
+- SOC / tmux themes (visual pane identity)
+- Golden-ratio manifest tiers (`cockpit.yaml` / layout geometry)
+- `verify_workflow_root`, `ab`/`av`/`at`, `agent_scan`
+
+**Still fair game for simplification (separate from navigators):**
+
+- `parse-project-tests.py` complexity — thin wrapper or sh-only default where possible
+- Python optional for shell-repo validation (not required to `source ~/.zshrc`)
+- Spec discipline: freeze new manifest fields until external need
+
+---
+
+## Long-term / decision gates
+
+- Physical repo split (`shelly-core` + `verification-cockpit`)
+- Drop fish from “supported” → `contrib/fish/`
+- Remove `curl | bash` as primary install
+- Demote Omarchy preset to private `local/omarchy.sh`
+- MCP emit/consume for cockpit instead of custom YAML panes
+- **Pivot trigger:** >50% cockpit commits for 6 months while IDE review replaces tmux workflow → execute “minimal kernel only”
+
+---
+
+## Reference
+
+Full 10-year analysis: [test-of-travelled-time-from-future.md](test-of-travelled-time-from-future.md)

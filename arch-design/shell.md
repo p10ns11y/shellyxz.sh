@@ -279,41 +279,46 @@ flowchart LR
     path_prepend --> path_append --> exports --> loaders
 ```
 
-### PATH contract
+### PATH contract (v2)
 
-Single source of truth for managed PATH segments. Machine-readable list: [`core/path.contract`](../core/path.contract) (validated by `bin/check-shell.sh`).
+Forkable kernel PATH: [`core/path.contract`](../core/path.contract). Machine-specific overlay: [`local/path.contract`](../local/path.contract) (copy from [`local/path.contract.example`](../local/path.contract.example)). Executed by [`core/path-resolve.sh`](../core/path-resolve.sh) via `path_contract_apply` in `env.sh` — **core first, then local** (local prepends win higher priority within a phase). Runtime 1:1 validation: `path_check` or `path_contract_verify`.
 
-**Rules:** `path_prepend` / `path_append` in `core/path.sh` skip work when a segment is absent or already at the target position; otherwise remove-then-add. Build order in `core/env.sh` runs low → high; **`which` uses first match** (table below is resolution order after vite+ hook + post `$HOME/bin` re-assert). Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do **not** source `~/.cargo/env` or `~/.local/bin/env`.
+**Format:** resolution order within phases (top line = highest `which` priority). Phases apply in build order `environment` → `core` → `append`; `post_vite` runs after `~/.vite-plus/env` (typically in `local/path.contract`). Deny list strips junk (`/condabin`, `~/.local/share/../bin`) at start and end of `env.sh`, and again via `path_contract_reassert` in `.zshrc` after tool hooks.
 
-| Priority (`which`) | Segment | Who prepends | Preset |
-|-------------------:|---------|--------------|--------|
-| 1 | `$HOME/bin` | `core/env.sh` (post vite+ re-assert) | all |
-| 2 | `$HOME/.vite-plus/bin` | `core/env.sh` + `~/.vite-plus/env` | all (if installed) |
-| 3 | `$HOME/.local/bin` | `core/env.sh` | all |
-| 4 | `$HOME/.local/share/mise/shims` | `core/env.sh` | all |
-| 5 | `$HOME/mamba/bin` | `core/env.sh` | all |
-| 6 | `$HOME/.vector/bin` | `core/env.sh` | all |
-| 7 | `$HOME/.grok/bin` | `core/env.sh` | all |
-| 8 | `$HOME/.risc0/bin` | `core/env.sh` | all |
-| 9 | `$HOME/.cargo/bin` | `core/env.sh` | all |
-| 10 | `$PNPM_HOME` (`~/.local/share/pnpm`) | `core/env.sh` | all |
-| 11 | `$HOME/.bun/bin` | `core/env.sh` | all |
-| 12 | `$HOME/.opencode/bin` | `core/env.sh` | all |
-| 13 | `$HOME/.local/share/solana/install/active_release/bin` | `core/env.sh` | all |
-| 14 | `$OMARCHY_PATH/bin` | `environments/omarchy/env.sh` | omarchy |
-| — | inherited system `PATH` | parent process / login | all |
-| ↓ | `$HOME/miniconda/condabin` | `core/env.sh` (`path_append`) | all |
-| ↓ | `/opt/rocm/bin` | `core/env.sh` (`path_append`) | all |
+**Hybrid system commands:** [`core/tool.contract`](../core/tool.contract) pins execution (`clear` → `/usr/bin/clear`) and `check-shell` warns on PATH shadowing.
 
-`generic` preset adds no PATH entries. Debug live order: `path_debug`.
+**Core** (`core/path.contract` — forkable defaults):
 
-**Not in the contract** (injected after `env.sh` — expected in some sessions):
+| Priority (`which`) | Segment | Phase |
+|-------------------:|---------|-------|
+| 1 | `$HOME/bin` | core |
+| 2 | `$HOME/.local/bin` | core |
+| 3 | `$HOME/.local/share/mise/shims` | core |
+| 4 | `$HOME/.cargo/bin` | core |
+| 5 | `$PNPM_HOME` | core |
+| 6 | `$HOME/.bun/bin` | core |
+| 7 | `$OMARCHY_PATH/bin` | environment (omarchy preset) |
+| — | inherited system `PATH` | inherit |
+
+**Local overlay** (`local/path.contract` — your machine; see example):
+
+| Segment | Phase |
+|---------|-------|
+| mamba, vector, grok, risc0, opencode, solana, vite-plus | core |
+| `$HOME/bin` re-assert | post_vite |
+| miniconda/condabin, `/opt/rocm/bin` | append |
+
+Debug: `path_debug` (shows contract status). Verify: `path_check` or `zsh -lic path_contract_verify`.
+
+**Installer drift:** after a tool adds init to `~/.zshrc`, run `~/.config/shell/bin/capture-shell-init.sh --dry-run`. Registry: [`templates/tool-init.manifest`](../templates/tool-init.manifest).
+
+**Not in the contract** (expected in some sessions until reassert):
 
 | Segment | Source | Notes |
 |---------|--------|--------|
-| `tmp/.mount_cursor*/…` | Cursor AppImage | Editor terminal only; ignore for `which` |
-| `~/.local/share/mise/installs/*/bin` | `mise activate` in `.zshrc` | Skipped when mise shims already on PATH |
-| `/condabin`, `~/.local/share/../bin` | Broken inherited PATH | Stripped at start of `env.sh` via `path_drop` |
+| `tmp/.mount_cursor*/…` | Cursor AppImage | Editor terminal only |
+| `~/.local/share/mise/installs/*/bin` | `mise activate` | Skipped when shims on PATH |
+| `/condabin` | mamba hook | Stripped by `path_contract_reassert` in managed `.zshrc` |
 
 ---
 

@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KEYMAP_FILE="${TMUX_KEYMAP_FILE:-$SCRIPT_DIR/data/tmux-keymaps.tsv}"
 BUILD="$HOME/.config/shell/bin/agent-build-layout.sh"
 VERIFY="$HOME/.config/shell/bin/agent-verify-layout.sh"
+TEST="$HOME/.config/shell/bin/agent-test-layout.sh"
 CYCLE="$HOME/.config/shell/bin/tmux-cycle-layout.sh"
 
 if [ -z "${TMUX:-}" ]; then
@@ -113,8 +114,9 @@ _display_menu() {
     path="$(_keymap_path)"
 
     tmux display-menu -T "Workflow keys (Prefix+?)" -x W -y S \
-        "Agent build · Prefix+B" b "run-shell '$BUILD $(printf '%q' "$path")'" \
-        "Verify cockpit · Prefix+V" v "run-shell '$VERIFY $(printf '%q' "$path")'" \
+        "Agent build · Prefix+B" B "run-shell '$BUILD $(printf '%q' "$path")'" \
+        "Verify cockpit · Prefix+V" V "run-shell '$VERIFY $(printf '%q' "$path")'" \
+        "Test cockpit · Prefix+T" T "run-shell '$TEST $(printf '%q' "$path")'" \
         "Verify + scan" s "run-shell 'AGENT_VERIFY_RESCAN=1 $VERIFY $(printf '%q' "$path")'" \
         "Agent continue · ab -c" c "send-keys -t $target agent_back Enter" \
         "" \

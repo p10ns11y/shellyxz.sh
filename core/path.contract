@@ -1,23 +1,22 @@
-# PATH contract — validated by bin/check-shell.sh against core/env.sh
-# prepend: build order in core/env.sh (low → high; last prepend wins before vite+)
-# post_prepend: re-assert after ~/.vite-plus/env
-# append: lowest priority fallbacks
-# omarchy: environments/omarchy/env.sh (omarchy preset only)
+# path.contract v2 — resolution order within each phase (top = highest which priority)
+# Validated: path_contract_apply in core/env.sh + runtime path_contract_verify
+# Personal/machine paths: local/path.contract (see local/path.contract.example)
 
-prepend:solana/install/active_release/bin
-prepend:.opencode/bin
-prepend:.bun/bin
-prepend:PNPM_HOME
-prepend:.cargo/bin
-prepend:.risc0/bin
-prepend:.grok/bin
-prepend:.vector/bin
-prepend:mamba/bin
-prepend:.vite-plus/bin
-prepend:mise/shims
-prepend:.local/bin
+deny:/condabin
+deny:.local/share/../bin
+
+phase:environment
+prepend:OMARCHY_PATH/bin:omarchy
+
+phase:core
 prepend:HOME/bin
-post_prepend:HOME/bin
-append:miniconda/condabin
-append:/opt/rocm/bin
-omarchy:OMARCHY_PATH/bin
+prepend:.local/bin
+prepend:mise/shims
+prepend:.cargo/bin
+prepend:PNPM_HOME
+prepend:.bun/bin
+
+phase:inherit
+keep:system
+
+phase:append

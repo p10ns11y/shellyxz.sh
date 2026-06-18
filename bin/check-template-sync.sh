@@ -11,7 +11,7 @@ ok() { echo "OK:   $1"; }
 
 echo "=== template sync check ==="
 
-for f in lib.sh path.sh path.contract env.sh aliases.sh functions.sh; do
+for f in lib.sh path.sh path-resolve.sh path.contract tool.contract env.sh aliases.sh functions.sh; do
     if [[ ! -f "$T/$f" ]]; then
         fail "missing template $T/$f"
         continue

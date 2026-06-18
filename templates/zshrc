@@ -38,13 +38,15 @@ fi
 
 detect_editor_terminal 2>/dev/null
 if command -v mise &>/dev/null && [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ]; then
-    # Shims on PATH (from env.sh) are enough for resolution — activate adds per-install bins
-    if ! whence -w mise 2>/dev/null | command grep -q 'function'; then
-        case ":$PATH:" in
-            *":${HOME}/.local/share/mise/shims:"*) ;;
-            *) eval "$(mise activate zsh)" ;;
-        esac
-    fi
+    # Shims on PATH (from env.sh) are enough — skip activate to avoid duplicate install bins
+    case ":$PATH:" in
+        *":${HOME}/.local/share/mise/shims:"*) ;;
+        *)
+            if ! whence -w mise 2>/dev/null | command grep -q 'function'; then
+                eval "$(mise activate zsh)"
+            fi
+            ;;
+    esac
 fi
 
 if command -v starship &>/dev/null && ! typeset -f prompt_starship_precmd >/dev/null 2>&1; then
@@ -61,6 +63,11 @@ fi
 
 if command -v thefuck &>/dev/null && ! alias fuck >/dev/null 2>&1; then
     eval "$(thefuck --alias)"
+fi
+
+# 5b. PATH contract re-assert (tool hooks may inject junk segments)
+if typeset -f path_contract_reassert >/dev/null 2>&1; then
+    path_contract_reassert
 fi
 
 # 6. Zsh-specific settings

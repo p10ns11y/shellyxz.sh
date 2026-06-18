@@ -334,82 +334,92 @@ grep -q 'path_append' "$CONFIG_DIR/core/path.sh" 2>/dev/null \
     && ok 'core/path.sh defines path_append' \
     || warn 'path_append missing'
 
-# PATH contract (core/path.contract vs core/env.sh + omarchy)
+# PATH contract v2 (core/path.contract + path-resolve.sh + runtime verify)
 PATH_CONTRACT="$CONFIG_DIR/core/path.contract"
+PATH_RESOLVE="$CONFIG_DIR/core/path-resolve.sh"
+TOOL_CONTRACT="$CONFIG_DIR/core/tool.contract"
 if [[ -f "$PATH_CONTRACT" ]]; then
-    _pc_prev=0
-    _pc_append_prev=0
-    _pc_append_start="$(line_number "$ENV_FILE" 'path_append ')"
-    _pc_vite_ln="$(line_number "$ENV_FILE" '\.vite-plus/env')"
-    _pc_fail=0
-    while IFS= read -r _pc_line || [[ -n "$_pc_line" ]]; do
-        [[ "$_pc_line" =~ ^# ]] && continue
-        [[ -z "${_pc_line// /}" ]] && continue
-        _pc_kind="${_pc_line%%:*}"
-        _pc_pat="${_pc_line#*:}"
-        _pc_ln=""
-        _pc_target="$ENV_FILE"
-        case "$_pc_kind" in
-            prepend)
-                _pc_ln="$(line_number "$_pc_target" "path_prepend.*${_pc_pat}")"
-                if [[ -z "$_pc_ln" ]]; then
-                    fail "path.contract prepend missing in env.sh: $_pc_pat"
-                    _pc_fail=1
-                elif [[ -n "$_pc_append_start" && "$_pc_ln" -ge "$_pc_append_start" ]]; then
-                    fail "path.contract prepend after path_append: $_pc_pat"
-                    _pc_fail=1
-                elif [[ "$_pc_ln" -le "$_pc_prev" ]]; then
-                    fail "path.contract prepend out of order: $_pc_pat (line $_pc_ln)"
-                    _pc_fail=1
-                else
-                    _pc_prev="$_pc_ln"
-                fi
-                ;;
-            post_prepend)
-                _pc_ln="$("${GREP[@]}" -nE "path_prepend.*${_pc_pat}" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d: -f1)"
-                if [[ -z "$_pc_ln" ]]; then
-                    fail "path.contract post_prepend missing: $_pc_pat"
-                    _pc_fail=1
-                elif [[ -n "$_pc_vite_ln" && "$_pc_ln" -le "$_pc_vite_ln" ]]; then
-                    fail "path.contract post_prepend must follow vite-plus/env: $_pc_pat"
-                    _pc_fail=1
-                fi
-                ;;
-            append)
-                _pc_ln="$(line_number "$_pc_target" "path_append.*${_pc_pat}")"
-                if [[ -z "$_pc_ln" ]]; then
-                    fail "path.contract append missing in env.sh: $_pc_pat"
-                    _pc_fail=1
-                elif [[ "$_pc_append_prev" -gt 0 && "$_pc_ln" -le "$_pc_append_prev" ]]; then
-                    fail "path.contract append out of order: $_pc_pat"
-                    _pc_fail=1
-                else
-                    _pc_append_prev="$_pc_ln"
-                fi
-                ;;
-            omarchy)
-                _pc_target="$CONFIG_DIR/environments/omarchy/env.sh"
-                _pc_ln="$(line_number "$_pc_target" "path_prepend.*${_pc_pat}")"
-                if [[ -z "$_pc_ln" ]]; then
-                    fail "path.contract omarchy entry missing: $_pc_pat"
-                    _pc_fail=1
-                fi
-                ;;
-            *)
-                warn "path.contract unknown kind: $_pc_kind"
-                ;;
-        esac
-    done < "$PATH_CONTRACT"
-    if [[ "$_pc_fail" -eq 0 ]]; then
-        if [[ "$_pc_prev" -gt 0 ]]; then
-            ok 'path.contract matches core/env.sh (+ omarchy)'
-        else
-            warn 'path.contract: no prepend entries verified'
-        fi
-    fi
+    grep -q '^phase:core' "$PATH_CONTRACT" \
+        && ok 'path.contract v2 format (phase:core)' \
+        || warn 'path.contract missing phase:core (v2 format)'
+    grep -q '^deny:' "$PATH_CONTRACT" \
+        && ok 'path.contract has deny list' \
+        || warn 'path.contract missing deny entries'
 else
     warn 'core/path.contract missing'
 fi
+[[ -f "$PATH_RESOLVE" ]] && ok 'core/path-resolve.sh present' || warn 'core/path-resolve.sh missing'
+grep -q 'path_contract_apply' "$ENV_FILE" 2>/dev/null \
+    && ok 'env.sh uses path_contract_apply' \
+    || warn 'env.sh missing path_contract_apply'
+grep -q 'path_deny_sweep' "$ENV_FILE" 2>/dev/null \
+    && ok 'env.sh uses path_deny_sweep' \
+    || warn 'env.sh missing path_deny_sweep'
+grep -q 'tool_contract_apply' "$ENV_FILE" 2>/dev/null \
+    && ok 'env.sh uses tool_contract_apply' \
+    || warn 'env.sh missing tool_contract_apply'
+[[ -f "$TOOL_CONTRACT" ]] && ok 'core/tool.contract present' || warn 'core/tool.contract missing'
+LOCAL_PATH_CONTRACT="$CONFIG_DIR/local/path.contract"
+LOCAL_PATH_EXAMPLE="$CONFIG_DIR/local/path.contract.example"
+if [[ -f "$LOCAL_PATH_CONTRACT" || -f "$LOCAL_PATH_EXAMPLE" ]]; then
+    ok 'local/path.contract or example present'
+else
+    warn 'local/path.contract missing (copy from local/path.contract.example for personal PATH)'
+fi
+grep -q 'LOCAL_PATH_CONTRACT' "$PATH_RESOLVE" 2>/dev/null \
+    && ok 'path-resolve.sh supports local/path.contract overlay' \
+    || warn 'path-resolve.sh missing LOCAL_PATH_CONTRACT overlay'
+if [[ -f "$PATH_RESOLVE" ]]; then
+    _apply_core=$(grep -n 'path_contract_apply_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    _apply_local=$(grep -n 'path_contract_apply_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    _rank_local=$(grep -n '_path_contract_collect_phase_prepends_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    _rank_core=$(grep -n '_path_contract_collect_phase_prepends_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    if [[ -n "$_apply_core" && -n "$_apply_local" && "$_apply_core" -lt "$_apply_local" \
+          && -n "$_rank_local" && -n "$_rank_core" && "$_rank_local" -lt "$_rank_core" ]]; then
+        ok 'local overlay invariant: apply core→local, verify ranks local→core'
+    else
+        warn 'path-resolve.sh overlay order broken (apply core→local; verify collect local→core)'
+    fi
+    unset _apply_core _apply_local _rank_local _rank_core
+fi
+if [[ -f "$PATH_CONTRACT" ]]; then
+    if grep -qE '^prepend:.*(grok|risc0|solana|vite-plus|rocm|\.vector)' "$PATH_CONTRACT" 2>/dev/null \
+        || grep -qE '^append:.*/opt/rocm' "$PATH_CONTRACT" 2>/dev/null; then
+        warn 'core/path.contract still has personal toolchain entries (move to local/path.contract)'
+    else
+        ok 'core/path.contract free of personal toolchain entries'
+    fi
+fi
+if ! grep -q 'path_prepend.*OMARCHY' "$CONFIG_DIR/environments/omarchy/env.sh" 2>/dev/null; then
+    ok 'omarchy env.sh delegates PATH to contract'
+else
+    warn 'omarchy env.sh still has path_prepend (should be in path.contract only)'
+fi
+
+# Runtime PATH verify (full zsh login session — catches post-hook mutations)
+if command -v zsh &>/dev/null && [[ -f "$PATH_RESOLVE" ]]; then
+    _pc_runtime=$(zsh -lic 'path_contract_verify --json 2>/dev/null' || true)
+    if [[ "$_pc_runtime" == *'"ok":true'* ]]; then
+        ok 'PATH runtime contract verify (zsh -lic)'
+    elif [[ -n "$_pc_runtime" ]]; then
+        warn 'PATH runtime contract mismatch (run: zsh -lic path_check)'
+    else
+        warn 'PATH runtime verify unavailable (path_contract_verify not in zsh session)'
+    fi
+    _shadow_out=$(zsh -lic 'path_shadow_report --warn 2>&1' || true)
+    if [[ -z "$_shadow_out" ]]; then
+        ok 'no tool.contract shadow warnings'
+    else
+        while IFS= read -r _shadow_line; do
+            [[ -n "$_shadow_line" ]] && warn "$_shadow_line"
+        done <<< "$_shadow_out"
+    fi
+fi
+
+# Init capture script
+[[ -x "$CONFIG_DIR/bin/capture-shell-init.sh" ]] \
+    && ok 'capture-shell-init.sh present' \
+    || warn 'capture-shell-init.sh missing'
 
 # migrate rc policy
 grep -q -- '--sync-rc' "$CONFIG_DIR/bin/migrate.sh" \
@@ -449,7 +459,17 @@ if [[ -f "$_VERIFY_CONF" ]]; then
     if grep -q 'bind B' "$_VERIFY_CONF" 2>/dev/null; then
         ok 'tmux verify.conf: Prefix+B (build)'
     else
-        warn 'tmux verify.conf missing bind B — merge from tmux.verify.conf.ex'
+        warn 'tmux verify.conf missing bind B — run bin/sync-tmux-verify.sh'
+    fi
+    if grep -q 'bind V' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: Prefix+V (verify)'
+    else
+        warn 'tmux verify.conf missing bind V — run bin/sync-tmux-verify.sh'
+    fi
+    if grep -q 'bind T' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: Prefix+T (test)'
+    else
+        warn 'tmux verify.conf missing bind T — run bin/sync-tmux-verify.sh'
     fi
     if grep -q 'tmux-keymap-menu' "$_VERIFY_CONF" 2>/dev/null; then
         ok 'tmux verify.conf: keymap menu (Prefix+?)'

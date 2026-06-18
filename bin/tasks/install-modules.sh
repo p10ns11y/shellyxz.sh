@@ -15,6 +15,7 @@ done
 
 install_if_missing "$CONFIG_DIR/environment.example" "$CONFIG_DIR/environment.example"
 install_if_missing "$CONFIG_DIR/local/personal.sh" "$CONFIG_DIR/local/personal.sh"
+install_if_missing "$CONFIG_DIR/local/path.contract.example" "$CONFIG_DIR/local/path.contract"
 
 mkdir -p "$CONFIG_DIR"/{backups,completions,local,core,environments/generic,environments/omarchy,templates/login,templates/core}
 

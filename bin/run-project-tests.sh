@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Priority-ordered test runner for at — top max_run from tests.yaml, list the rest.
-# Usage: run-project-tests.sh [directory] [--watch]
+# Priority-ordered test runner for at — delegates to parse-project-tests.py --run.
+# Usage: run-project-tests.sh [directory] [--watch] [--all]
+# Requires python for cockpit.yaml / tests.yaml manifests.
 set -euo pipefail
 
 DIR="."
 WATCH=0
 RUN_ALL=0
-INTERVAL="${TEST_WATCH_INTERVAL:-60}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PARSER="${SCRIPT_DIR}/lib/parse-project-tests.py"
+PARSER_PY="${SCRIPT_DIR}/lib/parse-project-tests.py"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -22,8 +22,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h | --help)
             echo "Usage: run-project-tests.sh [directory] [--watch] [--all]"
-            echo "  Reads .agents/verification/tests.yaml (max_run + priority list)."
-            echo "  Falls back to auto-discovery (package.json, Cargo.toml, bin/test/*.test.sh)."
+            echo "  Reads .agents/verification/cockpit.yaml (or tests.yaml)."
+            echo "  Requires python for manifest parsing and test execution."
+            echo "  Falls back to auto-discovery when no manifest exists."
             echo "  --all   Run every test in the manifest (ignore max_run)."
             exit 0
             ;;
@@ -39,94 +40,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if ! command -v python >/dev/null 2>&1; then
+    echo "run-project-tests: python is required (install python or use a project with bin/check-shell.sh only)" >&2
+    exit 1
+fi
+
 DIR="$(cd "$DIR" && pwd)"
 
-load_plan() {
-    local manifest="$DIR/.agents/verification/tests.yaml"
-    if [ -f "$manifest" ]; then
-        python3 "$PARSER" "$manifest" "$DIR"
-    else
-        python3 "$PARSER" --discover "$DIR"
-    fi
-}
-
-run_plan() {
-    local json="$1"
-    local max_run failures=0 run=0 total id label cmd
-
-    max_run="$(printf '%s' "$json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["max_run"])')"
-    total="$(printf '%s' "$json" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["tests"]))')"
-    if [ "$RUN_ALL" = 1 ]; then
-        max_run="$total"
-    fi
-
-    echo "=== at: running top ${max_run} test(s) (max_run=${max_run}) ==="
-
-    while IFS=$'\t' read -r id prio label cmd; do
-        if [ "$run" -ge "$max_run" ]; then
-            break
-        fi
-        run=$((run + 1))
-        printf '\n── [%s/%s] %s (priority %s) ──\n' "$run" "$max_run" "$id" "$prio"
-        printf '    %s\n' "$label"
-        if ! eval "$cmd"; then
-            failures=$((failures + 1))
-        fi
-    done < <(
-        printf '%s' "$json" | python3 -c '
-import json, sys
-for t in json.load(sys.stdin)["tests"]:
-    print("\t".join([
-        t.get("id", ""),
-        str(t.get("priority", "")),
-        t.get("label", t.get("id", "")),
-        t.get("command", ""),
-    ]))
-'
-    )
-
-    if [ "$total" -gt "$max_run" ] && [ "$RUN_ALL" != 1 ]; then
-        echo ""
-        echo "=== at: also available (not run) ==="
-        printf '%s' "$json" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-max_run = data['max_run']
-for t in data['tests'][max_run:]:
-    prio = t.get('priority', '?')
-    tid = t.get('id', '?')
-    label = t.get('label', '')
-    cmd = t.get('command', '')
-    print(f\"  [{prio}] {tid} — {label}\")
-    print(f\"      run: {cmd}\")
-print('  tip:   bin/run-project-tests.sh --all')
-"
-    fi
-
-    echo ""
-    if [ "$failures" -eq 0 ]; then
-        echo "=== at summary: ${run} run, 0 failed ==="
-    else
-        echo "=== at summary: ${run} run, ${failures} failed ==="
-    fi
-    return "$failures"
-}
-
-run_once() {
-    local json failures
-    json="$(load_plan)"
-    run_plan "$json"
-    failures=$?
-    return "$failures"
-}
-
+args=(--run --root "$DIR")
 if [ "$WATCH" = 1 ]; then
-    run_once || true
-    while true; do
-        sleep "$INTERVAL"
-        printf '\n── at watch %s ──\n' "$(date '+%Y-%m-%d %H:%M:%S')"
-        run_once || true
-    done
-else
-    run_once
+    args+=(--watch)
 fi
+if [ "$RUN_ALL" = 1 ]; then
+    args+=(--all)
+fi
+
+exec python "$PARSER_PY" "${args[@]}"

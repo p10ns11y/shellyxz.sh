@@ -21,15 +21,15 @@ Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor integra
 
 ## What happens when you run `ab` then `av`
 
-Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `grok` on first `build` open, `agent_scan` only with `av --scan`).
+Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `SHELL_AGENT_BUILD_CMD` on first `build` open, `agent_scan` only with `av --scan`).
 
 | Step | You type | What runs | Side effects |
 |------|----------|-----------|--------------|
-| 1 | `ab` (or Prefix+B) | `agent_build` → `bin/agent-build-layout.sh` | Creates/focuses tmux window `build` (one full pane). Sets `@workflow_dir` and `@workflow_mode build`. On **first** open only: sends `grok`. Renames legacy window `work` → `build` if present. |
+| 1 | `ab` (or Prefix+B) | `agent_build` → `bin/agent-build-layout.sh` | Creates/focuses tmux window `build` (one full pane). Sets `@workflow_dir` and `@workflow_mode build`. On **first** open only: sends `SHELL_AGENT_BUILD_CMD`. Renames legacy window `work` → `build` if present. |
 | 2 | *(agent runs)* | Your agent TUI in `build` | No automatic hooks. Other apps/notifications unchanged — this is **one tmux pane**, not OS-level focus mode. |
 | 3 | `av` (or Prefix+V) | `agent_verify` → `bin/agent-verify-layout.sh` | Creates/focuses window `verify` (golden-ratio insight layout; project-specific panes). Updates `@workflow_dir` / `@workflow_mode verify`. **Does not** run `agent_scan` unless you passed `--scan`. |
 | 4 | `av --scan` | same + `agent_scan` in verify CMD pane | Opt-in rg/dust/JSON sweep at workflow root. tmux shows brief message: `agent_scan (av --scan)`. |
-| 5 | `ab -c` / `agent_back` | Build layout + `grok -c` | Returns to `build`; no scan. |
+| 5 | `ab -c` / `agent_back` | Build layout + `SHELL_AGENT_BUILD_CONTINUE_CMD` | Returns to `build`; no scan. |
 
 **Session state (tmux options on the session):**
 
@@ -83,7 +83,7 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 
 ## Cockpit layout
 
-**Build window** (`ab` / Prefix+B): single full pane — Grok Build (`grok`) or custom agent command. One tmux pane only — not OS-level “do not disturb”.
+**Build window** (`ab` / Prefix+B): single full pane — agent TUI via `SHELL_AGENT_BUILD_CMD` or custom `-- cmd`. One tmux pane only — not OS-level “do not disturb”.
 
 **Verify window** (`av` / Prefix+V): project layouts use the **golden-ratio insight grid** below. `av --generic` falls back to a sparse 4-pane shell (CMD + empty WATCH/BUILD + lazygit) until you generate `.agents/verification/` with the verification-cockpit skill.
 
@@ -133,12 +133,12 @@ When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (
 ```bash
 t                              # Omarchy: tmux attach || new -s Work
 z my-project                   # zoxide jump
-ab                             # agent build (grok default)
+ab                             # agent build (SHELL_AGENT_BUILD_CMD in local/personal.sh)
 # ... agent runs ...
 av                             # verify cockpit (layout only)
 av --scan                      # verify + agent_scan in shell pane
 # inside tmux: Prefix+V
-# not happy: ab -c             # grok --continue in build window
+# not happy: ab -c             # agent continue in build window
 ```
 
 ---
@@ -149,9 +149,10 @@ av --scan                      # verify + agent_scan in shell pane
 |-----|--------|
 | `C-Space` | Prefix (also `C-b` as prefix2) |
 | `Prefix + h` | Split horizontal (pane below) |
-| `Prefix + v` | Split vertical (pane right) |
-| `Prefix + B` | Agent build (`build` window) |
-| `Prefix + V` | Verification cockpit |
+| `Prefix + v` | Split vertical (pane right) — **lowercase** `v` |
+| `Prefix + B` | Agent build (`build` window) — **Shift+b** |
+| `Prefix + V` | Verification cockpit — **Shift+v** (not split) |
+| `Prefix + T` | Test cockpit (`at`) — **Shift+t** |
 | `Prefix + ?` | Keymap menu (or click status-right `?`) |
 | `Prefix + Z` | Zoom pane |
 | `Prefix + Space` | Cycle layout |
@@ -160,11 +161,14 @@ av --scan                      # verify + agent_scan in shell pane
 
 Hyprland: **Super+Alt+Return** → tmux.
 
+**Install / refresh binds:** `~/.config/shell/bin/sync-tmux-verify.sh` then **Prefix+q** inside tmux.  
+Do not `source` `tmux.verify.conf.ex` in zsh — tmux loads `~/.config/tmux/verify.conf` via `tmux.conf`.
+
 ---
 
 ## Agent super-flow (8 steps)
 
-0. **Build** — `ab` (full-screen grok/agent in `build` window) or Omarchy `tdl` / `ic` for nvim+agent splits
+0. **Build** — `ab` (full-screen agent in `build` window) or Omarchy `tdl` / `ic` for nvim+agent splits
 1. **Jump** — `z project` or `tmux select-window -t verify`
 2. **Verify** — `av` (opens cockpit; run `av --scan` for checklist sweep)
 3. **Visual sweep** — `y` → sort modified (`o` `m` in yazi if not using `yazi.ex.toml` defaults)
@@ -187,8 +191,8 @@ jq '.summary, .issues' report.json | bat -l json
 |---------|---------|
 | `vf` | Fuzzy find file → `$EDITOR` |
 | `agent_scan [dir]` | rg sweep + dust + JSON reports |
-| `agent_build [dir] [cmd...]` / `ab` | tmux build window (grok default) |
-| `agent_back` | `ab -c` — return to agent with `grok -c` |
+| `agent_build [dir] [cmd...]` / `ab` | tmux build window (`SHELL_AGENT_BUILD_CMD`) |
+| `agent_back` | `ab -c` — return to agent with `SHELL_AGENT_BUILD_CONTINUE_CMD` |
 | `agent_verify [dir]` / `av` | tmux verify cockpit |
 | `av --scan` | verify cockpit + `agent_scan .` (opt-in) |
 | `av --generic` | skip project `.agents/verification/` layout |
@@ -231,7 +235,7 @@ rg --vimgrep 'pattern' src/ | nvim -q -
 ff                             # fastfetch — context at a glance
 t                              # tmux daily session
 z <project>                    # jump
-ab                             # agent build (grok)
+ab                             # agent build
 av                             # verify cockpit
 av --scan                      # + agent_scan
 av                             # verify cockpit after agent runs

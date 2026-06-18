@@ -96,6 +96,8 @@ After `av`, you get the golden φ verify grid (this repo dogfoods `.agents/verif
 | Right center | CHECK:watch | `check-shell-watch.sh` — live guardrail output |
 | Right bottom | shell / CMD | `agent_scan .`, `gdf`, `vf`, edits — default focus |
 
+**Note:** Many users run nvim in a separate window (Omarchy `eff` / `n`) instead of the verify CMD pane. CMD is for short verify commands (`agent_scan`, `gdf`, `vf`); use `vf` or your editor workflow for file edits.
+
 **Test window (`at`):** separate `test` window — btop left (62%), priority tests right. Top 2 from `tests.yaml`; full audit via `shellyhow` or `bin/run-project-tests.sh --all`.
 
 **tmux window:** `verify` (and `test` when you run `at`). **Zoom:** Prefix+Z on a pane when you need full width (e.g. `gdf` side-by-side).

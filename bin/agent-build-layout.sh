@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Agent build layout for tmux — one full-pane window for agent TUIs (grok default).
+# Agent build layout for tmux — one full-pane window for agent TUIs (SHELL_AGENT_BUILD_CMD).
 # Usage: agent-build-layout.sh [directory] [--continue|--no-launch] [-- command...]
 set -euo pipefail
 
@@ -88,15 +88,50 @@ _build_pane_target() {
     printf '=build.%s' "$idx"
 }
 
+_resolve_build_cmd() {
+    if [ "$#" -gt 0 ]; then
+        printf '%s' "$*"
+        return 0
+    fi
+    if [ -n "${SHELL_AGENT_BUILD_CMD:-}" ]; then
+        printf '%s' "$SHELL_AGENT_BUILD_CMD"
+        return 0
+    fi
+    echo "$SCRIPT_NAME: set SHELL_AGENT_BUILD_CMD (e.g. in local/personal.sh)" >&2
+    return 1
+}
+
+_resolve_continue_cmd() {
+    if [ -n "${SHELL_AGENT_BUILD_CONTINUE_CMD:-}" ]; then
+        printf '%s' "$SHELL_AGENT_BUILD_CONTINUE_CMD"
+        return 0
+    fi
+    if [ -n "${SHELL_AGENT_BUILD_CMD:-}" ]; then
+        case "$SHELL_AGENT_BUILD_CMD" in
+            *' '*)
+                echo "$SCRIPT_NAME: set SHELL_AGENT_BUILD_CONTINUE_CMD for multi-word SHELL_AGENT_BUILD_CMD" >&2
+                return 1
+                ;;
+        esac
+        printf '%s -c' "$SHELL_AGENT_BUILD_CMD"
+        return 0
+    fi
+    echo "$SCRIPT_NAME: set SHELL_AGENT_BUILD_CMD or SHELL_AGENT_BUILD_CONTINUE_CMD" >&2
+    return 1
+}
+
 _launch_build_cmd() {
     local target cmd
     target="$(_build_pane_target)" || return 1
-    if [ "$#" -eq 0 ]; then
-        cmd='grok'
-    else
-        cmd=$(printf '%s ' "$@")
-        cmd=${cmd% }
-    fi
+    cmd="$(_resolve_build_cmd "$@")" || return 1
+    tmux send-keys -t "$target" -l "$cmd"
+    tmux send-keys -t "$target" Enter
+}
+
+_launch_continue_cmd() {
+    local target cmd
+    target="$(_build_pane_target)" || return 1
+    cmd="$(_resolve_continue_cmd)" || return 1
     tmux send-keys -t "$target" -l "$cmd"
     tmux send-keys -t "$target" Enter
 }
@@ -105,7 +140,7 @@ case "$LAUNCH" in
     no | '')
         ;;
     continue)
-        _launch_build_cmd grok -c
+        _launch_continue_cmd
         ;;
     custom)
         _launch_build_cmd "${CMD[@]}"

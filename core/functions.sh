@@ -12,7 +12,36 @@ path_debug() {
     [ "$_d" -gt 0 ] && printf ', %s duplicate(s)' "$_d"
     printf ')\n'
     echo "$PATH" | tr ':' '\n' | nl -ba
+    if command -v path_contract_verify >/dev/null 2>&1; then
+        echo ""
+        if path_contract_verify --warn-only 2>/dev/null; then
+            echo "Contract: OK"
+        else
+            echo "Contract: mismatch (run path_check for details)"
+        fi
+    fi
     unset _n _u _d
+}
+
+# Verify live PATH against path.contract + local/path.contract (runtime 1:1 check)
+path_check() {
+    _login=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --login) _login=1; shift ;;
+            *) shift ;;
+        esac
+    done
+    if [ "$_login" -eq 1 ] && command -v zsh >/dev/null 2>&1; then
+        exec zsh -lic 'path_contract_verify; path_shadow_report --warn'
+    fi
+    if command -v path_contract_verify >/dev/null 2>&1; then
+        path_contract_verify || return 1
+        path_shadow_report --warn || true
+        return 0
+    fi
+    echo "path_contract_verify not available — source env.sh first" >&2
+    return 1
 }
 
 # Shell identity diagnostics.
@@ -125,7 +154,7 @@ _agent_tmux_guard() {
     fi
 }
 
-# Agent build layout — full-pane agent TUI (grok default). Requires native terminal + tmux.
+# Agent build layout — full-pane agent TUI (SHELL_AGENT_BUILD_CMD). Requires native terminal + tmux.
 agent_build() {
     _agent_tmux_guard || return 1
     local script="$HOME/.config/shell/bin/agent-build-layout.sh"
@@ -161,7 +190,7 @@ agent_work() {
     agent_build "$@"
 }
 
-# Return to build window and continue the agent session (grok -c).
+# Return to build window and continue the agent session (SHELL_AGENT_BUILD_CONTINUE_CMD).
 agent_back() {
     agent_build -c
 }
@@ -240,6 +269,10 @@ agent_test() {
         case "$1" in
             --watch)
                 args+=(--watch)
+                shift
+                ;;
+            --run)
+                args+=(--run)
                 shift
                 ;;
             *)

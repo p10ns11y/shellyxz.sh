@@ -1,0 +1,62 @@
+# Managed tool initialization registry — used by capture-shell-init.sh and check-shell.sh
+# owner: where the canonical init lives; path_side_effects: deny segments hooks may inject
+
+mamba:
+  shell: zsh
+  pattern: 'mamba shell hook'
+  owner: templates/zshrc
+  path_side_effects:
+    - /condabin
+
+mise:
+  shell: zsh
+  pattern: 'mise activate'
+  owner: templates/zshrc
+  note: skipped when mise shims already on PATH
+
+starship:
+  shell: zsh
+  pattern: 'starship init'
+  owner: templates/zshrc
+
+zoxide:
+  shell: zsh
+  pattern: 'zoxide init'
+  owner: templates/zshrc
+
+fzf:
+  shell: zsh
+  pattern: 'fzf --zsh'
+  owner: templates/zshrc
+
+thefuck:
+  shell: zsh
+  pattern: 'thefuck --alias'
+  owner: templates/zshrc
+
+direnv:
+  shell: zsh
+  pattern: 'direnv hook'
+  owner: templates/zshrc
+
+vite-plus:
+  shell: env
+  pattern: '.vite-plus/env'
+  owner: core/env.sh
+
+cargo:
+  shell: env
+  pattern: '.cargo/env'
+  owner: core/path.contract
+  note: use path.contract prepend, not ~/.cargo/env
+
+rustup-local:
+  shell: env
+  pattern: '.local/bin/env'
+  owner: core/path.contract
+  note: use path.contract prepend, not ~/.local/bin/env
+
+grok:
+  shell: zsh
+  pattern: '.grok/completions'
+  owner: templates/zshrc

@@ -11,40 +11,29 @@ SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 
 shell_truth_seeker 2>/dev/null || true
 
-# zprofile + zshrc both source env.sh — second pass is a no-op for PATH.
+# zprofile + zshrc both source env.sh — second pass skips PATH rebuild only.
+# PID guard: ignore _SHELL_ENV_SH_LOADED leaked from a parent shell (old export bug).
 if [ -n "${_SHELL_ENV_SH_LOADED:-}" ]; then
-    resolve_shell_environment
-    return 0 2>/dev/null || true
+    if [ "${_SHELL_ENV_SH_LOADED_PID:-}" = "$$" ]; then
+        resolve_shell_environment
+        tool_contract_apply 2>/dev/null || true
+        return 0 2>/dev/null || true
+    fi
+    unset _SHELL_ENV_SH_LOADED
 fi
-export _SHELL_ENV_SH_LOADED=1
+_SHELL_ENV_SH_LOADED=1
+_SHELL_ENV_SH_LOADED_PID=$$
 
 export PNPM_HOME="$HOME/.local/share/pnpm"
 
-# Drop known broken inherited segments before building (not a global dedupe pass)
-path_drop "/condabin"
-_local_share="${HOME}/.local/share"
-path_drop "${_local_share}/${_seg:-../bin}"
+# Strip deny-list segments before building PATH from contract
+path_deny_sweep
 
 # Environment exports + preset PATH entries (omarchy, generic, …)
 source_environments
 
-# Core PATH — lowest priority first → highest priority last (last prepend wins)
-path_prepend "$HOME/.local/share/solana/install/active_release/bin"
-path_prepend "$HOME/.opencode/bin"
-path_prepend "$HOME/.bun/bin"
-path_prepend "$PNPM_HOME"
-path_prepend "$HOME/.cargo/bin"
-path_prepend "$HOME/.risc0/bin"
-path_prepend "$HOME/.grok/bin"
-path_prepend "$HOME/.vector/bin"
-path_prepend "$HOME/mamba/bin"
-path_prepend "$HOME/.vite-plus/bin"
-path_prepend "$HOME/.local/share/mise/shims"
-path_prepend "$HOME/.local/bin"
-path_prepend "$HOME/bin"
-
-path_append "$HOME/miniconda/condabin"
-path_append "/opt/rocm/bin"
+# PATH contract — environment, core, append phases (post_vite after vite-plus)
+path_contract_apply
 
 export CONDA_CHANGEPS1=false
 
@@ -71,8 +60,6 @@ export OMP_NUM_THREADS=12
 export MKL_NUM_THREADS=12
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
 
-alias clear='/usr/bin/clear' 2>/dev/null || true
-
 if _is_interactive_session 2>/dev/null; then
     _sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
     [ -S "$_sock" ] && export SSH_AUTH_SOCK="$_sock"
@@ -80,15 +67,17 @@ if _is_interactive_session 2>/dev/null; then
     unset _sock _tty
 fi
 
-# Vite+ shell integration (vp function, completions) — PATH owned above.
+# Vite+ shell integration (vp function, completions) — PATH owned by contract.
 if command -v source_if_safe >/dev/null 2>&1; then
     source_if_safe "$HOME/.vite-plus/env" 2>/dev/null || true
 else
     [ -f "$HOME/.vite-plus/env" ] && . "$HOME/.vite-plus/env"
 fi
 
-# vite-plus/env re-promotes its bin; re-assert user tool priority explicitly
-path_prepend "$HOME/bin"
+path_contract_apply --phase post_vite
+path_deny_sweep
+path_dedupe
+tool_contract_apply
 
 # Rare machine-specific PATH/export tweaks (see local/overwrite.sh.example)
 if [ -f "$SHELL_ROOT/local/overwrite.sh" ]; then

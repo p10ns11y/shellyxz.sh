@@ -12,11 +12,12 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 |--------|-------------|---------------|-----------|
 | [migrate.sh](#migratesh) | First install, refresh managed rc, scaffold dotfiles | bash, curl (bootstrap), Omarchy recommended | 0 on success; `set -e` aborts on hard errors |
 | [check-shell.sh](#check-shellsh) | After edits or migrate | bash; optional `shellcheck` | 0 if no **errors** (warnings OK) |
+| [capture-shell-init.sh](#capture-shell-initsh) | After installer pollutes `~/.zshrc` | bash | 0 |
 | [recover-shell.sh](#recover-shellsh) | Broken rc / `source` loops | bash only | 0 (informational menu) |
 | [agent-build-layout.sh](#agent-build-layoutsh) | Open tmux agent build window | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
 | [agent-verify-layout.sh](#agent-verify-layoutsh) | Open tmux verification cockpit | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
-| [agent-test-layout.sh](#agent-test-layoutsh) | Open tmux test cockpit (`at`) | **Inside tmux**, tmux on PATH; `python3` for runner | 0 on success; 1 if not in tmux |
-| [run-project-tests.sh](#run-project-testssh) | Priority tests without tmux | `python3` on PATH | 0 if tests pass |
+| [agent-test-layout.sh](#agent-test-layoutsh) | Open tmux test cockpit (`at`) | **Inside tmux**, tmux on PATH; `python` for runner | 0 on success; 1 if not in tmux |
+| [run-project-tests.sh](#run-project-testssh) | Priority tests without tmux | `python` on PATH | 0 if tests pass |
 | [fzf-preview.sh](#fzf-previewsh) | *(internal)* fzf bat preview | bat | inherits bat exit code |
 
 ---
@@ -128,9 +129,24 @@ git config --global include.path ~/.config/git/verification
 - Git delta: `include.path` when `~/.config/git/verification` exists; `delta`, `procs`, `difft` on PATH (warn if missing)
 - Optional nvim `verification-workflow.lua` (warn if missing)
 - fish: direnv, `functions.sh`, fzf, thefuck
+- **PATH contract v2:** `path.contract`, `path-resolve.sh`, runtime `zsh -lic path_contract_verify`, `tool.contract` shadow scan
 - **shellcheck** on all `*.sh` (warns if `shellcheck` not installed — `pacman -S shellcheck`)
 
 **Exit:** `0` only when `errors=0`. Warnings do not fail the script.
+
+---
+
+## capture-shell-init.sh
+
+**Purpose:** Detect installer pollution in `~/.zshrc` / `~/.bashrc` and route lines to the correct module (`path.contract`, `aliases.sh`, `functions.sh`, managed rc template).
+
+```bash
+~/.config/shell/bin/capture-shell-init.sh [--dry-run] [--apply] [--force] [--since-install LOG]
+```
+
+After a tool install adds PATH or `eval "$(foo init"` to rc: run `--dry-run`, move entries per output, then `check-shell.sh` and `path_check`.
+
+Registry of managed inits: `templates/tool-init.manifest`.
 
 ---
 
@@ -169,8 +185,8 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 | Arg | Default | Effect |
 |-----|---------|--------|
 | `directory` | `.` | Working directory; stored as `@workflow_dir` on the session |
-| `--continue` / `-c` | — | Launch `grok -c` in the build pane |
-| `-- cmd...` | — | Launch a custom command (e.g. `cx` for Claude) |
+| `--continue` / `-c` | — | Launch `SHELL_AGENT_BUILD_CONTINUE_CMD` in the build pane |
+| `-- cmd...` | — | Launch a custom command (overrides env) |
 
 **Requirements:** same as agent-verify-layout (tmux, inside tmux).
 
@@ -178,7 +194,7 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 - If window `build` exists → `select-window`
 - Else if legacy `work` exists → rename to `build`
-- Else creates `build` window and launches `grok` by default
+- Else creates `build` window and launches `SHELL_AGENT_BUILD_CMD` (set in `local/personal.sh`)
 - Sets `@workflow_mode` to `build` on the session
 
 **Entry points:**
@@ -294,7 +310,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 
 **Entry points:** `agent_test` / `at` (shell); `tt` legacy alias.
 
-**Requirements:** tmux, inside tmux; `python3` for `run-project-tests.sh` manifest parsing.
+**Requirements:** tmux, inside tmux; `python` for `run-project-tests.sh` manifest parsing.
 
 ---
 
@@ -311,7 +327,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 | `--watch` | Re-run on `TEST_WATCH_INTERVAL` (default 60s) |
 | `--all` | Run every test in manifest (ignore `max_run`) |
 
-**Requires:** `python3` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
+**Requires:** `python` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
 
 ---
 
@@ -370,7 +386,7 @@ source ~/.zshrc
 ```bash
 t                    # tmux attach
 z my-project
-ab                   # agent build (grok)
+ab                   # agent build (SHELL_AGENT_BUILD_CMD)
 # ... agent runs ...
 av --scan            # verify cockpit + agent_scan
 # or: av             # layout only

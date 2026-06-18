@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 # Test cockpit — btop (major left) + project tests (right shell pane).
-# Usage: agent-test-layout.sh [directory] [--watch]
+# Usage: agent-test-layout.sh [directory] [--watch] [--run]
 set -euo pipefail
 
 DIR="."
 WATCH=0
+RUN_ONLY=0
 SCRIPT_NAME="agent-test-layout"
+
+# Golden-ratio test layout (matches cockpit.yaml btop-test / phi 62:38).
+readonly LAYOUT_PHI_MAJOR=62
+readonly LAYOUT_PHI_MINOR=38
+readonly LAYOUT_PHI_SLACK=4
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --watch)
             WATCH=1
+            shift
+            ;;
+        --run)
+            RUN_ONLY=1
             shift
             ;;
         *)
@@ -63,7 +73,7 @@ test_layout_ok() {
     if [ "$btop_h" -lt $((wh - 1)) ]; then
         return 1
     fi
-    if [ "$btop_w" -lt $((ww * 58 / 100)) ]; then
+    if [ "$btop_w" -lt $((ww * (LAYOUT_PHI_MAJOR - LAYOUT_PHI_SLACK) / 100)) ]; then
         return 1
     fi
     return 0
@@ -84,16 +94,28 @@ test_launch_pane() {
 
 if test_layout_ok; then
     tmux select-window -t 'test'
+    if [ "$RUN_ONLY" = 1 ]; then
+        if [ "$WATCH" = 1 ]; then
+            TEST_CMD="$(project_test_cmd "$DIR" watch)"
+        else
+            TEST_CMD="$(project_test_cmd "$DIR" once)"
+        fi
+        tmux send-keys -t "${WIN}.1" C-c 2>/dev/null || true
+        test_launch_pane "${WIN}.1" 'TEST' "$TEST_CMD"
+        tmux select-pane -t "${WIN}.1"
+        tmux display-message -d 2000 'at --run: tests sent to TEST pane' 2>/dev/null || true
+        exit 0
+    fi
 else
     if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qx 'test'; then
         tmux kill-window -t "$WIN"
     fi
     tmux new-window -n test -c "$DIR"
     tmux set-window-option -t "$WIN" pane-base-index 0
-    tmux split-window -h -t "$WIN" -c "$DIR" -p 38
+    tmux split-window -h -t "$WIN" -c "$DIR" -p "$LAYOUT_PHI_MINOR"
 
     w="$(tmux display-message -p -t "$WIN" '#{window_width}')"
-    tmux resize-pane -t "${WIN}.0" -x $((w * 62 / 100))
+    tmux resize-pane -t "${WIN}.0" -x $((w * LAYOUT_PHI_MAJOR / 100))
 
     if command -v btop >/dev/null 2>&1; then
         test_launch_pane "${WIN}.0" 'BTOP' btop

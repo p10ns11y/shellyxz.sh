@@ -70,11 +70,32 @@ path_append() {
 
 path_add() { path_prepend "$@"; }
 
+# shellcheck disable=SC1091
+. "${SHELL_ROOT:-$HOME/.config/shell}/core/path-resolve.sh"
+
 # Remove a segment from PATH (exact match). Used to drop inherited junk before building.
 path_drop() {
     _path_remove_segment "$1"
     export PATH
     unset _target
+}
+
+# Collapse duplicate segments (keep first = highest priority).
+path_dedupe() {
+    _rest=""
+    _seen=""
+    _seg=""
+    for _seg in $(printf '%s' "$PATH" | tr ':' ' '); do
+        [ -n "$_seg" ] || continue
+        case "$_seen" in
+            *"|${_seg}|"*) continue ;;
+        esac
+        _seen="${_seen}|${_seg}|"
+        _rest="${_rest:+$_rest:}$_seg"
+    done
+    PATH="$_rest"
+    export PATH
+    unset _rest _seen _seg
 }
 
 unset _target _rest _scan _p _dir _wrapped 2>/dev/null || true
