@@ -2,13 +2,23 @@
 # Verification workflow overlay — included from ~/.config/tmux/tmux.conf
 # Managed by ~/.config/shell/bin/migrate.sh
 #
-# Key mnemonics (Omarchy prefix = C-Space):
-#   Prefix+B  agent build  (ab)  — full-pane agent TUI in `build` window
-#   Prefix+V  agent verify (av)  — review cockpit in `verify` window
-#   Prefix+?  keymap menu (fzf popup or display-menu) — also click status-right
-#   Prefix+Z  zoom pane (tmux built-in; not agent-specific)
-# B/V are chosen to match shell aliases; they do not override tmux defaults for
-# lower-case b (last window) — these are shifted B and V.
+# INSTALL / REFRESH (not sourced in zsh — tmux loads this file):
+#   ~/.config/shell/bin/sync-tmux-verify.sh
+#   then inside tmux: Prefix+q  (Ctrl+Space, then q)
+#
+# Omarchy prefix = Ctrl+Space (prefix2 = Ctrl+b).
+#
+# WORKFLOW KEYS — SHIFTED letters (match shell aliases ab / av / at):
+#   Prefix+B   agent build   — Shift+b  (lowercase b is NOT bound here)
+#   Prefix+V   verify cockpit — Shift+v  (lowercase v = vertical split, unchanged)
+#   Prefix+T   test cockpit   — Shift+t
+#   Prefix+?   keymap menu (or click status-right)
+#   Prefix+Z   zoom pane
+#   Prefix+Space  cycle layout
+#
+# SPLITS (Omarchy defaults in tmux.conf — do not change):
+#   Prefix+h   split horizontal (pane below)
+#   Prefix+v   split vertical (pane right)
 
 # Workflow labels (set by agent-build / agent-verify layout scripts)
 # @workflow_mode is build | verify | empty. @workflow_dir holds the project path.
@@ -33,3 +43,6 @@ bind B run-shell '~/.config/shell/bin/agent-build-layout.sh "#{pane_current_path
 
 # Verification cockpit (Prefix+V) — av / agent_verify
 bind V run-shell '~/.config/shell/bin/agent-verify-layout.sh "#{pane_current_path}"'
+
+# Test cockpit (Prefix+T) — at / agent_test
+bind T run-shell '~/.config/shell/bin/agent-test-layout.sh "#{pane_current_path}"'

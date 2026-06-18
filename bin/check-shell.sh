@@ -428,7 +428,17 @@ if [[ -f "$_VERIFY_CONF" ]]; then
     if grep -q 'bind B' "$_VERIFY_CONF" 2>/dev/null; then
         ok 'tmux verify.conf: Prefix+B (build)'
     else
-        warn 'tmux verify.conf missing bind B — merge from tmux.verify.conf.ex'
+        warn 'tmux verify.conf missing bind B — run bin/sync-tmux-verify.sh'
+    fi
+    if grep -q 'bind V' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: Prefix+V (verify)'
+    else
+        warn 'tmux verify.conf missing bind V — run bin/sync-tmux-verify.sh'
+    fi
+    if grep -q 'bind T' "$_VERIFY_CONF" 2>/dev/null; then
+        ok 'tmux verify.conf: Prefix+T (test)'
+    else
+        warn 'tmux verify.conf missing bind T — run bin/sync-tmux-verify.sh'
     fi
     if grep -q 'tmux-keymap-menu' "$_VERIFY_CONF" 2>/dev/null; then
         ok 'tmux verify.conf: keymap menu (Prefix+?)'

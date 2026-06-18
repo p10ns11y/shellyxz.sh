@@ -2,6 +2,20 @@
 # Resolve a one-shot or watch test command for the current project root.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/parse-project-tests.sh"
+
+# Run a manifest command (allowlist lives in parse-project-tests.py).
+run_manifest_command() {
+    local cmd="$1"
+    if ! command -v python >/dev/null 2>&1; then
+        echo "run-project-tests: python is required to run manifest commands" >&2
+        return 1
+    fi
+    python "${SCRIPT_DIR}/parse-project-tests.py" --run-cmd "$cmd"
+}
+
 project_test_cmd() {
     local root="${1:?root}"
     local mode="${2:-once}"

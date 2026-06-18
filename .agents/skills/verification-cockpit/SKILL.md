@@ -140,7 +140,9 @@ Create under `.agents/verification/`:
 
 | File | Purpose |
 |------|---------|
-| `manifest.yaml` | Machine-readable pane map |
+| `cockpit.yaml` | Unified verify + test manifest (`cockpits.verify`, `cockpits.test`) |
+| `manifest.yaml` | Legacy verify pane map (still supported) |
+| `tests.yaml` | Legacy test runners (still supported) |
 | `tmux-layout.sh` | Executable layout (chmod +x) |
 | `tmux-theme.conf` | Optional project theme overrides |
 | `README.md` | Human pane legend |

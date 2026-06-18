@@ -271,6 +271,10 @@ agent_test() {
                 args+=(--watch)
                 shift
                 ;;
+            --run)
+                args+=(--run)
+                shift
+                ;;
             *)
                 if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
                     dir="$1"
