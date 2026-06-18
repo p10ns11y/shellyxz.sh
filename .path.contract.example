@@ -1,0 +1,7 @@
+# .path.contract — per-repo PATH fragment (phase:project only)
+# Copy to your project root. Loaded by direnv via bin/path-contract-project.sh.
+# Tokens prefixed with PWD/ resolve relative to the repo root (not $HOME).
+
+phase:project
+prepend:PWD/bin
+append:PWD/node_modules/.bin

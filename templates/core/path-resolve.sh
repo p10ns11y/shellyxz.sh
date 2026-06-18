@@ -46,6 +46,10 @@ path_contract_resolve_token() {
             ;;
         .vite-plus/bin) printf '%s/.vite-plus/bin' "$HOME" ;;
         miniconda/condabin) printf '%s/miniconda/condabin' "$HOME" ;;
+        PWD/*)
+            _root="${PATH_CONTRACT_PROJECT_ROOT:-$PWD}"
+            printf '%s/%s' "$_root" "${_tok#PWD/}"
+            ;;
         /*) printf '%s' "$_tok" ;;
         *) printf '%s/%s' "$HOME" "$_tok" ;;
     esac
@@ -87,8 +91,10 @@ _path_contract_phase_wanted() {
     _want="$1"
     _phase="$2"
     if [ -z "$_want" ]; then
-        [ "$_phase" != post_vite ] && return 0
-        return 1
+        case "$_phase" in
+            post_vite|project) return 1 ;;
+            *) return 0 ;;
+        esac
     fi
     case ":$_want:" in
         *":$_phase:"*) return 0 ;;
@@ -163,6 +169,25 @@ path_contract_apply_file() {
     done < "$_contract"
     _flush_phase
     unset _phase _prepends _line _rest _tok _cond _dir _contract
+}
+
+path_contract_apply_project() {
+    _contract="${1:-${PATH_CONTRACT_PROJECT:-$PWD/.path.contract}}"
+    _root="${PATH_CONTRACT_PROJECT_ROOT:-$PWD}"
+    [ -f "$_contract" ] || return 0
+    PATH_CONTRACT_PROJECT_ROOT="$_root"
+    export PATH_CONTRACT_PROJECT_ROOT
+    path_contract_apply_file "$_contract" "project" 1
+    unset _contract _root
+}
+
+path_contract_apply_core_only() {
+    PATH="${PATH_CONTRACT_STRICT_BASE:-/usr/local/bin:/usr/bin:/bin}"
+    export PATH
+    path_deny_sweep
+    path_contract_apply_file "$PATH_CONTRACT" "" 1
+    path_deny_sweep
+    path_dedupe
 }
 
 path_contract_apply() {
@@ -381,7 +406,9 @@ tool_contract_apply() {
                 printf '%s\n' "$_p"
                 return 0
             fi
-            whence -p "$1" 2>/dev/null || command which "$@"
+            whence -p "$1" 2>/dev/null && return 0
+            whence -v "$1" 2>/dev/null && return 0
+            command which "$@" 2>/dev/null
         }
         if ! whence which 2>/dev/null | grep -q 'function'; then
             # shellcheck disable=SC2329

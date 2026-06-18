@@ -50,6 +50,7 @@ The verification plugin **may** assume a richer environment. It is allowed to br
 | Per-project cockpit manifests | `.agents/verification/`, `cockpit.yaml` |
 | Desktop integration (Omarchy, Ghostty) | `environments/omarchy/`, docs |
 | Agent build command via env (target) | `SHELL_AGENT_BUILD_CMD` — **not** hardcoded in kernel |
+| Strict PATH before agent launch | `SHELL_AGENT_STRICT_PATH=1` or `ab --strict` — core contract only + shadow audit |
 
 **Plugin must not:**
 
@@ -67,3 +68,28 @@ The verification plugin **may** assume a richer environment. It is allowed to br
 | Both | **Split the PR** or document cross-boundary contract here |
 
 When in doubt: kernel stays boring; plugin stays opinionated.
+
+---
+
+## Agent strict PATH (plugin only)
+
+Agents run arbitrary shell commands; shadowed `git` / `clear` / `python` (conda, AppImage, malicious PATH) is a real failure class.
+
+| Control | Effect |
+|---------|--------|
+| `SHELL_AGENT_STRICT_PATH=1` | `ab` injects core-only PATH into build pane before launch |
+| `ab --strict` | Same, one-shot |
+| `path_shadow_report` | Warns when pinned tools resolve elsewhere |
+
+**Kernel default unchanged** — strict mode is opt-in via plugin (`agent-build-layout.sh`). Uses `path_contract_apply_core_only` (skips `local/path.contract` overlay) then `tool.contract` shadow pins.
+
+Unset `SHELL_AGENT_STRICT_PATH` or leave tmux to return to normal PATH in new shells.
+
+**Portability:** `path_contract_apply_core_only` resets PATH to `PATH_CONTRACT_STRICT_BASE` (default `/usr/local/bin:/usr/bin:/bin`) before applying `core/path.contract` only. `core/tool.contract` pins `git` at `/usr/bin/git` — correct on typical Arch/FHS layouts; Nix, Homebrew, or minimal images may need overrides:
+
+```bash
+export PATH_CONTRACT_STRICT_BASE="/usr/bin:/bin"   # before ab --strict
+# or adjust pin:git in local/tool.contract overlay when you add one
+```
+
+Strict-mode shadow warnings on `git` after override are expected until the pin matches your layout.

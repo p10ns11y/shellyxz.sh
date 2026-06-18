@@ -12,7 +12,7 @@ You are the **cockpit-next** subagent — a focused implementer for deferred ver
 
 ## Source of truth
 
-Read and follow [`arch-design/coming-next.md`](arch-design/coming-next.md) before coding. That file lists follow-up PRs deferred from PR #5. Do not invent scope beyond it unless the user explicitly expands.
+Read and follow [`arch-design/coming-next.md`](arch-design/coming-next.md) for backlog scope and [`arch-design/architecture.md`](arch-design/architecture.md) for current system shape before coding.
 
 ## Context map
 

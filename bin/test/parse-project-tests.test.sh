@@ -71,5 +71,17 @@ source "$ROOT/bin/lib/project-tests.sh"
 assert_ok 'bash delegates allowlist to python' run_manifest_command "$ROOT/bin/check-shell.sh --help"
 assert_fail 'bash delegates reject metachar' run_manifest_command "echo ok; rm -rf /"
 
+assert_contains 'sh discover finds shellcheck' shellcheck \
+    sh "$ROOT/bin/lib/parse-project-tests-discover.sh" "$ROOT"
+
+assert_contains 'sh discover without python via wrapper' shellcheck \
+    env PATH=/usr/bin:/bin bash -c "
+        source \"$ROOT/bin/lib/parse-project-tests.sh\"
+        parse_project_tests_json \"$ROOT\"
+    "
+
+assert_ok 'cockpit-mcp verify on shell repo' \
+    "$ROOT/bin/cockpit-mcp.sh" verify "$ROOT"
+
 echo "=== $FAIL failure(s) ==="
 [[ "$FAIL" -eq 0 ]]

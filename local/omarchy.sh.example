@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# local/omarchy.sh — optional Omarchy desktop overlay (machine-specific)
+# Copy to local/omarchy.sh when using the omarchy environment preset.
+# Keeps environments/omarchy/ forkable; personal Omarchy tweaks live here.
+
+# Example: desktop-only aliases or exports not suitable for core preset
+# export OMARCHY_PATH="$HOME/.local/share/omarchy"

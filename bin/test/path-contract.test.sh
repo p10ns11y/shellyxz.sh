@@ -117,5 +117,53 @@ assert_ok 'path_contract_verify with local overlay' sh -c "
     path_contract_verify --json | grep -q '\"ok\":true'
 "
 
+# phase:project (direnv per-repo fragment)
+PROJECT_ROOT="$TEST_HOME/myrepo"
+mkdir -p "$PROJECT_ROOT/bin"
+cat > "$PROJECT_ROOT/.path.contract" <<EOF
+phase:project
+append:PWD/bin
+EOF
+
+assert_contains 'project phase appends PWD/bin' "$PROJECT_ROOT/bin" sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    export PATH='/usr/bin:/bin'
+    export PATH_CONTRACT_PROJECT_ROOT='$PROJECT_ROOT'
+    path_contract_apply_project '$PROJECT_ROOT/.path.contract'
+    printf '%s' \"\$PATH\"
+"
+
+assert_ok 'project phase excluded from default path_contract_apply' sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    export PATH='/usr/bin:/bin'
+    export PATH_CONTRACT_PROJECT_ROOT='$PROJECT_ROOT'
+    path_contract_apply
+    ! printf '%s' \"\$PATH\" | tr ':' '\n' | grep -qx '$PROJECT_ROOT/bin'
+"
+
+assert_ok 'path_contract_verify still passes without project phase' sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    path_deny_sweep
+    path_contract_apply
+    path_contract_apply --phase post_vite
+    path_deny_sweep
+    path_contract_verify --json | grep -q '\"ok\":true'
+"
+
+# core-only apply (agent strict PATH)
+mkdir -p "$TEST_HOME/.config/shell/local"
+cat > "$TEST_HOME/.config/shell/local/path.contract" <<EOF
+phase:core
+prepend:.grok/bin
+EOF
+
+assert_ok 'path_contract_apply_core_only skips local overlay' sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    path_deny_sweep
+    path_contract_apply
+    path_contract_apply_core_only
+    ! printf '%s' \"\$PATH\" | tr ':' '\n' | grep -qx '$TEST_HOME/.grok/bin'
+"
+
 echo "=== $FAIL failure(s) ==="
 [[ "$FAIL" -eq 0 ]]

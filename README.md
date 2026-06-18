@@ -98,7 +98,8 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 
 ```
 ~/.config/shell/
-├── arch-design/          # Architecture & design docs (shell.md, VERIFICATION, …)
+├── arch-design/          # architecture.md (current state), coming-next (backlog), shell.md, …
+├── planned-features/     # done/ — shipped epics with diagrams + PR/commit evidence
 │   └── README.md         # Index of design docs
 ├── environment.example   # Copy → environment (optional pin; omit for auto-detect)
 ├── core/                 # Distro-agnostic (always loaded)
@@ -381,6 +382,9 @@ source ~/.zshrc   # or: source ~/.bashrc
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
 - See [PLUGIN.md](PLUGIN.md) for kernel vs verification-plugin boundary (what must work without tmux/agents)
+- See [arch-design/architecture.md](arch-design/architecture.md) for **current** system map, scorecard, and PATH layers
+- See [arch-design/coming-next.md](arch-design/coming-next.md) for backlog (next items + last 10 done)
+- See [planned-features/done/](planned-features/done/) for shipped sprint archives with diagrams and PR links
 - See [arch-design/README.md](arch-design/README.md) for the architecture & design doc index
 - See [arch-design/shell.md](arch-design/shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
 - See [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) for agent workflow (`ab` build + `av` verify cockpit, `av --scan`, per-project layouts via distributable [.agents/skills/verification-cockpit](.agents/skills/verification-cockpit/SKILL.md), tmux Prefix+B/V, nvim Telescope keymaps, `gdf`/`gdfs`, delta via git include)

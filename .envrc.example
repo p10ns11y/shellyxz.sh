@@ -1,0 +1,9 @@
+# Example .envrc for a project repo (copy to your project root as .envrc).
+# Do NOT place .envrc in ~/.config/shell — Cursor uses that cwd and direnv would fire every prompt.
+#
+# Per-repo PATH: append project bins via phase:project fragment (see .path.contract.example).
+
+if [ -f .path.contract ]; then
+    # shellcheck disable=SC1091
+    source "${SHELL_ROOT:-$HOME/.config/shell}/bin/path-contract-project.sh"
+fi

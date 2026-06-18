@@ -1,6 +1,9 @@
 # local/path.contract — machine-specific PATH overlay (optional)
 # Copy to local/path.contract (migrate installs if missing). Applied after core/path.contract.
 # Same format as core/path.contract; local prepends win higher priority within a phase.
+#
+# Project repo bins do NOT go here — use repo-root .path.contract (phase:project) via direnv.
+# See commented block at the bottom and copy ../.path.contract.example into each project.
 
 phase:core
 prepend:mamba/bin
@@ -17,3 +20,11 @@ prepend:HOME/bin
 phase:append
 append:miniconda/condabin
 append:/opt/rocm/bin
+
+# --- Per-repo PATH (phase:project) — copy to PROJECT/.path.contract, not local/ ---
+# Loaded on cd by direnv: source ~/.config/shell/bin/path-contract-project.sh
+# (see ~/.config/shell/.envrc.example). PWD/* resolves from repo root.
+#
+# phase:project
+# prepend:PWD/bin
+# append:PWD/node_modules/.bin

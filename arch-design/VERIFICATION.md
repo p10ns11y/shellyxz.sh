@@ -15,7 +15,29 @@ See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load ord
 - **Composability** — pipe rg → fzf → nvim; jq + bat on JSON agent reports.
 - **Human stays in the loop** — tools collapse time between "agent done" and "I understand + I act".
 
-Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor integrated terminals skip `mise activate` and refuse `agent_build` / `agent_verify` (`ab` / `av`; `af`/`aw`/`agent_work` are legacy) (phantom-tab / no-cockpit UX).
+Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). **Planned:** `ts` — per-project tmux session ([coming-next.md](coming-next.md) SN-TS). **Current architecture:** [architecture.md](architecture.md). Cursor integrated terminals skip `mise activate` and refuse `agent_build` / `agent_verify` (`ab` / `av`; legacy `af`/`aw`/`agent_work`).
+
+---
+
+## Host-agnostic verbs (MCP / CI / IDE)
+
+Same manifest and rituals as tmux — different renderer. Headless entrypoint:
+
+```bash
+~/.config/shell/bin/cockpit-mcp.sh verify [dir]   # gates: check-shell, template sync
+~/.config/shell/bin/cockpit-mcp.sh test [dir]     # run-project-tests.sh (python optional)
+~/.config/shell/bin/cockpit-mcp.sh scan [dir]     # rg + dust + JSON (agent_scan)
+```
+
+| Verb | tmux | Headless (`cockpit-mcp.sh`) |
+|------|------|-----------------------------|
+| verify | `av` — layout + panes | `verify` — audit scripts, manifest parse when python present |
+| test | `at` — btop + TEST pane | `test` — priority test runner |
+| scan | `av --scan` — CMD pane | `scan` — structured sweep |
+
+MCP hosts wrap these three subcommands as tools; [`cockpit.yaml`](../.agents/verification/cockpit.yaml) remains the stable manifest schema.
+
+**Python optional:** `test` uses sh auto-discovery when python is absent (`bin/test/*.sh`, `check-shell.sh`, package.json, Cargo.toml). Full `cockpit.yaml` test parsing still needs python.
 
 ---
 

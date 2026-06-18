@@ -141,10 +141,14 @@ git config --global include.path ~/.config/git/verification
 **Purpose:** Detect installer pollution in `~/.zshrc` / `~/.bashrc` and route lines to the correct module (`path.contract`, `aliases.sh`, `functions.sh`, managed rc template).
 
 ```bash
-~/.config/shell/bin/capture-shell-init.sh [--dry-run] [--apply] [--force] [--since-install LOG]
+~/.config/shell/bin/capture-shell-init.sh [--dry-run] [--apply] [--force] [--verbose] [--since-install LOG]
 ```
 
 After a tool install adds PATH or `eval "$(foo init"` to rc: run `--dry-run`, move entries per output, then `check-shell.sh` and `path_check`.
+
+Managed `~/.zshrc` / `~/.bashrc` / login files (`~/.profile`, …) already include template-owned lines — those are not reported as DUPLICATE. Use `--verbose` to list them as OK expected.
+
+On login files that source `~/.config/shell/env.sh`, DUPLICATE PATH hooks (`.cargo/env`, `.vite-plus/env`, …) are **real** installer pollution — remove them; PATH and hooks are owned by `path.contract` / `core/env.sh`. Trim to `templates/login/profile` or run `bin/migrate.sh`.
 
 Registry of managed inits: `templates/tool-init.manifest`.
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Priority-ordered test runner for at — delegates to parse-project-tests.py --run.
+# Priority-ordered test runner for at — python for manifests, sh fallback for discovery.
 # Usage: run-project-tests.sh [directory] [--watch] [--all]
-# Requires python for cockpit.yaml / tests.yaml manifests.
 set -euo pipefail
 
 DIR="."
@@ -22,9 +21,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h | --help)
             echo "Usage: run-project-tests.sh [directory] [--watch] [--all]"
-            echo "  Reads .agents/verification/cockpit.yaml (or tests.yaml)."
-            echo "  Requires python for manifest parsing and test execution."
-            echo "  Falls back to auto-discovery when no manifest exists."
+            echo "  Reads .agents/verification/cockpit.yaml (or tests.yaml) when python is available."
+            echo "  Without python: sh auto-discovery (package.json, Cargo.toml, bin/test/*.sh, check-shell.sh)."
             echo "  --all   Run every test in the manifest (ignore max_run)."
             exit 0
             ;;
@@ -40,19 +38,22 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if ! command -v python >/dev/null 2>&1; then
-    echo "run-project-tests: python is required (install python or use a project with bin/check-shell.sh only)" >&2
-    exit 1
-fi
-
 DIR="$(cd "$DIR" && pwd)"
+cockpit="${DIR}/.agents/verification/cockpit.yaml"
+tests_yaml="${DIR}/.agents/verification/tests.yaml"
 
-args=(--run --root "$DIR")
-if [ "$WATCH" = 1 ]; then
-    args+=(--watch)
-fi
-if [ "$RUN_ALL" = 1 ]; then
-    args+=(--all)
+if command -v python >/dev/null 2>&1 && [ -f "$PARSER_PY" ]; then
+    args=(--run --root "$DIR")
+    [ "$WATCH" = 1 ] && args+=(--watch)
+    [ "$RUN_ALL" = 1 ] && args+=(--all)
+    exec python "$PARSER_PY" "${args[@]}"
 fi
 
-exec python "$PARSER_PY" "${args[@]}"
+if [ -f "$cockpit" ] || [ -f "$tests_yaml" ]; then
+    echo "run-project-tests: python not found — cockpit.yaml/tests.yaml need python; trying sh auto-discovery" >&2
+fi
+
+args=(--root "$DIR")
+[ "$WATCH" = 1 ] && args+=(--watch)
+[ "$RUN_ALL" = 1 ] && args+=(--all)
+exec bash "$SCRIPT_DIR/lib/parse-project-tests-run.sh" "${args[@]}"
