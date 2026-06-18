@@ -16,8 +16,8 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 | [recover-shell.sh](#recover-shellsh) | Broken rc / `source` loops | bash only | 0 (informational menu) |
 | [agent-build-layout.sh](#agent-build-layoutsh) | Open tmux agent build window | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
 | [agent-verify-layout.sh](#agent-verify-layoutsh) | Open tmux verification cockpit | **Inside tmux**, tmux on PATH | 0 on success; 1 if not in tmux |
-| [agent-test-layout.sh](#agent-test-layoutsh) | Open tmux test cockpit (`at`) | **Inside tmux**, tmux on PATH; `python3` for runner | 0 on success; 1 if not in tmux |
-| [run-project-tests.sh](#run-project-testssh) | Priority tests without tmux | `python3` on PATH | 0 if tests pass |
+| [agent-test-layout.sh](#agent-test-layoutsh) | Open tmux test cockpit (`at`) | **Inside tmux**, tmux on PATH; `python` for runner | 0 on success; 1 if not in tmux |
+| [run-project-tests.sh](#run-project-testssh) | Priority tests without tmux | `python` on PATH | 0 if tests pass |
 | [fzf-preview.sh](#fzf-previewsh) | *(internal)* fzf bat preview | bat | inherits bat exit code |
 
 ---
@@ -310,7 +310,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 
 **Entry points:** `agent_test` / `at` (shell); `tt` legacy alias.
 
-**Requirements:** tmux, inside tmux; `python3` for `run-project-tests.sh` manifest parsing.
+**Requirements:** tmux, inside tmux; `python` for `run-project-tests.sh` manifest parsing.
 
 ---
 
@@ -327,7 +327,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 | `--watch` | Re-run on `TEST_WATCH_INTERVAL` (default 60s) |
 | `--all` | Run every test in manifest (ignore `max_run`) |
 
-**Requires:** `python3` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
+**Requires:** `python` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
 
 ---
 

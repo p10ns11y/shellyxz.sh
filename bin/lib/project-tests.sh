@@ -9,11 +9,11 @@ source "${SCRIPT_DIR}/parse-project-tests.sh"
 # Run a manifest command (allowlist lives in parse-project-tests.py).
 run_manifest_command() {
     local cmd="$1"
-    if ! command -v python3 >/dev/null 2>&1; then
-        echo "run-project-tests: python3 is required to run manifest commands" >&2
+    if ! command -v python >/dev/null 2>&1; then
+        echo "run-project-tests: python is required to run manifest commands" >&2
         return 1
     fi
-    python3 "${SCRIPT_DIR}/parse-project-tests.py" --run-cmd "$cmd"
+    python "${SCRIPT_DIR}/parse-project-tests.py" --run-cmd "$cmd"
 }
 
 project_test_cmd() {

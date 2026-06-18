@@ -67,7 +67,7 @@ Execute in dependency order unless the user names a specific item:
 ### 8. Docs + thin-python runner
 
 - Update `human-in-the-loop-workflow.md` nvim pane notes if touched.
-- `parse-project-tests.py` is the single parser/runner; bash delegates via `--run` / `--run-cmd` (python3 required).
+- `parse-project-tests.py` is the single parser/runner; bash delegates via `--run` / `--run-cmd` (python required).
 
 ## Implementation rules
 

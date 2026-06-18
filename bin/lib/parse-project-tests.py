@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Parse cockpit.yaml / tests.yaml and run priority tests for at.
 
 Subcommands (via flags):

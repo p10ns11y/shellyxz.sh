@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Priority-ordered test runner for at — delegates to parse-project-tests.py --run.
 # Usage: run-project-tests.sh [directory] [--watch] [--all]
-# Requires python3 for cockpit.yaml / tests.yaml manifests.
+# Requires python for cockpit.yaml / tests.yaml manifests.
 set -euo pipefail
 
 DIR="."
@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
         -h | --help)
             echo "Usage: run-project-tests.sh [directory] [--watch] [--all]"
             echo "  Reads .agents/verification/cockpit.yaml (or tests.yaml)."
-            echo "  Requires python3 for manifest parsing and test execution."
+            echo "  Requires python for manifest parsing and test execution."
             echo "  Falls back to auto-discovery when no manifest exists."
             echo "  --all   Run every test in the manifest (ignore max_run)."
             exit 0
@@ -40,8 +40,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if ! command -v python3 >/dev/null 2>&1; then
-    echo "run-project-tests: python3 is required (install python3 or use a project with bin/check-shell.sh only)" >&2
+if ! command -v python >/dev/null 2>&1; then
+    echo "run-project-tests: python is required (install python or use a project with bin/check-shell.sh only)" >&2
     exit 1
 fi
 
@@ -55,4 +55,4 @@ if [ "$RUN_ALL" = 1 ]; then
     args+=(--all)
 fi
 
-exec python3 "$PARSER_PY" "${args[@]}"
+exec python "$PARSER_PY" "${args[@]}"

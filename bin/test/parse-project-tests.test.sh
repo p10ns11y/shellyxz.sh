@@ -47,10 +47,10 @@ mkdir -p "$TMP/.agents/verification"
 cp "$ROOT/.agents/verification/cockpit.yaml" "$TMP/.agents/verification/"
 
 assert_contains 'cockpit.yaml parses shellcheck' shellcheck \
-    python3 "$PARSER" --root "$TMP"
+    python "$PARSER" --root "$TMP"
 
 assert_contains 'tests.yaml fallback' shellcheck \
-    python3 "$PARSER" "$ROOT/.agents/verification/tests.yaml" "$ROOT"
+    python "$PARSER" "$ROOT/.agents/verification/tests.yaml" "$ROOT"
 
 # shellcheck source=/dev/null
 source "$ROOT/bin/lib/parse-project-tests.sh"
@@ -58,13 +58,13 @@ assert_contains 'bash wrapper returns json' max_run \
     parse_project_tests_json "$ROOT"
 
 assert_ok 'python allowlisted absolute path' \
-    python3 "$PARSER" --run-cmd "$ROOT/bin/check-shell.sh --help"
+    python "$PARSER" --run-cmd "$ROOT/bin/check-shell.sh --help"
 
 assert_fail 'python reject shell metachar' \
-    python3 "$PARSER" --run-cmd "echo ok; rm -rf /"
+    python "$PARSER" --run-cmd "echo ok; rm -rf /"
 
 assert_contains 'python --run summary' 'at summary' \
-    python3 "$PARSER" --run --root "$TMP"
+    python "$PARSER" --run --root "$TMP"
 
 # shellcheck source=/dev/null
 source "$ROOT/bin/lib/project-tests.sh"
