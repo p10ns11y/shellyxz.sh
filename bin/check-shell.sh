@@ -369,6 +369,19 @@ fi
 grep -q 'LOCAL_PATH_CONTRACT' "$PATH_RESOLVE" 2>/dev/null \
     && ok 'path-resolve.sh supports local/path.contract overlay' \
     || warn 'path-resolve.sh missing LOCAL_PATH_CONTRACT overlay'
+if [[ -f "$PATH_RESOLVE" ]]; then
+    _apply_core=$(grep -n 'path_contract_apply_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    _apply_local=$(grep -n 'path_contract_apply_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    _rank_local=$(grep -n '_path_contract_collect_phase_prepends_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    _rank_core=$(grep -n '_path_contract_collect_phase_prepends_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    if [[ -n "$_apply_core" && -n "$_apply_local" && "$_apply_core" -lt "$_apply_local" \
+          && -n "$_rank_local" && -n "$_rank_core" && "$_rank_local" -lt "$_rank_core" ]]; then
+        ok 'local overlay invariant: apply core→local, verify ranks local→core'
+    else
+        warn 'path-resolve.sh overlay order broken (apply core→local; verify collect local→core)'
+    fi
+    unset _apply_core _apply_local _rank_local _rank_core
+fi
 if [[ -f "$PATH_CONTRACT" ]]; then
     if grep -qE '^prepend:.*(grok|risc0|solana|vite-plus|rocm|\.vector)' "$PATH_CONTRACT" 2>/dev/null \
         || grep -qE '^append:.*/opt/rocm' "$PATH_CONTRACT" 2>/dev/null; then
