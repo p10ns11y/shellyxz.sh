@@ -333,7 +333,7 @@ sequenceDiagram
     Env->>Local: path_contract_apply overlay
     Note over Env: post_vite after vite-plus
     Direnv->>Proj: path_contract_apply_project
-    Note over Proj: phase:project only; PWD/* tokens
+    Note over Proj: project phase and PWD-relative paths
 ```
 
 **Project setup:** copy [`.path.contract.example`](../.path.contract.example) and [`.envrc.example`](../.envrc.example) to your repo. `.envrc` sources [`bin/path-contract-project.sh`](../bin/path-contract-project.sh), which applies only `phase:project` entries. `path_contract_verify` at home still validates machine PATH; project segments are direnv-scoped.
