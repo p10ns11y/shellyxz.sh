@@ -310,6 +310,36 @@ Forkable kernel PATH: [`core/path.contract`](../core/path.contract). Machine-spe
 
 Debug: `path_debug` (shows contract status). Verify: `path_check` or `zsh -lic path_contract_verify`.
 
+### PATH layer precedence (machine vs project)
+
+**Rule:** `path.contract` owns the machine; direnv owns the project. Never rebuild full PATH in `.envrc`.
+
+| Layer | File | Owns | Must not |
+|-------|------|------|----------|
+| Core | `core/path.contract` | Forkable defaults | Personal toolchains |
+| Local | `local/path.contract` | Machine overlay | Project repo paths |
+| Project | repo `.path.contract` | `phase:project` append/prepend | Replace global contract |
+| direnv | repo `.envrc` | Load project fragment | Duplicate machine PATH |
+
+```mermaid
+sequenceDiagram
+    participant Env as env.sh
+    participant Core as core/path.contract
+    participant Local as local/path.contract
+    participant Direnv as direnv .envrc
+    participant Proj as repo .path.contract
+
+    Env->>Core: path_contract_apply
+    Env->>Local: path_contract_apply overlay
+    Note over Env: post_vite after vite-plus
+    Direnv->>Proj: path_contract_apply_project
+    Note over Proj: phase:project only; PWD/* tokens
+```
+
+**Project setup:** copy [`.path.contract.example`](../.path.contract.example) and [`.envrc.example`](../.envrc.example) to your repo. `.envrc` sources [`bin/path-contract-project.sh`](../bin/path-contract-project.sh), which applies only `phase:project` entries. `path_contract_verify` at home still validates machine PATH; project segments are direnv-scoped.
+
+**Tokens:** use `PWD/bin`, `PWD/node_modules/.bin`, etc. — resolved from repo root, not `$HOME`.
+
 **Installer drift:** after a tool adds init to `~/.zshrc`, run `~/.config/shell/bin/capture-shell-init.sh --dry-run`. Registry: [`templates/tool-init.manifest`](../templates/tool-init.manifest).
 
 **Not in the contract** (expected in some sessions until reassert):

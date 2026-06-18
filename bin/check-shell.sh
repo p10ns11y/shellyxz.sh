@@ -382,6 +382,20 @@ if [[ -f "$PATH_RESOLVE" ]]; then
     fi
     unset _apply_core _apply_local _rank_local _rank_core
 fi
+PATH_CONTRACT_PROJECT_SH="$CONFIG_DIR/bin/path-contract-project.sh"
+if [[ -x "$PATH_CONTRACT_PROJECT_SH" ]]; then
+    ok 'bin/path-contract-project.sh present and executable'
+else
+    warn 'bin/path-contract-project.sh missing or not executable (SN-2 direnv project fragment)'
+fi
+grep -q 'path_contract_apply_project' "$PATH_RESOLVE" 2>/dev/null \
+    && ok 'path-resolve.sh has path_contract_apply_project' \
+    || warn 'path-resolve.sh missing path_contract_apply_project'
+if [[ -f "$PATH_RESOLVE" ]]; then
+    grep -qE 'post_vite\|project' "$PATH_RESOLVE" \
+        && ok 'path-resolve.sh excludes project from unfiltered apply' \
+        || warn 'path-resolve.sh should exclude project phase from default apply'
+fi
 if [[ -f "$PATH_CONTRACT" ]]; then
     if grep -qE '^prepend:.*(grok|risc0|solana|vite-plus|rocm|\.vector)' "$PATH_CONTRACT" 2>/dev/null \
         || grep -qE '^append:.*/opt/rocm' "$PATH_CONTRACT" 2>/dev/null; then
