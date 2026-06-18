@@ -11,52 +11,52 @@
 
 ## 0. Mission (one sentence)
 
-**Build the dev environment that flies through every platform shift** — a portable shell kernel (PATH, migrate, recover) **plus** a human verification cockpit (tmux, agents, tests) that **evolves with each generation of AI tools** instead of fighting them.
+**Build the dev environment that punches through every platform shift** — a portable shell kernel (PATH, migrate, recover) **plus** a human verification bridge (tmux, agents, tests) that **evolves with each generation of AI tools** instead of fighting them.
 
 ---
 
 ## 0b. Ten-year thrive picture (2036 — not survival, ascent)
 
-Agents get faster. Trust gets scarcer. **That is tailwind, not headwind** for this project.
+Agents get faster. Trust gets scarcer. **That is thrust, not drag** for this project.
 
 ```mermaid
 flowchart TB
-  subgraph kernel2036["Kernel — flight computer"]
+  subgraph kernel2036["Kernel — ship computer"]
     PC[path.contract as portable spec]
     VF[verify anywhere: laptop VPS CI agent sandbox]
     RC[recover-shell one command always]
   end
 
-  subgraph cockpit2036["Cockpit — human verification deck"]
+  subgraph bridge2036["Verification bridge — command ops"]
     HVP[Human Verification Protocol]
     MCP[cockpit.yaml as MCP tool surface]
     UI[tmux today · IDE panel tomorrow · same manifest]
     HITL[human signs off before ship]
   end
 
-  subgraph storms["Platform storms we cut through"]
+  subgraph storms["Cosmic weather we punch through"]
     V1[vendor CLI churn grok to X to MCP]
     V2[IDE vs terminal false war]
-    V3[PATH hijack supply chain noise]
-    V4[Nix containers home-manager]
+    V3[PATH hijack supply chain debris]
+    V4[Nix containers home-manager gravity wells]
   end
 
   storms --> kernel2036
-  kernel2036 --> cockpit2036
-  cockpit2036 --> OUT[You ship with eyes on the diff not hope]
+  kernel2036 --> bridge2036
+  bridge2036 --> OUT[You launch with eyes on the diff not hope]
 ```
 
 | 2036 role | What it is | Why it still wins |
 |-----------|------------|-------------------|
 | **Kernel** | Declarative PATH + migrate + recover | POSIX and PATH outlive every agent brand |
-| **Cockpit** | Verify-build-test ritual + layouts + navigators | Fast agents increase need for **human audit**, not less |
-| **Boundary (PLUGIN)** | Modular bays — swap agent engine, keep airframe | Upgrade without rewriting dotfiles |
+| **Verification bridge** | Verify-build-test ritual + layouts + navigators | Fast agents increase need for **human audit**, not less |
+| **Boundary (PLUGIN)** | Modular bays — swap agent engine, keep hull | Upgrade without rewriting dotfiles |
 | **cockpit.yaml** | Project verification manifest | Becomes host-agnostic (MCP, CI, tmux, future IDE) |
 | **ab / av / at** | Stable verbs: build · verify · test | Same muscle memory; different TUIs underneath |
 
-**What thriving looks like day-to-day:** Agent proposes a diff in any host (IDE, CLI, cloud). You open **one** verification surface — tmux cockpit today, embedded panel later — with tests, git, scan, and layout you already trust. Kernel guarantees `git`, `node`, `clear` are the real binaries. You approve. Ship.
+**What thriving looks like day-to-day:** Agent proposes a diff in any host (IDE, CLI, cloud). You open **one** verification surface — tmux bridge today, embedded panel later — with tests, git, scan, and layout you already trust. Kernel guarantees `git`, `node`, `clear` are the real binaries. You approve. Launch.
 
-**Design bet:** We are not betting on tmux forever. We are betting on **human-in-the-loop verification** forever. tmux is today's flight deck; the manifest and rituals are the product.
+**Design bet:** We are not betting on tmux forever. We are betting on **human-in-the-loop verification** forever. tmux is today's command bridge; the manifest and rituals are the spacecraft.
 
 ---
 
@@ -91,9 +91,9 @@ flowchart LR
 | Cockpit daily driver | **B+** | ab/av/at + navigators; evolves to MCP | Ghostty+tmux now; manifest is the constant |
 | Per-project PATH (direnv) | **C+** | Hooked; project fragment next | `check-shell` direnv guards; SN-2 unlocks thrive |
 | Agent PATH hardening | **B-** | Pins + shadow report; strict mode next | Foundation for agent-sandbox trust |
-| Modular packaging | **B** | PLUGIN boundary done; physical split when scale needs it | Clarity without abandoning cockpit |
+| Modular packaging | **B** | PLUGIN boundary done; physical split when scale needs it | Clarity without abandoning the bridge |
 
-**Plain rule:** Strengthen the flight computer (kernel PATH) **and** upgrade the flight deck (cockpit) — modularly, on purpose.
+**Plain rule:** Strengthen the ship computer (kernel PATH) **and** upgrade the command bridge (verification + MCP) — modular hull bays, on purpose.
 
 ---
 
@@ -119,7 +119,7 @@ flowchart TB
     L6[path_contract_reassert]
   end
 
-  subgraph plugin["Cockpit — verification deck"]
+  subgraph plugin["Verification bridge — ops deck"]
     AB[ab / agent-build-layout]
     AV[av / cockpit.yaml layouts]
     AT[at / parse-project-tests]
@@ -200,7 +200,7 @@ flowchart TD
 
 ---
 
-## 5. Tailwinds and turbulence (evidence-weighted)
+## 5. Trajectory forces (evidence-weighted)
 
 | Force | P(3–7y) | Effect on us | Response |
 |-------|---------|--------------|----------|
@@ -212,7 +212,7 @@ flowchart TD
 | Nix / containers / devcontainers | ~40% | migrate less central; **verify more central** | Contract as runtime checker in CI |
 | tmux UI fashion | ~60% | Surface changes | Manifest + navigators survive UI swap |
 
-**Acceleration trigger (optimistic):** When IDE agents run builds for you daily → **invest in cockpit MCP + verify manifest**, not shrink cockpit. The bottleneck moved from typing to **judgment**.
+**Acceleration trigger:** When IDE agents run builds for you daily → **invest in bridge MCP + verify manifest**, expand thrust. The bottleneck moved from typing to **judgment**.
 
 ---
 
@@ -254,7 +254,7 @@ Priority order. Each: problem → flow → files → done when → verify.
 
 ### SN-1 · Dogfood gate (no new code)
 
-**Problem:** Lock in kernel trust, then expand the flight deck.
+**Problem:** Lock in kernel trust, then expand the command bridge.
 
 ```mermaid
 flowchart LR
@@ -312,7 +312,7 @@ stateDiagram-v2
 
 | File | Work |
 |------|------|
-| `bin/agent-build-layout.sh` or plugin wrapper | Optional strict preflight |
+| `bin/agent-build-layout.sh` or plugin wrapper | Optional strict pre-launch check |
 | `core/tool.contract` | Extend `warn_shadow` list as needed |
 | `PLUGIN.md` | Document plugin-only scope |
 
@@ -324,16 +324,16 @@ stateDiagram-v2
 
 ### SN-4 · Modular `plugins/verification/` (scale, not abandonment)
 
-**Problem:** One repo carries two **composable** systems — clarity for contributors and forks, not a funeral for cockpit.
+**Problem:** One repo carries two **composable** bays — clarity for contributors and forks; the bridge launches with the hull.
 
 ```mermaid
 flowchart TB
   subgraph now["Today"]
-    R[one repo two wings]
-    R --> K[kernel airframe]
-    R --> C[cockpit flight deck]
+    R[one hull two bays]
+    R --> K[kernel ship computer]
+    R --> C[verification command bridge]
   end
-  subgraph target["Target — same mission bigger runway"]
+  subgraph target["Target — same mission deeper orbit"]
     K2[shelly-core]
     C2[verification-cockpit package]
     K2 <-->|env hooks MCP manifest| C2
@@ -364,9 +364,9 @@ flowchart TB
 
 ---
 
-### SN-7 · Cockpit MCP surface (thrive bet)
+### SN-7 · Verification bridge MCP surface (thrive bet)
 
-**Problem:** IDE agents are not the enemy — they are a **new cabin**. Cockpit rituals should run there too.
+**Problem:** IDE agents are not the enemy — they are a **new dock module**. Bridge rituals should run there too.
 
 ```mermaid
 flowchart LR
@@ -384,7 +384,7 @@ flowchart LR
 
 **Done when:** Same project manifest drives `av` in tmux **and** an MCP client's verify step.
 
-**Why now in backlog:** This is how cockpit **thrives** when agent hosts multiply.
+**Why now in backlog:** This is how the verification bridge **reaches orbit** when agent hosts multiply.
 
 ---
 
@@ -398,7 +398,7 @@ flowchart LR
 
 ---
 
-## 8. Cockpit scope lock (user decision)
+## 8. Bridge scope lock — navigators stay (user decision)
 
 ```mermaid
 flowchart LR
@@ -426,15 +426,15 @@ gantt
   SN-6 Doc triage             :sn6, after sn2, 2d
   section Week 2
   SN-3 Agent strict PATH      :sn3, after sn6, 2d
-  SN-5 Cockpit py optional    :sn5, after sn3, 3d
-  SN-7 Cockpit MCP surface    :sn7, after sn5, 5d
+  SN-5 Bridge py optional      :sn5, after sn3, 3d
+  SN-7 Bridge MCP surface      :sn7, after sn5, 5d
   section Later
   SN-4 plugins/ modular pack  :sn4, 2026-07-01, 5d
 ```
 
 ---
 
-## 10. Monitoring signals (fly the plane)
+## 10. Monitoring signals (command the mission)
 
 | Signal | Healthy | Invest more when |
 |--------|---------|------------------|
@@ -442,7 +442,7 @@ gantt
 | `path_contract_verify` failures | Rare | Spike after installs → `capture-shell-init` |
 | External forks | Core + cockpit copies | Others adopt manifest pattern |
 | Agent CLI churn | Env vars updated | New host → add MCP tool not new pane |
-| IDE + tmux both in use | Hybrid workflow | **Expected thrive path** — bridge them, don't pick one |
+| IDE + tmux both in use | Hybrid workflow | **Expected orbit** — bridge hosts, don't abandon either |
 
 ---
 
@@ -498,4 +498,4 @@ mindmap
 
 ---
 
-*Plain rule: strengthen the flight computer (kernel PATH), upgrade the flight deck (cockpit + MCP), fly through storms — direnv handles projects, not global PATH.*
+*Plain rule: harden the ship computer (kernel PATH), grow the command bridge (verification + MCP), punch through cosmic weather — direnv handles per-planet ops, not ship-wide navigation.*
