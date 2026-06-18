@@ -7,8 +7,8 @@
 | Overlay | Repo type | Canonical full doc |
 |---------|-----------|-------------------|
 | [shell-kernel.md](shell-kernel.md) | Portable shell / dotfiles kernel + PLUGIN boundary | [arch-design/coming-next.md](../../../arch-design/coming-next.md) |
-| [web-app.md](web-app.md) | Next.js / full-stack web app (RSC + API routes) | *(create `arch-design/coming-next.md` in target repo)* |
+| [eve-agent.md](eve-agent.md) | [Vercel Eve](https://vercel.com/eve) agent directory | *(create `arch-design/coming-next.md` in target repo)* |
 
 **Usage:** Tell the agent: `Load stellar-roadmap/examples/shell-kernel.md overlay; expand full coming-next only for SN-N being edited.`
 
-**Add overlays:** Copy `web-app.md` as a template; keep ≤80 lines; fused abstraction + scorecard skeleton + SN priorities only.
+**Add overlays:** Copy `eve-agent.md` as a template; keep ≤80 lines; fused abstraction + scorecard skeleton + SN priorities only.

@@ -65,7 +65,7 @@ description: >-
 
 ### 2. Structure (13 sections)
 
-Use [references/document-template.md](references/document-template.md). For **scout**, load a repo-type overlay first: [examples/](examples/README.md) (`shell-kernel`, `web-app`) — expand full `coming-next.md` only for cards being edited.
+Use [references/document-template.md](references/document-template.md). For **scout**, load a repo-type overlay first: [examples/](examples/README.md) (`shell-kernel`, `eve-agent`) — expand full `coming-next.md` only for cards being edited.
 
 Section map:
 
@@ -164,7 +164,7 @@ Full list: [references/external-sources.md](references/external-sources.md).
 
 - Full section template: [references/document-template.md](references/document-template.md)
 - Lens integration detail: [references/companion-skills.md](references/companion-skills.md)
-- **Repo-type overlays (scout ~30% cheaper):** [examples/README.md](examples/README.md) — [shell-kernel](examples/shell-kernel.md) · [web-app](examples/web-app.md)
+- **Repo-type overlays (scout ~30% cheaper):** [examples/README.md](examples/README.md) — [shell-kernel](examples/shell-kernel.md) · [eve-agent](examples/eve-agent.md) ([Eve](https://vercel.com/eve))
 - Example output: [arch-design/coming-next.md](../../arch-design/coming-next.md)
 
 ---
