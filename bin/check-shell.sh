@@ -472,6 +472,12 @@ grep -q 'agent_strict_path_check' "$VERIFY_LAUNCH" 2>/dev/null \
 grep -q 'path_contract_apply_core_only' "$PATH_RESOLVE" 2>/dev/null \
     && ok 'path-resolve.sh has path_contract_apply_core_only' \
     || warn 'path-resolve.sh missing path_contract_apply_core_only'
+[[ -x "$CONFIG_DIR/bin/cockpit-mcp.sh" ]] \
+    && ok 'bin/cockpit-mcp.sh present (SN-7 headless verbs)' \
+    || warn 'bin/cockpit-mcp.sh missing'
+[[ -x "$CONFIG_DIR/bin/lib/parse-project-tests-discover.sh" ]] \
+    && ok 'parse-project-tests-discover.sh present (SN-5 sh path)' \
+    || warn 'parse-project-tests-discover.sh missing'
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
     && ok 'tmux.conf present' \
     || warn 'tmux.conf missing (run migrate.sh)'
