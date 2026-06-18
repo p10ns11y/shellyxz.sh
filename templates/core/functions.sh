@@ -169,6 +169,10 @@ agent_build() {
                 args+=(--continue)
                 shift
                 ;;
+            --strict)
+                args+=(--strict)
+                shift
+                ;;
             *)
                 if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
                     dir="$1"

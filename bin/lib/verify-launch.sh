@@ -250,3 +250,45 @@ verify_maybe_rescan() {
         tmux send-keys -t "$console_target" 'agent_scan' Enter
     fi
 }
+
+# Agent strict PATH (plugin): core/path.contract only, then shadow audit before agent launch.
+agent_strict_path_enabled() {
+    [ "${SHELL_AGENT_STRICT_PATH:-}" = 1 ] \
+        || [ "${SHELL_AGENT_STRICT_PATH:-}" = true ] \
+        || [ "${AGENT_STRICT_PATH:-}" = 1 ]
+}
+
+agent_strict_path_apply() {
+    local shell_root="${SHELL_ROOT:-$HOME/.config/shell}"
+    # shellcheck disable=SC1091
+    . "$shell_root/core/path.sh"
+    path_contract_apply_core_only
+    printf '%s' "$PATH"
+}
+
+agent_strict_path_check() {
+    local shell_root="${SHELL_ROOT:-$HOME/.config/shell}" saved_path
+    saved_path="$PATH"
+    PATH="$(agent_strict_path_apply)" || return 1
+    export PATH
+    if path_shadow_report --warn; then
+        PATH="$saved_path"
+        export PATH
+        return 1
+    fi
+    PATH="$saved_path"
+    export PATH
+    return 0
+}
+
+agent_strict_path_inject_pane() {
+    local target="${1:?target}"
+    local strict_path
+    if ! agent_strict_path_check; then
+        echo "agent_strict_path: shadowed command on PATH — fix before agent launch" >&2
+        return 1
+    fi
+    strict_path="$(agent_strict_path_apply)" || return 1
+    tmux send-keys -t "$target" -l "export PATH=$(printf '%q' "$strict_path")"
+    tmux send-keys -t "$target" Enter
+}

@@ -6,6 +6,7 @@ set -euo pipefail
 SCRIPT_NAME="agent-build-layout"
 DIR="."
 LAUNCH="" # unset | default | continue | no | custom
+STRICT_PATH=false
 CMD=()
 
 while [[ $# -gt 0 ]]; do
@@ -16,6 +17,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-launch)
             LAUNCH="no"
+            shift
+            ;;
+        --strict)
+            STRICT_PATH=true
             shift
             ;;
         --)
@@ -123,6 +128,9 @@ _resolve_continue_cmd() {
 _launch_build_cmd() {
     local target cmd
     target="$(_build_pane_target)" || return 1
+    if [[ "$STRICT_PATH" == true ]] || agent_strict_path_enabled; then
+        agent_strict_path_inject_pane "$target" || return 1
+    fi
     cmd="$(_resolve_build_cmd "$@")" || return 1
     tmux send-keys -t "$target" -l "$cmd"
     tmux send-keys -t "$target" Enter
@@ -131,6 +139,9 @@ _launch_build_cmd() {
 _launch_continue_cmd() {
     local target cmd
     target="$(_build_pane_target)" || return 1
+    if [[ "$STRICT_PATH" == true ]] || agent_strict_path_enabled; then
+        agent_strict_path_inject_pane "$target" || return 1
+    fi
     cmd="$(_resolve_continue_cmd)" || return 1
     tmux send-keys -t "$target" -l "$cmd"
     tmux send-keys -t "$target" Enter

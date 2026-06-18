@@ -150,5 +150,20 @@ assert_ok 'path_contract_verify still passes without project phase' sh -c "
     path_contract_verify --json | grep -q '\"ok\":true'
 "
 
+# core-only apply (agent strict PATH)
+mkdir -p "$TEST_HOME/.config/shell/local"
+cat > "$TEST_HOME/.config/shell/local/path.contract" <<EOF
+phase:core
+prepend:.grok/bin
+EOF
+
+assert_ok 'path_contract_apply_core_only skips local overlay' sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    path_deny_sweep
+    path_contract_apply
+    path_contract_apply_core_only
+    ! printf '%s' \"\$PATH\" | tr ':' '\n' | grep -qx '$TEST_HOME/.grok/bin'
+"
+
 echo "=== $FAIL failure(s) ==="
 [[ "$FAIL" -eq 0 ]]

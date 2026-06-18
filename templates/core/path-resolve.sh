@@ -181,6 +181,15 @@ path_contract_apply_project() {
     unset _contract _root
 }
 
+path_contract_apply_core_only() {
+    PATH="${PATH_CONTRACT_STRICT_BASE:-/usr/local/bin:/usr/bin:/bin}"
+    export PATH
+    path_deny_sweep
+    path_contract_apply_file "$PATH_CONTRACT" "" 1
+    path_deny_sweep
+    path_dedupe
+}
+
 path_contract_apply() {
     _phase_filter=""
     _skip_post_vite=0

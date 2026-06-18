@@ -3,4 +3,5 @@
 
 pin:clear:/usr/bin/clear
 pin:tput:/usr/bin/tput
-warn_shadow:clear tput stty reset
+pin:git:/usr/bin/git
+warn_shadow:clear tput stty reset git
