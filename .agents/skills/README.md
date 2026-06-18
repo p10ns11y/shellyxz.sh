@@ -5,6 +5,7 @@ Cursor agent skills shipped with this shell repo under `.agents/skills/`.
 | Skill | Use in |
 |-------|--------|
 | [verification-cockpit](verification-cockpit/SKILL.md) | Any repo using the `av` workflow — **including this one** as a stress test |
+| [stellar-roadmap](stellar-roadmap/SKILL.md) | Architecture backlog docs (`coming-next.md`, blueprint cards SN-*) — pairs with ai-optimization, fusion-sage, higher-order-decision-architect |
 
 ## Dogfood (this repo)
 

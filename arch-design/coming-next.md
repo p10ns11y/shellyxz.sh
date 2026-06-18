@@ -495,6 +495,7 @@ mindmap
 | [collab-finder intuitive-shell-plan](https://github.com/p10ns11y/collab-finder/blob/main/reports/intuitive-shell-plan.md) | Blueprint card + diagram style |
 | [collab-finder batch-2-blueprints](https://github.com/p10ns11y/collab-finder/blob/main/reports/batch-2-engineering-blueprints.md) | Scorecard, gantt, done-when tables |
 | [collab-finder single-pr-intuitive-product](https://github.com/p10ns11y/collab-finder/blob/main/reports/single-pr-intuitive-product.md) | Musk 5-step, 2nd/3rd order guards |
+| [stellar-roadmap skill](../.agents/skills/stellar-roadmap/SKILL.md) | This doc format; pairs with ai-optimization, fusion-sage, higher-order-decision-architect |
 
 ---
 
