@@ -149,9 +149,10 @@ av --scan                      # verify + agent_scan in shell pane
 |-----|--------|
 | `C-Space` | Prefix (also `C-b` as prefix2) |
 | `Prefix + h` | Split horizontal (pane below) |
-| `Prefix + v` | Split vertical (pane right) |
-| `Prefix + B` | Agent build (`build` window) |
-| `Prefix + V` | Verification cockpit |
+| `Prefix + v` | Split vertical (pane right) — **lowercase** `v` |
+| `Prefix + B` | Agent build (`build` window) — **Shift+b** |
+| `Prefix + V` | Verification cockpit — **Shift+v** (not split) |
+| `Prefix + T` | Test cockpit (`at`) — **Shift+t** |
 | `Prefix + ?` | Keymap menu (or click status-right `?`) |
 | `Prefix + Z` | Zoom pane |
 | `Prefix + Space` | Cycle layout |
@@ -159,6 +160,9 @@ av --scan                      # verify + agent_scan in shell pane
 | `Prefix + q` | Reload tmux.conf |
 
 Hyprland: **Super+Alt+Return** → tmux.
+
+**Install / refresh binds:** `~/.config/shell/bin/sync-tmux-verify.sh` then **Prefix+q** inside tmux.  
+Do not `source` `tmux.verify.conf.ex` in zsh — tmux loads `~/.config/tmux/verify.conf` via `tmux.conf`.
 
 ---
 
