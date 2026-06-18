@@ -72,7 +72,7 @@ bootstrap_from_remote() {
         environments/generic/env.sh environments/generic/bash.sh environments/generic/zsh.sh environments/generic/fish.sh
         environments/omarchy/env.sh environments/omarchy/bash.sh environments/omarchy/zsh.sh environments/omarchy/fish.sh
         environment.example
-        local/personal.sh
+        local/personal.sh local/path.contract.example
         templates/zshrc templates/bashrc templates/fish.config.fish
         templates/login/zprofile templates/login/zshenv templates/login/profile templates/login/bash_profile
         templates/core/lib.sh templates/core/path.sh templates/core/path-resolve.sh templates/core/path.contract templates/core/tool.contract templates/core/env.sh templates/core/aliases.sh templates/core/functions.sh

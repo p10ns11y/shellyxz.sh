@@ -1,5 +1,6 @@
 # path.contract v2 — resolution order within each phase (top = highest which priority)
 # Validated: path_contract_apply in core/env.sh + runtime path_contract_verify
+# Personal/machine paths: local/path.contract (see local/path.contract.example)
 
 deny:/condabin
 deny:.local/share/../bin
@@ -11,23 +12,11 @@ phase:core
 prepend:HOME/bin
 prepend:.local/bin
 prepend:mise/shims
-prepend:mamba/bin
-prepend:.vector/bin
-prepend:.grok/bin
-prepend:.risc0/bin
 prepend:.cargo/bin
 prepend:PNPM_HOME
 prepend:.bun/bin
-prepend:.opencode/bin
-prepend:solana/install/active_release/bin
-prepend:.vite-plus/bin
-
-phase:post_vite
-prepend:HOME/bin
 
 phase:inherit
 keep:system
 
 phase:append
-append:miniconda/condabin
-append:/opt/rocm/bin

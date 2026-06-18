@@ -281,23 +281,32 @@ flowchart LR
 
 ### PATH contract (v2)
 
-Single source of truth for managed PATH segments: [`core/path.contract`](../core/path.contract). Executed by [`core/path-resolve.sh`](../core/path-resolve.sh) via `path_contract_apply` in `env.sh`. Runtime 1:1 validation: `path_check` or `path_contract_verify`.
+Forkable kernel PATH: [`core/path.contract`](../core/path.contract). Machine-specific overlay: [`local/path.contract`](../local/path.contract) (copy from [`local/path.contract.example`](../local/path.contract.example)). Executed by [`core/path-resolve.sh`](../core/path-resolve.sh) via `path_contract_apply` in `env.sh` — **core first, then local** (local prepends win higher priority within a phase). Runtime 1:1 validation: `path_check` or `path_contract_verify`.
 
-**Format:** resolution order within phases (top line = highest `which` priority). Phases apply in build order `environment` → `core` → `append`; `post_vite` runs after `~/.vite-plus/env`. Deny list strips junk (`/condabin`, `~/.local/share/../bin`) at start and end of `env.sh`, and again via `path_contract_reassert` in `.zshrc` after tool hooks.
+**Format:** resolution order within phases (top line = highest `which` priority). Phases apply in build order `environment` → `core` → `append`; `post_vite` runs after `~/.vite-plus/env` (typically in `local/path.contract`). Deny list strips junk (`/condabin`, `~/.local/share/../bin`) at start and end of `env.sh`, and again via `path_contract_reassert` in `.zshrc` after tool hooks.
 
 **Hybrid system commands:** [`core/tool.contract`](../core/tool.contract) pins execution (`clear` → `/usr/bin/clear`) and `check-shell` warns on PATH shadowing.
 
+**Core** (`core/path.contract` — forkable defaults):
+
 | Priority (`which`) | Segment | Phase |
 |-------------------:|---------|-------|
-| 1 | `$HOME/bin` | post_vite (re-assert) |
+| 1 | `$HOME/bin` | core |
 | 2 | `$HOME/.local/bin` | core |
 | 3 | `$HOME/.local/share/mise/shims` | core |
-| 4 | `$HOME/mamba/bin` | core |
-| 5–12 | vector, grok, risc0, cargo, pnpm, bun, opencode, solana | core |
-| 13 | `$HOME/.vite-plus/bin` | core |
-| 14 | `$OMARCHY_PATH/bin` | environment (omarchy preset) |
+| 4 | `$HOME/.cargo/bin` | core |
+| 5 | `$PNPM_HOME` | core |
+| 6 | `$HOME/.bun/bin` | core |
+| 7 | `$OMARCHY_PATH/bin` | environment (omarchy preset) |
 | — | inherited system `PATH` | inherit |
-| ↓ | `$HOME/miniconda/condabin`, `/opt/rocm/bin` | append |
+
+**Local overlay** (`local/path.contract` — your machine; see example):
+
+| Segment | Phase |
+|---------|-------|
+| mamba, vector, grok, risc0, opencode, solana, vite-plus | core |
+| `$HOME/bin` re-assert | post_vite |
+| miniconda/condabin, `/opt/rocm/bin` | append |
 
 Debug: `path_debug` (shows contract status). Verify: `path_check` or `zsh -lic path_contract_verify`.
 

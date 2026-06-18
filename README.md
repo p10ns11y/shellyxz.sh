@@ -113,6 +113,8 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 │   └── omarchy/          # Omarchy desktop integration
 ├── local/
 │   ├── personal.sh       # Secrets + work aliases (local overlay)
+│   ├── path.contract     # Personal PATH overlay (optional; see path.contract.example)
+│   ├── path.contract.example
 │   └── overwrite.sh.example  # Rare PATH/export overrides (copy → overwrite.sh)
 ├── templates/            # Canonical dotfiles for migrate.sh
 ├── env.sh, lib.sh, …     # Thin shims → core/
@@ -378,6 +380,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 - `bin/migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
+- See [PLUGIN.md](PLUGIN.md) for kernel vs verification-plugin boundary (what must work without tmux/agents)
 - See [arch-design/README.md](arch-design/README.md) for the architecture & design doc index
 - See [arch-design/shell.md](arch-design/shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
 - See [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) for agent workflow (`ab` build + `av` verify cockpit, `av --scan`, per-project layouts via distributable [.agents/skills/verification-cockpit](.agents/skills/verification-cockpit/SKILL.md), tmux Prefix+B/V, nvim Telescope keymaps, `gdf`/`gdfs`, delta via git include)
@@ -418,4 +421,4 @@ This sets a minimal PATH and prints restore options (latest `backups/*/revert.sh
 
 - This setup treats **Omarchy** as your personal foundation and layers modern tooling on top without fighting it.
 - The goal is **low cognitive load** — you should rarely need to edit `~/.zshrc` or `~/.bashrc` directly.
-- **PATH** is owned by `core/path.contract` + `core/path-resolve.sh` (`path_contract_apply` in `env.sh`). Runtime verify: `path_check` or `path_contract_verify`. Installer drift: `bin/capture-shell-init.sh --dry-run`. See [arch-design/shell.md](arch-design/shell.md#path-contract-v2).
+- **PATH** is owned by `core/path.contract` + optional `local/path.contract` overlay + `core/path-resolve.sh` (`path_contract_apply` in `env.sh`). Runtime verify: `path_check` or `path_contract_verify`. Installer drift: `bin/capture-shell-init.sh --dry-run`. See [arch-design/shell.md](arch-design/shell.md#path-contract-v2) and [PLUGIN.md](PLUGIN.md).

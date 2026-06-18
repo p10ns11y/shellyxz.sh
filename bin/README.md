@@ -185,8 +185,8 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 | Arg | Default | Effect |
 |-----|---------|--------|
 | `directory` | `.` | Working directory; stored as `@workflow_dir` on the session |
-| `--continue` / `-c` | — | Launch `grok -c` in the build pane |
-| `-- cmd...` | — | Launch a custom command (e.g. `cx` for Claude) |
+| `--continue` / `-c` | — | Launch `SHELL_AGENT_BUILD_CONTINUE_CMD` in the build pane |
+| `-- cmd...` | — | Launch a custom command (overrides env) |
 
 **Requirements:** same as agent-verify-layout (tmux, inside tmux).
 
@@ -194,7 +194,7 @@ Use `bash --norc` if `~/.bashrc` is also broken. **No flags** — any argument i
 
 - If window `build` exists → `select-window`
 - Else if legacy `work` exists → rename to `build`
-- Else creates `build` window and launches `grok` by default
+- Else creates `build` window and launches `SHELL_AGENT_BUILD_CMD` (set in `local/personal.sh`)
 - Sets `@workflow_mode` to `build` on the session
 
 **Entry points:**
@@ -386,7 +386,7 @@ source ~/.zshrc
 ```bash
 t                    # tmux attach
 z my-project
-ab                   # agent build (grok)
+ab                   # agent build (SHELL_AGENT_BUILD_CMD)
 # ... agent runs ...
 av --scan            # verify cockpit + agent_scan
 # or: av             # layout only

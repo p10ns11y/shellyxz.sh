@@ -51,4 +51,4 @@ Edit `environments/mydistro/*.sh`, then `SHELL_ENVIRONMENT=mydistro` in `environ
 
 ## PATH ownership
 
-`core/env.sh` builds canonical PATH order via `path_prepend` / `path_append` (each call removes then re-adds — idempotent reorder). Presets may only declare entries in `env.sh`. Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do not source `~/.cargo/env` or `~/.local/bin/env` from presets.
+`core/env.sh` builds canonical PATH via `path_contract_apply` from `core/path.contract` then optional `local/path.contract`. Presets must not call `path_prepend` in `env.sh` (use contract phases). Rare machine tweaks: `local/overwrite.sh` (see `local/overwrite.sh.example`). Do not source `~/.cargo/env` or `~/.local/bin/env` from presets.

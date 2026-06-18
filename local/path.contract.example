@@ -1,0 +1,19 @@
+# local/path.contract — machine-specific PATH overlay (optional)
+# Copy to local/path.contract (migrate installs if missing). Applied after core/path.contract.
+# Same format as core/path.contract; local prepends win higher priority within a phase.
+
+phase:core
+prepend:mamba/bin
+prepend:.vector/bin
+prepend:.grok/bin
+prepend:.risc0/bin
+prepend:.opencode/bin
+prepend:solana/install/active_release/bin
+prepend:.vite-plus/bin
+
+phase:post_vite
+prepend:HOME/bin
+
+phase:append
+append:miniconda/condabin
+append:/opt/rocm/bin

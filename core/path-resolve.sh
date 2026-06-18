@@ -4,6 +4,7 @@
 
 SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 PATH_CONTRACT="${PATH_CONTRACT:-$SHELL_ROOT/core/path.contract}"
+LOCAL_PATH_CONTRACT="${LOCAL_PATH_CONTRACT:-$SHELL_ROOT/local/path.contract}"
 TOOL_CONTRACT="${TOOL_CONTRACT:-$SHELL_ROOT/core/tool.contract}"
 
 _path_contract_env_ok() {
@@ -62,18 +63,24 @@ path_contract_resolve_deny() {
 }
 
 path_deny_sweep() {
-    [ -f "$PATH_CONTRACT" ] || return 0
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
-            \#*) continue ;;
-            deny:*)
-                _pat="${_line#deny:}"
-                _dir=$(path_contract_resolve_deny "$_pat")
-                [ -n "$_dir" ] && path_drop "$_dir"
-                ;;
-        esac
-    done < "$PATH_CONTRACT"
+    _path_deny_sweep_file() {
+        _contract="$1"
+        [ -f "$_contract" ] || return 0
+        while IFS= read -r _line || [ -n "$_line" ]; do
+            case "$_line" in
+                \#*) continue ;;
+                deny:*)
+                    _pat="${_line#deny:}"
+                    _dir=$(path_contract_resolve_deny "$_pat")
+                    [ -n "$_dir" ] && path_drop "$_dir"
+                    ;;
+            esac
+        done < "$_contract"
+    }
+    _path_deny_sweep_file "$PATH_CONTRACT"
+    _path_deny_sweep_file "$LOCAL_PATH_CONTRACT"
     export PATH
+    unset _contract _line _pat _dir
 }
 
 _path_contract_phase_wanted() {
@@ -102,22 +109,11 @@ _path_contract_apply_prepend_list() {
     unset _rev _item
 }
 
-path_contract_apply() {
-    _phase_filter=""
-    _skip_post_vite=0
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --phase)
-                shift
-                _phase_filter="${_phase_filter}${_phase_filter:+:}$1"
-                shift
-                ;;
-            --skip-post-vite) _skip_post_vite=1; shift ;;
-            *) shift ;;
-        esac
-    done
-
-    [ -f "$PATH_CONTRACT" ] || return 0
+path_contract_apply_file() {
+    _contract="$1"
+    _phase_filter="$2"
+    _skip_post_vite="$3"
+    [ -f "$_contract" ] || return 0
 
     _phase=""
     _prepends=""
@@ -164,9 +160,31 @@ path_contract_apply() {
                 ;;
             keep:*) ;;
         esac
-    done < "$PATH_CONTRACT"
+    done < "$_contract"
     _flush_phase
-    unset _phase _prepends _line _rest _tok _cond _dir _phase_filter _skip_post_vite
+    unset _phase _prepends _line _rest _tok _cond _dir _contract
+}
+
+path_contract_apply() {
+    _phase_filter=""
+    _skip_post_vite=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --phase)
+                shift
+                _phase_filter="${_phase_filter}${_phase_filter:+:}$1"
+                shift
+                ;;
+            --skip-post-vite) _skip_post_vite=1; shift ;;
+            *) shift ;;
+        esac
+    done
+
+    [ -f "$PATH_CONTRACT" ] || [ -f "$LOCAL_PATH_CONTRACT" ] || return 0
+
+    path_contract_apply_file "$PATH_CONTRACT" "$_phase_filter" "$_skip_post_vite"
+    path_contract_apply_file "$LOCAL_PATH_CONTRACT" "$_phase_filter" "$_skip_post_vite"
+    unset _phase_filter _skip_post_vite
 }
 
 path_contract_reassert() {
@@ -178,10 +196,11 @@ path_contract_reassert() {
     tool_contract_apply
 }
 
-_path_contract_collect_phase_prepends() {
-    _target_phase="$1"
-    _include_post_vite="${2:-1}"
-    [ -f "$PATH_CONTRACT" ] || return 0
+_path_contract_collect_phase_prepends_file() {
+    _contract="$1"
+    _target_phase="$2"
+    _include_post_vite="${3:-1}"
+    [ -f "$_contract" ] || return 0
     _phase=""
     while IFS= read -r _line || [ -n "$_line" ]; do
         case "$_line" in
@@ -201,7 +220,17 @@ _path_contract_collect_phase_prepends() {
                 [ -n "$_dir" ] && [ -d "$_dir" ] && printf '%s\n' "$_dir"
                 ;;
         esac
-    done < "$PATH_CONTRACT"
+    done < "$_contract"
+    unset _contract _phase _line _rest _tok _cond _dir
+}
+
+_path_contract_collect_phase_prepends() {
+    _target_phase="$1"
+    _include_post_vite="${2:-1}"
+    # Local overlay wins PATH priority (applied after core); list it first for verify ranks.
+    _path_contract_collect_phase_prepends_file "$LOCAL_PATH_CONTRACT" "$_target_phase" "$_include_post_vite"
+    _path_contract_collect_phase_prepends_file "$PATH_CONTRACT" "$_target_phase" "$_include_post_vite"
+    unset _target_phase _include_post_vite
 }
 
 _path_contract_expected_prepend_order() {
@@ -227,20 +256,27 @@ path_contract_verify() {
     done
 
     _fail=0
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
-            deny:*)
-                _pat="${_line#deny:}"
-                _dir=$(path_contract_resolve_deny "$_pat")
-                [ -n "$_dir" ] && case ":$PATH:" in
-                    *":${_dir}:"*)
-                        printf 'deny violation: %s in PATH\n' "$_dir" >&2
-                        _fail=1
-                        ;;
-                esac
-                ;;
-        esac
-    done < "$PATH_CONTRACT"
+    _path_contract_verify_deny_file() {
+        _contract="$1"
+        [ -f "$_contract" ] || return 0
+        while IFS= read -r _line || [ -n "$_line" ]; do
+            case "$_line" in
+                deny:*)
+                    _pat="${_line#deny:}"
+                    _dir=$(path_contract_resolve_deny "$_pat")
+                    [ -n "$_dir" ] && case ":$PATH:" in
+                        *":${_dir}:"*)
+                            printf 'deny violation: %s in PATH\n' "$_dir" >&2
+                            _fail=1
+                            ;;
+                    esac
+                    ;;
+            esac
+        done < "$_contract"
+    }
+    _path_contract_verify_deny_file "$PATH_CONTRACT"
+    _path_contract_verify_deny_file "$LOCAL_PATH_CONTRACT"
+    unset _contract _line _pat _dir
 
     _seen=""
     _seg=""

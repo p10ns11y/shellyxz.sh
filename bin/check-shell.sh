@@ -359,6 +359,24 @@ grep -q 'tool_contract_apply' "$ENV_FILE" 2>/dev/null \
     && ok 'env.sh uses tool_contract_apply' \
     || warn 'env.sh missing tool_contract_apply'
 [[ -f "$TOOL_CONTRACT" ]] && ok 'core/tool.contract present' || warn 'core/tool.contract missing'
+LOCAL_PATH_CONTRACT="$CONFIG_DIR/local/path.contract"
+LOCAL_PATH_EXAMPLE="$CONFIG_DIR/local/path.contract.example"
+if [[ -f "$LOCAL_PATH_CONTRACT" || -f "$LOCAL_PATH_EXAMPLE" ]]; then
+    ok 'local/path.contract or example present'
+else
+    warn 'local/path.contract missing (copy from local/path.contract.example for personal PATH)'
+fi
+grep -q 'LOCAL_PATH_CONTRACT' "$PATH_RESOLVE" 2>/dev/null \
+    && ok 'path-resolve.sh supports local/path.contract overlay' \
+    || warn 'path-resolve.sh missing LOCAL_PATH_CONTRACT overlay'
+if [[ -f "$PATH_CONTRACT" ]]; then
+    if grep -qE '^prepend:.*(grok|risc0|solana|vite-plus|rocm|\.vector)' "$PATH_CONTRACT" 2>/dev/null \
+        || grep -qE '^append:.*/opt/rocm' "$PATH_CONTRACT" 2>/dev/null; then
+        warn 'core/path.contract still has personal toolchain entries (move to local/path.contract)'
+    else
+        ok 'core/path.contract free of personal toolchain entries'
+    fi
+fi
 if ! grep -q 'path_prepend.*OMARCHY' "$CONFIG_DIR/environments/omarchy/env.sh" 2>/dev/null; then
     ok 'omarchy env.sh delegates PATH to contract'
 else

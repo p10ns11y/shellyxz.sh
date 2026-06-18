@@ -15,3 +15,7 @@ fi
 alias agrepos="cd ~/Work/agents/public-agenc-repos/"
 alias agcore="cd ~/Work/agents/public-agenc-repos/agenc-core"
 alias agproto="cd ~/Work/agents/public-agenc-repos/agenc-protocol"
+
+# Verification cockpit — agent build TUI (plugin; see PLUGIN.md)
+export SHELL_AGENT_BUILD_CMD="${SHELL_AGENT_BUILD_CMD:-grok}"
+export SHELL_AGENT_BUILD_CONTINUE_CMD="${SHELL_AGENT_BUILD_CONTINUE_CMD:-grok -c}"

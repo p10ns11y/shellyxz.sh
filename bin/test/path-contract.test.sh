@@ -95,5 +95,27 @@ if [[ -f "$ROOT/core/tool.contract" ]]; then
     assert_ok 'tool_contract_apply runs' tool_contract_apply
 fi
 
+# local/path.contract overlay
+mkdir -p "$TEST_HOME/.grok/bin" "$TEST_HOME/.config/shell/local"
+cat > "$TEST_HOME/.config/shell/local/path.contract" <<EOF
+phase:core
+prepend:.grok/bin
+EOF
+
+assert_contains 'local overlay prepends .grok/bin' "$TEST_HOME/.grok/bin" sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    path_deny_sweep
+    path_contract_apply
+    printf '%s' \"\$PATH\"
+"
+
+assert_ok 'path_contract_verify with local overlay' sh -c "
+    . \"$SHELL_ROOT/core/path.sh\"
+    path_deny_sweep
+    path_contract_apply
+    path_deny_sweep
+    path_contract_verify --json | grep -q '\"ok\":true'
+"
+
 echo "=== $FAIL failure(s) ==="
 [[ "$FAIL" -eq 0 ]]

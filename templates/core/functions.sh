@@ -23,7 +23,7 @@ path_debug() {
     unset _n _u _d
 }
 
-# Verify live PATH against core/path.contract (runtime 1:1 check)
+# Verify live PATH against path.contract + local/path.contract (runtime 1:1 check)
 path_check() {
     _login=0
     while [ $# -gt 0 ]; do
@@ -154,7 +154,7 @@ _agent_tmux_guard() {
     fi
 }
 
-# Agent build layout — full-pane agent TUI (grok default). Requires native terminal + tmux.
+# Agent build layout — full-pane agent TUI (SHELL_AGENT_BUILD_CMD). Requires native terminal + tmux.
 agent_build() {
     _agent_tmux_guard || return 1
     local script="$HOME/.config/shell/bin/agent-build-layout.sh"
@@ -190,7 +190,7 @@ agent_work() {
     agent_build "$@"
 }
 
-# Return to build window and continue the agent session (grok -c).
+# Return to build window and continue the agent session (SHELL_AGENT_BUILD_CONTINUE_CMD).
 agent_back() {
     agent_build -c
 }
