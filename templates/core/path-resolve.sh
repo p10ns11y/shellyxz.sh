@@ -406,7 +406,9 @@ tool_contract_apply() {
                 printf '%s\n' "$_p"
                 return 0
             fi
-            whence -p "$1" 2>/dev/null || command which "$@"
+            whence -p "$1" 2>/dev/null && return 0
+            whence -v "$1" 2>/dev/null && return 0
+            command which "$@" 2>/dev/null
         }
         if ! whence which 2>/dev/null | grep -q 'function'; then
             # shellcheck disable=SC2329
