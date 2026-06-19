@@ -475,8 +475,12 @@ grep -q 'path_contract_apply_core_only' "$PATH_RESOLVE" 2>/dev/null \
 [[ -x "$CONFIG_DIR/bin/cockpit-mcp.sh" ]] \
     && ok 'bin/cockpit-mcp.sh present (SN-7 headless verbs)' \
     || warn 'bin/cockpit-mcp.sh missing'
+[[ -x "$CONFIG_DIR/bin/lib/discover-tests.sh" ]] \
+    && ok 'discover-tests.sh present (SN-8 canonical emitter)' \
+    || warn 'discover-tests.sh missing'
+
 [[ -x "$CONFIG_DIR/bin/lib/parse-project-tests-discover.sh" ]] \
-    && ok 'parse-project-tests-discover.sh present (SN-5 sh path)' \
+    && ok 'parse-project-tests-discover.sh present (SN-8 shim)' \
     || warn 'parse-project-tests-discover.sh missing'
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
     && ok 'tmux.conf present' \
@@ -527,6 +531,14 @@ if [[ -x "$CONFIG_DIR/bin/test/verify-workflow-root.test.sh" ]]; then
         ok 'verify_workflow_root tests pass'
     else
         warn 'verify_workflow_root tests failed (see /tmp/verify-workflow-root.test.out)'
+    fi
+fi
+
+if [[ -x "$CONFIG_DIR/bin/test/strict-path.test.sh" ]]; then
+    if "$CONFIG_DIR/bin/test/strict-path.test.sh" >/tmp/strict-path.test.out 2>&1; then
+        ok 'agent_strict_path tests pass'
+    else
+        warn 'agent_strict_path tests failed (see /tmp/strict-path.test.out)'
     fi
 fi
 unset _VERIFY_CONF

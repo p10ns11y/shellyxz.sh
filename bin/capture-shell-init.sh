@@ -201,6 +201,13 @@ parse_install_log() {
 }
 
 apply_capture() {
+    local rc
+    for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
+        if [[ -f "$rc" ]] && ! is_managed_rc "$rc" && [[ "$FORCE" != true ]]; then
+            warn "Refusing --apply on unmanaged $rc (pass --force to override)"
+            return 1
+        fi
+    done
     warn "--apply: manual review recommended for first run; use --dry-run output"
     local backup ts
     ts=$(date +%Y%m%d-%H%M%S)

@@ -74,11 +74,33 @@ assert_fail 'bash delegates reject metachar' run_manifest_command "echo ok; rm -
 assert_contains 'sh discover finds shellcheck' shellcheck \
     sh "$ROOT/bin/lib/parse-project-tests-discover.sh" "$ROOT"
 
+assert_contains 'discover-tests canonical emitter' shellcheck \
+    sh "$ROOT/bin/lib/discover-tests.sh" "$ROOT"
+
 assert_contains 'sh discover without python via wrapper' shellcheck \
     env PATH=/usr/bin:/bin bash -c "
         source \"$ROOT/bin/lib/parse-project-tests.sh\"
         parse_project_tests_json \"$ROOT\"
     "
+
+if command -v python >/dev/null 2>&1; then
+    sh_norm="$(sh "$ROOT/bin/lib/discover-tests.sh" "$ROOT" | python -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')"
+    py_norm="$(python "$PARSER" --discover "$ROOT" | python -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')"
+    if [ "$sh_norm" = "$py_norm" ]; then
+        printf 'ok   py/sh discover_tests JSON parity\n'
+    else
+        printf 'FAIL py/sh discover_tests JSON parity\n' >&2
+        printf '  sh: %s\n' "$sh_norm" >&2
+        printf '  py: %s\n' "$py_norm" >&2
+        FAIL=$((FAIL + 1))
+    fi
+fi
+
+# shellcheck source=/dev/null
+source "$ROOT/bin/lib/test-allowlist.sh"
+assert_ok 'sh allowlist absolute path' run_allowlisted_command "$ROOT/bin/check-shell.sh --help"
+assert_fail 'sh allowlist reject metachar' run_allowlisted_command "echo ok; rm -rf /"
+assert_fail 'sh allowlist reject unknown runner' run_allowlisted_command "curl http://evil"
 
 assert_ok 'cockpit-mcp verify on shell repo' \
     "$ROOT/bin/cockpit-mcp.sh" verify "$ROOT"

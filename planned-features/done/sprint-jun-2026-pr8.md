@@ -61,9 +61,9 @@ gantt
 
 | ID | Item | Tracking |
 |----|------|----------|
-| SN-TS | Per-project tmux `ts` | [coming-next.md](../../arch-design/coming-next.md) |
-| SN-8 | Unified `discover_tests` → JSON | PR #8 review; [coming-next.md](../../arch-design/coming-next.md) |
 | SN-4 | Physical `plugins/verification/` split | [coming-next.md](../../arch-design/coming-next.md) |
+
+**Shipped in PR #9:** [sn-ts-sn8-pr9.md](sn-ts-sn8-pr9.md) — SN-TS, SN-8, `ab --strict` subshell fix.
 
 ---
 
