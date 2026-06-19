@@ -4,7 +4,7 @@
 **Update this file** when kernel or verification bridge shape changes on `master`.  
 **Backlog:** [coming-next.md](coming-next.md) · **Shipped epics:** [../planned-features/done/](../planned-features/done/)
 
-*Last updated: 2026-06-18 (post–PR #8 merge)*
+*Last updated: 2026-06-19 (SN-TS + SN-8)*
 
 ---
 
@@ -115,13 +115,12 @@ flowchart LR
     PL[PLUGIN.md]
     AG[SHELL_AGENT_BUILD_CMD]
     DV[direnv phase:project]
-    PY[sh test discovery]
+    PY[discover_tests JSON]
     MCP[cockpit-mcp headless]
+    TS[ts per-project tmux]
   end
   subgraph open["Open"]
-    TS[ts per-project tmux]
-    D8[discover_tests JSON SN-8]
-    SP[plugins/ physical split]
+    SP[plugins/ physical split SN-4]
   end
   shipped --> open
 ```
@@ -135,7 +134,7 @@ flowchart LR
 | Agent vendor decoupling | **B+** | Env vars; no hardcoded agent in layout | `agent-build-layout.sh` |
 | Agent PATH hardening | **B+** | Pins, shadow report, `ab --strict` | `tool.contract`, PR #8 |
 | Cockpit daily driver | **A-** | ab/av/at + navigators + MCP verbs | tmux + `cockpit-mcp.sh` |
-| Test runner portability | **B+** | sh discovery default; python for full YAML | `parse-project-tests-discover.sh` |
+| Test runner portability | **A-** | `discover-tests.sh` canonical emitter; py parity test | `test-allowlist.sh`, SN-8 |
 | Modular packaging | **B** | PLUGIN boundary done; physical split next | SN-4 |
 
 ---
@@ -167,8 +166,8 @@ flowchart TD
 | direnv vs contract collision | Precedence + `phase:project` | **Done** |
 | Cockpit stuck on one TUI | Manifest-first; tmux one renderer | **Done** — headless `cockpit-mcp.sh` shipped (PR #8) |
 | Cockpit stuck on one agent | `SHELL_AGENT_BUILD_CMD` + MCP | **In progress** |
-| One tmux session all projects | `ts` per-repo session | **Planned** — [coming-next](coming-next.md) SN-TS |
-| Test discovery drift (py/sh) | Single JSON emitter | **Planned** — SN-8 |
+| One tmux session all projects | `ts` per-repo session | **Done** — SN-TS |
+| Test discovery drift (py/sh) | Single JSON emitter | **Done** — SN-8 |
 
 ---
 

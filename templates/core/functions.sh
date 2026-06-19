@@ -295,6 +295,43 @@ agent_test() {
     "$script" "$dir" "${args[@]}"
 }
 
+# Per-project tmux session — attach-or-create from git repo basename (SN-TS).
+# Omarchy `t` opens one shared session (Work); `ts` isolates ab/av/at per repo.
+_ts_session_name() {
+    local dir="$1" root name
+    if root=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null); then
+        name=$(basename "$root")
+    else
+        name=$(basename "$dir")
+    fi
+    name="${name//[^[:alnum:]._-]/_}"
+    [ -n "$name" ] || name="shell"
+    printf '%s' "$name"
+}
+
+ts() {
+    local dir="${1:-.}"
+    dir="$(_verify_workflow_root "$dir")" || return 1
+    local session
+    session="$(_ts_session_name "$dir")"
+
+    if tmux has-session -t "=$session" 2>/dev/null; then
+        if [ -n "${TMUX:-}" ]; then
+            tmux switch-client -t "=$session"
+        else
+            tmux attach-session -t "=$session"
+        fi
+        return 0
+    fi
+
+    if [ -n "${TMUX:-}" ]; then
+        tmux new-session -d -s "$session" -c "$dir"
+        tmux switch-client -t "=$session"
+    else
+        tmux new-session -s "$session" -c "$dir"
+    fi
+}
+
 # Portable reload helper for the current shell.
 # Works in bash and zsh. In zsh, ~/.zshrc overrides this with an enhanced
 # version that pre-clears 'n'/'ga'/'gd'/'reload' (and runs unfunction) before

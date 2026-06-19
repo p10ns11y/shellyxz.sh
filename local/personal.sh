@@ -25,3 +25,6 @@ fi
 # Verification cockpit — agent build TUI (plugin; see PLUGIN.md)
 export SHELL_AGENT_BUILD_CMD="${SHELL_AGENT_BUILD_CMD:-grok}"
 export SHELL_AGENT_BUILD_CONTINUE_CMD="${SHELL_AGENT_BUILD_CONTINUE_CMD:-grok -c}"
+
+# Optional: per-project tmux (ts) — see arch-design/VERIFICATION.md § t vs ts
+# alias tw='ts'

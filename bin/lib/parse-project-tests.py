@@ -213,6 +213,7 @@ def discover(root: Path) -> dict:
                 "label": "no runner detected",
             }
         )
+        return {"max_run": 0, "tests": tests}
 
     return {"max_run": 2, "tests": tests}
 

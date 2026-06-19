@@ -269,9 +269,12 @@ agent_strict_path_apply() {
 agent_strict_path_check() {
     local shell_root="${SHELL_ROOT:-$HOME/.config/shell}" saved_path
     saved_path="$PATH"
-    PATH="$(agent_strict_path_apply)" || return 1
+    # Source in this shell — $(agent_strict_path_apply) runs a subshell and drops path_shadow_report.
+    # shellcheck disable=SC1091
+    . "$shell_root/core/path.sh"
+    path_contract_apply_core_only
     export PATH
-    if path_shadow_report --warn; then
+    if ! path_shadow_report --warn; then
         PATH="$saved_path"
         export PATH
         return 1

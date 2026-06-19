@@ -5,30 +5,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/parse-project-tests.sh"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/test-allowlist.sh"
 
 # Run a manifest command (allowlist: parse-project-tests.py or sh mirror).
 run_manifest_command() {
-    local cmd="$1" first
+    local cmd="$1"
     if command -v python >/dev/null 2>&1 && [ -f "${SCRIPT_DIR}/parse-project-tests.py" ]; then
         python "${SCRIPT_DIR}/parse-project-tests.py" --run-cmd "$cmd"
         return $?
     fi
-    cmd="${cmd#"${cmd%%[![:space:]]*}"}"
-    case "$cmd" in
-        *';'*|*'|'*|*'`'*|*'$('*|*'>'*|*'<'*)
-            echo "run-project-tests: rejected command: $cmd" >&2
-            return 1
-            ;;
-    esac
-    first="${cmd%% *}"
-    case "$first" in
-        bin/*|./*|/*|pnpm|npm|cargo|pytest|python|python3|bash|sh|echo) ;;
-        *)
-            echo "run-project-tests: command not allowlisted: $first" >&2
-            return 1
-            ;;
-    esac
-    bash -c "$cmd"
+    run_allowlisted_command "$cmd"
 }
 
 project_test_cmd() {

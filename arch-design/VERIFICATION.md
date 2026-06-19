@@ -15,7 +15,24 @@ See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load ord
 - **Composability** — pipe rg → fzf → nvim; jq + bat on JSON agent reports.
 - **Human stays in the loop** — tools collapse time between "agent done" and "I understand + I act".
 
-Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). **Planned:** `ts` — per-project tmux session ([coming-next.md](coming-next.md) SN-TS). **Current architecture:** [architecture.md](architecture.md). Cursor integrated terminals skip `mise activate` and refuse `agent_build` / `agent_verify` (`ab` / `av`; legacy `af`/`aw`/`agent_work`).
+Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). **Current architecture:** [architecture.md](architecture.md). Cursor integrated terminals skip `mise activate` and refuse `agent_build` / `agent_verify` (`ab` / `av`; legacy `af`/`aw`/`agent_work`).
+
+### `t` vs `ts` (tmux sessions)
+
+| Command | Session | Use when |
+|---------|---------|----------|
+| **`t`** (Omarchy) | One shared session (`Work`) | Single focus, quick terminal |
+| **`ts`** | Per-repo session from git basename | Multi-repo — isolated `build` / `verify` / `test` windows |
+
+`ts` resolves the workflow root (`verify_workflow_root`), names the session after the git repo directory (e.g. `shellyxz.sh`), then attach-or-create with cwd set to that root. From inside tmux it `switch-client`s; from a bare shell it attaches or starts a new session.
+
+```bash
+cd ~/Work/repo-a && ts    # session: repo-a
+cd ~/Work/repo-b && ts    # session: repo-b — separate ab/av/at state
+ts .                      # explicit root (walk-up from cwd)
+```
+
+Optional Omarchy alias in `local/personal.sh`: `# alias tw='ts'` if you prefer a mnemonic.
 
 ---
 
