@@ -34,6 +34,8 @@ ts .                      # explicit root (walk-up from cwd)
 
 Optional Omarchy alias in `local/personal.sh`: `# alias tw='ts'` if you prefer a mnemonic.
 
+**Limitation:** Session name is git repo basename only — two unrelated clones with the same directory name share one tmux session. Use distinct clone paths or rename before `ts` if that matters.
+
 ---
 
 ## Host-agnostic verbs (MCP / CI / IDE)

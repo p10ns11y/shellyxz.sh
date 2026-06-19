@@ -2,9 +2,9 @@
 
 **Backlog only** — short. **Current architecture:** [architecture.md](architecture.md) · **Shipped epics:** [../planned-features/done/](../planned-features/done/)
 
-*Last updated: 2026-06-19 (SN-TS + SN-8 on branch sn-ts-sn-8)*
+*Last updated: 2026-06-19 (PR #9 SN-TS + SN-8)*
 
-**Next:** [SN-4](#sn-4--modular-pluginsverification) only.
+**Next:** [SN-4](#sn-4--modular-pluginsverification) only. **Shipped:** [sn-ts-sn8-pr9.md](../planned-features/done/sn-ts-sn8-pr9.md).
 
 ---
 
@@ -32,16 +32,16 @@ Detail when scheduled: [sprint archive template](../planned-features/done/sprint
 
 | # | Item | PR / commit |
 |---|------|-------------|
-| 1 | SN-TS per-project tmux `ts` | branch `sn-ts-sn-8` |
-| 2 | SN-8 unified `discover_tests` JSON + allowlist | branch `sn-ts-sn-8` |
-| 3 | PR #8 merge close-out (strict PATH docs + backlog) | [#8](https://github.com/p10ns11y/shellyxz.sh/pull/8) `876abf0` |
-| 4 | capture-shell-init false-positive fix | #8 `c0496d9` |
-| 5 | Mermaid fix in shell.md | #8 `0d204d2` |
-| 6 | Doc split architecture / planned-features | #8 `4bfedc6` |
-| 7 | SN-7 cockpit-mcp headless verbs | #8 `c589765` |
-| 8 | SN-5 sh test discovery | #8 `50f4e52` |
-| 9 | SN-3 agent strict PATH | #8 `2c76358` |
-| 10 | SN-2 direnv `phase:project` | #8 `afb4fc0` |
+| 1 | SN-TS + SN-8 (`ts`, discover_tests, ab --strict fix) | [#9](https://github.com/p10ns11y/shellyxz.sh/pull/9) |
+| 2 | PR #8 merge close-out (strict PATH docs + backlog) | [#8](https://github.com/p10ns11y/shellyxz.sh/pull/8) `876abf0` |
+| 3 | capture-shell-init false-positive fix | #8 `c0496d9` |
+| 4 | Mermaid fix in shell.md | #8 `0d204d2` |
+| 5 | Doc split architecture / planned-features | #8 `4bfedc6` |
+| 6 | SN-7 cockpit-mcp headless verbs | #8 `c589765` |
+| 7 | SN-5 sh test discovery | #8 `50f4e52` |
+| 8 | SN-3 agent strict PATH | #8 `2c76358` |
+| 9 | SN-2 direnv `phase:project` | #8 `afb4fc0` |
+| 10 | PATH contract v2 + overlay | [#6](https://github.com/p10ns11y/shellyxz.sh/pull/6) |
 
 Full blueprint cards + diagrams: [planned-features/done/](../planned-features/done/).
 
