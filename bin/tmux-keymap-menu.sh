@@ -94,17 +94,17 @@ _parse_pick() {
 
 _handle_pick() {
     local pick="$1"
-    local kind label shortcut _action cmd
+    local kind label shortcut menu_action_label cmd
 
     [ -n "$pick" ] || return 0
 
-    IFS=$'\t' read -r kind label shortcut _action cmd <<< "$(printf '%s' "$pick" | _parse_pick)"
+    IFS=$'\t' read -r kind label shortcut menu_action_label cmd <<< "$(printf '%s' "$pick" | _parse_pick)"
     [ -n "${kind:-}" ] || return 0
 
     if [ "$kind" = "run" ]; then
         _exec_cmd "$cmd"
     else
-        tmux display-message -d 6000 "$label ($shortcut): $cmd"
+        tmux display-message -d 6000 "$label ($shortcut) [$menu_action_label]: $cmd"
     fi
 }
 

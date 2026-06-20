@@ -23,6 +23,7 @@ The kernel **must** remain usable if every agent/tmux feature is deleted.
 | Safe secrets + optional overlays | `lib.sh`, `local/personal.sh`, `local/overwrite.sh` |
 | Migrate with backup + `revert.sh` | `bin/migrate.sh`, `bin/tasks/` |
 | Validation gate | `bin/check-shell.sh` |
+| Shell readability lexicon (human + agent) | [arch-design/shell-script-readability.md](arch-design/shell-script-readability.md) |
 | Nuclear recovery | `bin/recover-shell.sh` |
 
 **Kernel must not:**

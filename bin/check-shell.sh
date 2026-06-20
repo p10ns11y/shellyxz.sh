@@ -36,20 +36,20 @@ ok()   { echo "OK:   $1"; }
 run_shellcheck_checks() {
     if command -v shellcheck &>/dev/null; then
         shellcheck_for_file() {
-            local _f="$1" _shell _exclude
-            case "$_f" in
-                */lib.sh|*/env.sh|*/path.sh|*/personal.sh|*/environments/generic/*) _shell="sh" ;;
-                *) _shell="bash" ;;
+            local shell_script_path="$1" shellcheck_dialect shellcheck_exclude_codes
+            case "$shell_script_path" in
+                */lib.sh|*/env.sh|*/path.sh|*/personal.sh|*/environments/generic/*) shellcheck_dialect="sh" ;;
+                *) shellcheck_dialect="bash" ;;
             esac
-            _exclude='SC1090,SC1091'
-            if shellcheck -s "$_shell" -x -S warning -e "$_exclude" "$_f" >/dev/null 2>&1; then
-                ok "shellcheck: ${_f#$CONFIG_DIR/}"
+            shellcheck_exclude_codes='SC1090,SC1091'
+            if shellcheck -s "$shellcheck_dialect" -x -S warning -e "$shellcheck_exclude_codes" "$shell_script_path" >/dev/null 2>&1; then
+                ok "shellcheck: ${shell_script_path#$CONFIG_DIR/}"
             else
-                fail "shellcheck: ${_f#$CONFIG_DIR/} (run: shellcheck -s $_shell -x ${_f})"
+                fail "shellcheck: ${shell_script_path#$CONFIG_DIR/} (run: shellcheck -s $shellcheck_dialect -x ${shell_script_path})"
             fi
         }
-        while IFS= read -r -d '' _scf; do
-            shellcheck_for_file "$_scf"
+        while IFS= read -r -d '' shell_script_file; do
+            shellcheck_for_file "$shell_script_file"
         done < <(find "$CONFIG_DIR" -name '*.sh' -print0 2>/dev/null)
     else
         warn 'shellcheck not installed (optional: pacman -S shellcheck)'
@@ -103,10 +103,10 @@ fi
 if [[ -f "$HOME/.config/secrets/dev.env" ]]; then
     ok 'dev secrets at ~/.config/secrets/dev.env'
     if [[ "$AUDIT" == true ]]; then
-        _perm=$(stat -c '%a' "$HOME/.config/secrets/dev.env" 2>/dev/null || echo '')
-        case "$_perm" in
-            600|640) ok "dev.env permissions: $_perm" ;;
-            *) warn "dev.env permissions $_perm (recommend 600)" ;;
+        secrets_file_mode=$(stat -c '%a' "$HOME/.config/secrets/dev.env" 2>/dev/null || echo '')
+        case "$secrets_file_mode" in
+            600|640) ok "dev.env permissions: $secrets_file_mode" ;;
+            *) warn "dev.env permissions $secrets_file_mode (recommend 600)" ;;
         esac
     fi
 else
@@ -119,9 +119,9 @@ if grep -q 'lib.sh' "$ENV_FILE" 2>/dev/null || grep -q 'core/lib.sh' "$CONFIG_DI
 else
     warn 'env does not source lib.sh'
 fi
-_personal="$CONFIG_DIR/local/personal.sh"
-[[ -f "$_personal" ]] || _personal="$CONFIG_DIR/personal.sh"
-if grep -qE '^[[:space:]]*set[[:space:]]+-a' "$_personal" 2>/dev/null; then
+personal_overlay_path="$CONFIG_DIR/local/personal.sh"
+[[ -f "$personal_overlay_path" ]] || personal_overlay_path="$CONFIG_DIR/personal.sh"
+if grep -qE '^[[:space:]]*set[[:space:]]+-a' "$personal_overlay_path" 2>/dev/null; then
     fail 'personal.sh uses set -a for secrets (use load_secrets_file in lib.sh)'
 else
     ok 'personal.sh does not use set -a'
@@ -133,9 +133,9 @@ else
 fi
 
 # Environment hooks before aliases in rc files
-_env_hook_pat='(source_environment_shell|source_layer_shell|source_omarchy|omarchy/)'
-check_order "$HOME/.bashrc" "$_env_hook_pat" 'aliases\.sh' 'bash environment before aliases'
-check_order "$HOME/.zshrc" "$_env_hook_pat" 'aliases\.sh' 'zsh environment before aliases'
+environment_hook_pattern='(source_environment_shell|source_layer_shell|source_omarchy|omarchy/)'
+check_order "$HOME/.bashrc" "$environment_hook_pattern" 'aliases\.sh' 'bash environment before aliases'
+check_order "$HOME/.zshrc" "$environment_hook_pattern" 'aliases\.sh' 'zsh environment before aliases'
 if "${GREP[@]}" -q 'source_layer_shell' "$HOME/.zshrc" 2>/dev/null \
     || "${GREP[@]}" -q 'source_layer_shell' "$HOME/.bashrc" 2>/dev/null; then
     warn 'rc still uses removed source_layer_shell — run: ~/.config/shell/bin/migrate.sh --sync-rc'
@@ -216,14 +216,14 @@ done
 # Runtime verification that reserved names resolve to Omarchy functions in zsh
 # Skip in editor terminals (Omarchy hooks may be reduced; not a config defect)
 if command -v zsh &>/dev/null; then
-    _zsh_rt_env=()
+    zsh_runtime_env=()
     if [[ -n "${CURSOR_AGENT:-}" || "${TERM_PROGRAM:-}" == *[Cc]ursor* ]]; then
-        _zsh_rt_env=(SHELL_IN_EDITOR_TERMINAL=yes)
+        zsh_runtime_env=(SHELL_IN_EDITOR_TERMINAL=yes)
     fi
     for r in n ga gd; do
-        if env "${_zsh_rt_env[@]}" zsh -ic "type -w $r 2>/dev/null" 2>/dev/null | "${GREP[@]}" -q ': function'; then
+        if env "${zsh_runtime_env[@]}" zsh -ic "type -w $r 2>/dev/null" 2>/dev/null | "${GREP[@]}" -q ': function'; then
             ok "zsh runtime: ${r} is function (Omarchy reserved, reload-safe)"
-        elif [[ ${#_zsh_rt_env[@]} -gt 0 ]]; then
+        elif [[ ${#zsh_runtime_env[@]} -gt 0 ]]; then
             ok "zsh runtime: ${r} skipped (editor terminal)"
         else
             warn "zsh runtime: ${r} did not resolve to function (run migrate.sh --sync-rc?)"
@@ -370,17 +370,17 @@ grep -q 'LOCAL_PATH_CONTRACT' "$PATH_RESOLVE" 2>/dev/null \
     && ok 'path-resolve.sh supports local/path.contract overlay' \
     || warn 'path-resolve.sh missing LOCAL_PATH_CONTRACT overlay'
 if [[ -f "$PATH_RESOLVE" ]]; then
-    _apply_core=$(grep -n 'path_contract_apply_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
-    _apply_local=$(grep -n 'path_contract_apply_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
-    _rank_local=$(grep -n '_path_contract_collect_phase_prepends_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
-    _rank_core=$(grep -n '_path_contract_collect_phase_prepends_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
-    if [[ -n "$_apply_core" && -n "$_apply_local" && "$_apply_core" -lt "$_apply_local" \
-          && -n "$_rank_local" && -n "$_rank_core" && "$_rank_local" -lt "$_rank_core" ]]; then
+    core_apply_line_number=$(grep -n 'path_contract_apply_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    local_apply_line_number=$(grep -n 'path_contract_apply_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    local_rank_line_number=$(grep -n '_path_contract_collect_phase_prepends_file "\$LOCAL_PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    core_rank_line_number=$(grep -n '_path_contract_collect_phase_prepends_file "\$PATH_CONTRACT"' "$PATH_RESOLVE" | head -1 | cut -d: -f1)
+    if [[ -n "$core_apply_line_number" && -n "$local_apply_line_number" && "$core_apply_line_number" -lt "$local_apply_line_number" \
+          && -n "$local_rank_line_number" && -n "$core_rank_line_number" && "$local_rank_line_number" -lt "$core_rank_line_number" ]]; then
         ok 'local overlay invariant: apply core→local, verify ranks local→core'
     else
         warn 'path-resolve.sh overlay order broken (apply core→local; verify collect local→core)'
     fi
-    unset _apply_core _apply_local _rank_local _rank_core
+    unset core_apply_line_number local_apply_line_number local_rank_line_number core_rank_line_number
 fi
 PATH_CONTRACT_PROJECT_SH="$CONFIG_DIR/bin/path-contract-project.sh"
 if [[ -x "$PATH_CONTRACT_PROJECT_SH" ]]; then
@@ -412,21 +412,21 @@ fi
 
 # Runtime PATH verify (full zsh login session — catches post-hook mutations)
 if command -v zsh &>/dev/null && [[ -f "$PATH_RESOLVE" ]]; then
-    _pc_runtime=$(zsh -lic 'path_contract_verify --json 2>/dev/null' || true)
-    if [[ "$_pc_runtime" == *'"ok":true'* ]]; then
+    path_contract_runtime_json=$(zsh -lic 'path_contract_verify --json 2>/dev/null' || true)
+    if [[ "$path_contract_runtime_json" == *'"ok":true'* ]]; then
         ok 'PATH runtime contract verify (zsh -lic)'
-    elif [[ -n "$_pc_runtime" ]]; then
+    elif [[ -n "$path_contract_runtime_json" ]]; then
         warn 'PATH runtime contract mismatch (run: zsh -lic path_check)'
     else
         warn 'PATH runtime verify unavailable (path_contract_verify not in zsh session)'
     fi
-    _shadow_out=$(zsh -lic 'path_shadow_report --warn 2>&1' || true)
-    if [[ -z "$_shadow_out" ]]; then
+    path_shadow_report_output=$(zsh -lic 'path_shadow_report --warn 2>&1' || true)
+    if [[ -z "$path_shadow_report_output" ]]; then
         ok 'no tool.contract shadow warnings'
     else
-        while IFS= read -r _shadow_line; do
-            [[ -n "$_shadow_line" ]] && warn "$_shadow_line"
-        done <<< "$_shadow_out"
+        while IFS= read -r shadow_warning_line; do
+            [[ -n "$shadow_warning_line" ]] && warn "$shadow_warning_line"
+        done <<< "$path_shadow_report_output"
     fi
 fi
 
@@ -485,40 +485,40 @@ grep -q 'path_contract_apply_core_only' "$PATH_RESOLVE" 2>/dev/null \
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
     && ok 'tmux.conf present' \
     || warn 'tmux.conf missing (run migrate.sh)'
-_VERIFY_CONF="$HOME/.config/tmux/verify.conf"
-if [[ -f "$_VERIFY_CONF" ]]; then
-    if grep -q 'bind B' "$_VERIFY_CONF" 2>/dev/null; then
+tmux_verify_conf_path="$HOME/.config/tmux/verify.conf"
+if [[ -f "$tmux_verify_conf_path" ]]; then
+    if grep -q 'bind B' "$tmux_verify_conf_path" 2>/dev/null; then
         ok 'tmux verify.conf: Prefix+B (build)'
     else
         warn 'tmux verify.conf missing bind B — run bin/sync-tmux-verify.sh'
     fi
-    if grep -q 'bind V' "$_VERIFY_CONF" 2>/dev/null; then
+    if grep -q 'bind V' "$tmux_verify_conf_path" 2>/dev/null; then
         ok 'tmux verify.conf: Prefix+V (verify)'
     else
         warn 'tmux verify.conf missing bind V — run bin/sync-tmux-verify.sh'
     fi
-    if grep -q 'bind T' "$_VERIFY_CONF" 2>/dev/null; then
+    if grep -q 'bind T' "$tmux_verify_conf_path" 2>/dev/null; then
         ok 'tmux verify.conf: Prefix+T (test)'
     else
         warn 'tmux verify.conf missing bind T — run bin/sync-tmux-verify.sh'
     fi
-    if grep -q 'tmux-keymap-menu' "$_VERIFY_CONF" 2>/dev/null; then
+    if grep -q 'tmux-keymap-menu' "$tmux_verify_conf_path" 2>/dev/null; then
         ok 'tmux verify.conf: keymap menu (Prefix+?)'
     else
         warn 'tmux verify.conf missing keymap menu — merge from tmux.verify.conf.ex'
     fi
-    if grep -q 'tmux-mode-sync' "$_VERIFY_CONF" 2>/dev/null || grep -q 'tmux.status-mode.conf.ex' "$_VERIFY_CONF" 2>/dev/null; then
+    if grep -q 'tmux-mode-sync' "$tmux_verify_conf_path" 2>/dev/null || grep -q 'tmux.status-mode.conf.ex' "$tmux_verify_conf_path" 2>/dev/null; then
         ok 'tmux verify.conf: mode display hooks (tmux-mode-sync)'
     else
         warn 'tmux verify.conf missing mode display — merge from tmux.verify.conf.ex'
     fi
-    _status_len="$(tmux show-options -gv status-right-length 2>/dev/null || echo 0)"
-    if [[ "${_status_len:-0}" -ge 100 ]]; then
-        ok "tmux status-right-length: $_status_len (mode bar fits)"
+    tmux_status_right_length="$(tmux show-options -gv status-right-length 2>/dev/null || echo 0)"
+    if [[ "${tmux_status_right_length:-0}" -ge 100 ]]; then
+        ok "tmux status-right-length: $tmux_status_right_length (mode bar fits)"
     else
-        warn "tmux status-right-length $_status_len — need >=100 for mode display (run: tmux-mode-sync.sh apply)"
+        warn "tmux status-right-length $tmux_status_right_length — need >=100 for mode display (run: tmux-mode-sync.sh apply)"
     fi
-    unset _status_len
+    unset tmux_status_right_length
 fi
 [[ -x "$CONFIG_DIR/bin/tmux-keymap-menu.sh" ]] \
     && ok 'tmux-keymap-menu.sh executable' \
@@ -541,7 +541,7 @@ if [[ -x "$CONFIG_DIR/bin/test/strict-path.test.sh" ]]; then
         warn 'agent_strict_path tests failed (see /tmp/strict-path.test.out)'
     fi
 fi
-unset _VERIFY_CONF
+unset tmux_verify_conf_path
 [[ -f "$CONFIG_DIR/arch-design/VERIFICATION.md" ]] \
     && ok 'arch-design/VERIFICATION.md present' \
     || warn 'arch-design/VERIFICATION.md missing'
