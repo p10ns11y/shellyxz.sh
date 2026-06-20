@@ -66,17 +66,17 @@ prepend:*)
 
 ---
 
-## Pilot scope (shipped)
+## Shipped scope
 
 | File | Status |
 |------|--------|
 | `core/path-resolve.sh`, `core/path.sh` | Renamed locals + vocabulary header |
 | `core/lib.sh`, `core/env.sh`, `core/functions.sh` | Renamed locals + vocabulary header |
-| `bin/check-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-build-layout.sh` | Renamed locals |
+| `bin/check-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-build-layout.sh`, `bin/tmux-keymap-menu.sh` | Renamed locals |
 | `bin/lib/discover-tests.sh` | Renamed discovery priority counter |
 | `templates/core/*` | Kept in sync with core |
 
-**Optional follow-up:** remaining `bin/*.sh` entrypoints when next edited.
+New and edited `*.sh` files must follow [`.cursor/rules/shell-readability.mdc`](../.cursor/rules/shell-readability.mdc) (`alwaysApply: true`).
 
 ---
 
