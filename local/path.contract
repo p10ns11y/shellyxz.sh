@@ -7,6 +7,7 @@ prepend:.vector/bin
 prepend:.grok/bin
 prepend:.risc0/bin
 prepend:.opencode/bin
+prepend:.agenc/bin
 prepend:solana/install/active_release/bin
 prepend:.vite-plus/bin
 

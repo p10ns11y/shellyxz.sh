@@ -150,6 +150,34 @@ assert_ok 'path_contract_verify still passes without project phase' sh -c "
     path_contract_verify --json | grep -q '\"ok\":true'
 "
 
+# zsh: batched prepends must not rely on shwordsplit (regression for .agenc/bin-style tokens)
+mkdir -p "$TEST_HOME/.agenc/bin" "$TEST_HOME/.config/shell/local"
+cat > "$TEST_HOME/.config/shell/local/path.contract" <<EOF
+phase:core
+prepend:.agenc/bin
+prepend:.grok/bin
+EOF
+
+assert_contains 'zsh batched prepends apply .agenc/bin' "$TEST_HOME/.agenc/bin" zsh -c "
+    export HOME=\"$TEST_HOME\"
+    export SHELL_ROOT=\"$TEST_HOME/.config/shell\"
+    export SHELL_ENVIRONMENT=generic
+    export PATH='/usr/bin:/bin'
+    . \"\$SHELL_ROOT/core/path.sh\"
+    path_deny_sweep
+    path_contract_apply
+    printf '%s' \"\$PATH\"
+"
+
+assert_ok 'zsh path_contract_verify catches missing managed segments' zsh -c "
+    export HOME=\"$TEST_HOME\"
+    export SHELL_ROOT=\"$TEST_HOME/.config/shell\"
+    export SHELL_ENVIRONMENT=generic
+    export PATH='/usr/bin:/bin'
+    . \"\$SHELL_ROOT/core/path.sh\"
+    ! path_contract_verify --json 2>/dev/null | grep -q '\"ok\":true'
+"
+
 # core-only apply (agent strict PATH)
 mkdir -p "$TEST_HOME/.config/shell/local"
 cat > "$TEST_HOME/.config/shell/local/path.contract" <<EOF

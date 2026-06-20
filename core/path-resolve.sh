@@ -106,13 +106,23 @@ _path_contract_apply_prepend_list() {
     _list="$1"
     _rev=""
     _item=""
-    for _item in $_list; do
-        _rev="$_item $_rev"
+    _rest="$_list"
+    while [ -n "$_rest" ]; do
+        case "$_rest" in
+            *" "*) _item="${_rest%% *}"; _rest="${_rest#$_item}"; _rest="${_rest# }" ;;
+            *) _item="$_rest"; _rest="" ;;
+        esac
+        [ -n "$_item" ] && _rev="$_item $_rev"
     done
-    for _item in $_rev; do
+    _rest="$_rev"
+    while [ -n "$_rest" ]; do
+        case "$_rest" in
+            *" "*) _item="${_rest%% *}"; _rest="${_rest#$_item}"; _rest="${_rest# }" ;;
+            *) _item="$_rest"; _rest="" ;;
+        esac
         [ -n "$_item" ] && path_prepend "$_item"
     done
-    unset _rev _item
+    unset _rev _item _rest _list
 }
 
 path_contract_apply_file() {
@@ -317,6 +327,20 @@ path_contract_verify() {
     done
 
     _exp_order=$(_path_contract_expected_prepend_order "$_include_post_vite")
+    _e=""
+    while IFS= read -r _e || [ -n "$_e" ]; do
+        [ -n "$_e" ] || continue
+        case ":$PATH:" in
+            *":${_e}:"*) ;;
+            *)
+                printf 'missing managed segment: %s\n' "$_e" >&2
+                _fail=1
+                ;;
+        esac
+    done <<EOF
+$_exp_order
+EOF
+
     _prev_rank=0
     _seg=""
     for _seg in $(printf '%s' "$PATH" | tr ':' ' '); do
@@ -324,10 +348,13 @@ path_contract_verify() {
         _rank=0
         _e=""
         _i=0
-        for _e in $_exp_order; do
+        while IFS= read -r _e || [ -n "$_e" ]; do
+            [ -n "$_e" ] || continue
             _i=$((_i + 1))
             [ "$_e" = "$_seg" ] && _rank=$_i && break
-        done
+        done <<EOF
+$_exp_order
+EOF
         [ "$_rank" -eq 0 ] && continue
         if [ "$_prev_rank" -gt 0 ] && [ "$_rank" -lt "$_prev_rank" ]; then
             printf 'managed order violation: %s (rank %s) before higher-priority segment\n' "$_seg" "$_rank" >&2
