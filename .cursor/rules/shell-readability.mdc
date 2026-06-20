@@ -1,7 +1,7 @@
 ---
 description: Human-readable shell script naming for ~/.config/shell — no opaque scratch variables
 globs: "**/*.sh"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Shell script readability
@@ -27,7 +27,7 @@ alwaysApply: false
 
 ## Enforcement
 
-- **Cursor rule + review** are the gate. `check-shell.sh` does not judge semantic naming (no LLM overhead).
+- **Cursor rule (`alwaysApply: true`) + review** are the gate. `check-shell.sh` does not judge semantic naming (no LLM overhead).
 - Canonical lexicon: [arch-design/shell-script-readability.md](../arch-design/shell-script-readability.md)
 
 ## When adding PATH contract logic

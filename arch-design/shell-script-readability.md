@@ -2,7 +2,7 @@
 
 Human maintainers are a **primary audience** for kernel shell — not just agents. When PATH or init fails, you read scripts under stress; opaque scratch names (`_tok`, `_rest`, `_seg`) slow incident response.
 
-**Enforcement:** [`.cursor/rules/shell-readability.mdc`](../.cursor/rules/shell-readability.mdc) steers agents on `*.sh` edits. `check-shell.sh` does **not** lint semantic naming (no cheap programmatic substitute for readable names).
+**Enforcement:** [`.cursor/rules/shell-readability.mdc`](../.cursor/rules/shell-readability.mdc) (`alwaysApply: true`) steers agents on every session. `check-shell.sh` does **not** lint semantic naming (no cheap programmatic substitute for readable names).
 
 ---
 
