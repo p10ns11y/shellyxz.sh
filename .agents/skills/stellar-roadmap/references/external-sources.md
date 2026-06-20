@@ -33,7 +33,7 @@ Copy into every stellar-roadmap document. Add project-specific rows at the top.
 
 | Skill | Path |
 |-------|------|
-| stellar-roadmap | `~/.cursor/skills/stellar-roadmap/SKILL.md` |
-| ai-optimization | `~/.cursor/skills/ai-optimization/SKILL.md` |
-| fusion-sage | `~/.cursor/skills/fusion-sage/SKILL.md` |
-| higher-order-decision-architect | `~/.cursor/skills/higher-order-decision-architect/SKILL.md` |
+| stellar-roadmap | `{SKILLS_ROOT}/stellar-roadmap/SKILL.md` |
+| ai-optimization | `{SKILLS_ROOT}/ai-optimization/SKILL.md` |
+| fusion-sage | `{SKILLS_ROOT}/fusion-sage/SKILL.md` |
+| higher-order-decision-architect | `{SKILLS_ROOT}/higher-order-decision-architect/SKILL.md` |

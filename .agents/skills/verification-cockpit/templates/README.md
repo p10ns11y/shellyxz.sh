@@ -5,13 +5,14 @@ Golden-ratio mission control for post-agent verification. Every pane must answer
 ## Layout (φ 62% / 38%)
 
 ```
-+---------------------------+------------+
-| CMD (interactive, minor)  |            |
-|---------------------------|  GIT 38%   |
-| WATCH (scroll, major)     |  lazygit   |
-|---------------------------|            |
-| VERIFY (confirm, minor)   |            |
-+---------------------------+------------+
++----------------------------+------------------+
+|                            | VERIFY (minor)   |
+|  GIT (tui-side, 62% w)     |------------------|
+|  lazygit full height       | WATCH (scroll)   |
+|                            |------------------|
+|                            | CMD (interactive)|
++----------------------------+------------------+
+     git column 62%              ops column 38%
 ```
 
 | Title | Prio | Tier | Command |
@@ -32,4 +33,4 @@ av --generic        # skip this layout; use generic cockpit
 
 ## Regenerate
 
-Re-run `verification-cockpit` when verify steps change. Skill: `~/.config/shell/.agents/skills/verification-cockpit/`.
+Re-run `verification-cockpit` when verify steps change. Skill: `~/skills/verification-cockpit/` (or your skills library path).

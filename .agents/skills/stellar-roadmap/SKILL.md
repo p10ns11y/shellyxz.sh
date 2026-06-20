@@ -12,7 +12,7 @@ description: >-
 
 **Mission:** Produce **high-quality, scannable backlog docs** — diagrams and tables over prose, optimism grounded in evidence, blueprint cards agents can execute.
 
-**Provenance:** `[arch-design/coming-next.md](../../arch-design/coming-next.md)` (path-contract-v2 → thrive reframe).
+**Provenance:** collab-finder blueprint style; see [examples/shell-kernel.md](examples/shell-kernel.md) for a shell-kernel overlay pattern.
 
 ---
 
@@ -31,9 +31,9 @@ description: >-
 
 | Skill | Role in this workflow |
 |-------|------------------------|
-| [ai-optimization](../ai-optimization/SKILL.md) | Hierarchy first; compress scout; tables > prose; never drop evidence columns |
-| [fusion-sage](../fusion-sage/SKILL.md) | Fused abstraction (1 diagram); surplus item at end; binding energy on backlog items |
-| [higher-order-decision-architect](../higher-order-decision-architect/SKILL.md) | Consequence chain table; guardrails not funeral; confidence % on thrive bets |
+| [ai-optimization](../../ai-optimization/SKILL.md) | Hierarchy first; compress scout; tables > prose; never drop evidence columns |
+| [fusion-sage](../../fusion-sage/SKILL.md) | Fused abstraction (1 diagram); surplus item at end; binding energy on backlog items |
+| [higher-order-decision-architect](../../higher-order-decision-architect/SKILL.md) | Consequence chain table; guardrails not funeral; confidence % on thrive bets |
 
 **Internal order:** scout (Context Sage) → decide (HODA) → synthesize (Fusion) → **write doc** (this skill).
 
@@ -165,18 +165,24 @@ Full list: [references/external-sources.md](references/external-sources.md).
 - Full section template: [references/document-template.md](references/document-template.md)
 - Lens integration detail: [references/companion-skills.md](references/companion-skills.md)
 - **Repo-type overlays (scout ~30% cheaper):** [examples/README.md](examples/README.md) — [shell-kernel](examples/shell-kernel.md) · [eve-agent](examples/eve-agent.md) ([Eve](https://vercel.com/eve))
-- Example output: [arch-design/coming-next.md](../../arch-design/coming-next.md)
+- Example output pattern: [examples/shell-kernel.md](examples/shell-kernel.md)
+- Repo-specific full doc: copy overlay into target project or see skills library [shellyxz-shell-kernel overlay](../../examples/overlays/shellyxz-shell-kernel.md)
 
 ---
 
-## IDE setup
+## Install
 
-**Personal:** already at `~/.cursor/skills/stellar-roadmap/`
-
-**Project:** symlink into repo:
+**Global** (skills library):
 
 ```bash
-ln -sfn ~/.cursor/skills/stellar-roadmap /path/to/repo/.agents/skills/stellar-roadmap
+SKILLS_ROOT=~/skills   # clone path for the agent skills library
+ln -sfn "$SKILLS_ROOT/stellar-roadmap" ~/.cursor/skills/stellar-roadmap
+```
+
+**Per-project:**
+
+```bash
+ln -sfn "$SKILLS_ROOT/stellar-roadmap" /path/to/repo/.agents/skills/stellar-roadmap
 # or .cursor/skills/stellar-roadmap
 ```
 

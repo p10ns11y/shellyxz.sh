@@ -29,10 +29,10 @@
 
 | Profile | Tool examples | Golden placement |
 |---------|---------------|------------------|
-| `scroll` | test watch, lint watch, health checks | Major height in insight column |
-| `interactive` | CMD, short REPL | Minor height, top of insight column |
-| `tui-side` | lazygit, tig | Minor width, full-height right column |
-| `confirm-burst` | test, build, tsc | Minor height, bottom of insight stack |
+| `scroll` | test watch, lint watch, health checks | Major height in ops stack (right center) |
+| `interactive` | CMD, short REPL | Minor height, bottom-right (default focus) |
+| `tui-side` | lazygit, tig | Major left column (62% width), full height |
+| `confirm-burst` | test, build, tsc | Minor height, top-right ops band |
 | `omit` | yazi, btop during verify | Do not include — low verification signal |
 
 ## Golden grid (default template)
@@ -66,7 +66,7 @@ Reject any pane that does not surface a **concrete verification failure**. Commo
 - Duplicate watchers showing the same signal
 - Generic placeholder panes (`INSIGHT`, `VERIFY` titles) — recreate layout via `av`
 
-`agent-verify-layout.sh` resolves cwd via `verify_workflow_root` (layout → git → cwd). After `reload`, run `verify_workflow_root`; script: `~/.config/shell/bin/verify-workflow-root.sh`.
+`agent-verify-layout.sh` resolves cwd via `verify_workflow_root` (layout → git → cwd). After `reload`, run `verify_workflow_root` from your shell workflow install (see overlay).
 
 ## Example
 

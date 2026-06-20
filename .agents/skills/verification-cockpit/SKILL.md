@@ -1,32 +1,33 @@
 ---
 name: verification-cockpit
 description: >-
-  Generates project-specific tmux verification cockpits for repos that use the
-  ~/.config/shell av workflow. Reads target project AGENTS.md, setup docs, and
+  Generates project-specific tmux verification cockpits for repos that use an
+  av-style agent verify workflow. Reads target project AGENTS.md, setup docs, and
   scripts; writes .agents/verification/ with SOC-style panes and tiered
-  auto-launch. Distributable skill — copy from ~/.config/shell/.agents/skills/ into
-  the target project; do not run against the shell config repo itself.
+  auto-launch. Use when setting up av layouts, mission-control verify panes,
+  or regenerating .agents/verification after stack changes.
 ---
 
 # Verification Cockpit Generator
 
-**Distributable skill** — lives in `~/.config/shell/.agents/skills/` as source-of-truth. Primary use: generate layouts **in app/library repos**. This shell repo also ships a **dogfood** copy at `.agents/verification/` to stress-test the stack.
+**Portable skill** — install from the [agent skills library](https://github.com/p10ns11y/skills) (`verification-cockpit/`). Primary use: generate layouts **in app/library repos** you are verifying.
 
-**Output:** `.agents/verification/` in the **workspace you are verifying** (target project or this repo). `av` auto-delegates when `tmux-layout.sh` exists there.
+**Output:** `.agents/verification/` in the **workspace you are verifying**. `av` auto-delegates when `tmux-layout.sh` exists there.
 
 ## Adopt in a target project
 
 Copy or symlink this skill into the **project you are verifying**:
 
 ```bash
+SKILLS_ROOT=~/skills   # or wherever you cloned the skills library
 mkdir -p /path/to/my-app/.cursor/skills
-ln -sfn ~/.config/shell/.agents/skills/verification-cockpit /path/to/my-app/.cursor/skills/verification-cockpit
-# or: cp -a ~/.config/shell/.agents/skills/verification-cockpit /path/to/my-app/.cursor/skills/
+ln -sfn "$SKILLS_ROOT/verification-cockpit" /path/to/my-app/.cursor/skills/verification-cockpit
+# or: cp -a "$SKILLS_ROOT/verification-cockpit" /path/to/my-app/.cursor/skills/
 ```
 
 Open that project in Cursor, then invoke the skill. It generates `.agents/verification/*` **in that repo** — tweak manifest and layout for that stack.
 
-**Prerequisite:** shell workflow installed (`av`, `ab`, `~/.config/shell/bin/lib/verify-launch.sh`). See [arch-design/VERIFICATION.md](../../arch-design/VERIFICATION.md).
+**Prerequisite:** `av` workflow with `verify-launch.sh` + `verify-layout.sh` on the host. See [shell-av-workflow overlay](../../examples/overlays/shell-av-workflow.md) in the skills library.
 
 ## When to run
 
@@ -191,5 +192,4 @@ av --generic        # fallback to generic 4-pane cockpit
 
 - Manifest schema: [reference.md](reference.md)
 - Starter templates: [templates/](templates/) — copy into **target project** `.agents/verification/`
-- Shell integration (runtime): [arch-design/VERIFICATION.md](../../arch-design/VERIFICATION.md)
-- Skills index: [skills/README.md](../README.md)
+- Runtime integration overlay: [shell-av-workflow](../../examples/overlays/shell-av-workflow.md)
