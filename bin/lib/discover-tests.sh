@@ -15,14 +15,14 @@ _discover_tests_reset() {
     DISCOVER_TEST_CMDS=''
     DISCOVER_TEST_LABELS=''
     DISCOVER_TEST_WATCH=''
-    _discover_prio=1
+    discover_test_priority=1
 }
 
 _discover_tests_add() {
     local id="$1" cmd="$2" label="$3" watch="${4:-}"
     local entry sep
     entry=$(printf '{"id":"%s","priority":%s,"command":"%s","label":"%s"' \
-        "$id" "$_discover_prio" "$cmd" "$label")
+        "$id" "$discover_test_priority" "$cmd" "$label")
     if [ -n "$watch" ]; then
         entry="${entry},$(printf '"watch_command":"%s"' "$watch")"
     fi
@@ -37,7 +37,7 @@ _discover_tests_add() {
     DISCOVER_TEST_CMDS="${DISCOVER_TEST_CMDS}${DISCOVER_TEST_CMDS:+|}$cmd"
     DISCOVER_TEST_LABELS="${DISCOVER_TEST_LABELS}${DISCOVER_TEST_LABELS:+|}$label"
     DISCOVER_TEST_WATCH="${DISCOVER_TEST_WATCH}${DISCOVER_TEST_WATCH:+|}${watch:-}"
-    _discover_prio=$((_discover_prio + 1))
+    discover_test_priority=$((discover_test_priority + 1))
 }
 
 discover_tests_collect() {

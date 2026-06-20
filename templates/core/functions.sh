@@ -5,11 +5,11 @@
 
 # Print PATH entries one per line (handy when debugging precedence)
 path_debug() {
-    _n=$(printf '%s\n' "$PATH" | tr ':' '\n' | awk 'NF' | wc -l)
-    _u=$(printf '%s\n' "$PATH" | tr ':' '\n' | awk 'NF' | sort -u | wc -l)
-    _d=$((_n - _u))
-    printf '%s entries (%s unique' "$_n" "$_u"
-    [ "$_d" -gt 0 ] && printf ', %s duplicate(s)' "$_d"
+    path_entry_count=$(printf '%s\n' "$PATH" | tr ':' '\n' | awk 'NF' | wc -l)
+    unique_path_entry_count=$(printf '%s\n' "$PATH" | tr ':' '\n' | awk 'NF' | sort -u | wc -l)
+    duplicate_path_count=$((path_entry_count - unique_path_entry_count))
+    printf '%s entries (%s unique' "$path_entry_count" "$unique_path_entry_count"
+    [ "$duplicate_path_count" -gt 0 ] && printf ', %s duplicate(s)' "$duplicate_path_count"
     printf ')\n'
     echo "$PATH" | tr ':' '\n' | nl -ba
     if command -v path_contract_verify >/dev/null 2>&1; then
@@ -20,19 +20,19 @@ path_debug() {
             echo "Contract: mismatch (run path_check for details)"
         fi
     fi
-    unset _n _u _d
+    unset path_entry_count unique_path_entry_count duplicate_path_count
 }
 
 # Verify live PATH against path.contract + local/path.contract (runtime 1:1 check)
 path_check() {
-    _login=0
+    use_login_shell=0
     while [ $# -gt 0 ]; do
         case "$1" in
-            --login) _login=1; shift ;;
+            --login) use_login_shell=1; shift ;;
             *) shift ;;
         esac
     done
-    if [ "$_login" -eq 1 ] && command -v zsh >/dev/null 2>&1; then
+    if [ "$use_login_shell" -eq 1 ] && command -v zsh >/dev/null 2>&1; then
         exec zsh -lic 'path_contract_verify; path_shadow_report --warn'
     fi
     if command -v path_contract_verify >/dev/null 2>&1; then
@@ -162,7 +162,7 @@ agent_build() {
         echo "agent_build: missing $script" >&2
         return 1
     fi
-    local dir="." args=() _dir_set=""
+    local dir="." args=() workflow_directory_set=""
     while [ $# -gt 0 ]; do
         case "$1" in
             -c | --continue)
@@ -174,9 +174,9 @@ agent_build() {
                 shift
                 ;;
             *)
-                if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                if [ -z "$workflow_directory_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
                     dir="$1"
-                    _dir_set=1
+                    workflow_directory_set=1
                     shift
                 else
                     args+=(-- "$@")
@@ -268,7 +268,7 @@ agent_test() {
         echo "agent_test: missing $script" >&2
         return 1
     fi
-    local dir="." args=() _dir_set=""
+    local dir="." args=() workflow_directory_set=""
     while [ $# -gt 0 ]; do
         case "$1" in
             --watch)
@@ -280,9 +280,9 @@ agent_test() {
                 shift
                 ;;
             *)
-                if [ -z "$_dir_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
+                if [ -z "$workflow_directory_set" ] && { [ "$1" = . ] || [ -d "$1" ]; }; then
                     dir="$1"
-                    _dir_set=1
+                    workflow_directory_set=1
                     shift
                 else
                     echo "agent_test: unknown argument: $1" >&2

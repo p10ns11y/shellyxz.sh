@@ -30,9 +30,9 @@ while [[ $# -gt 0 ]]; do
             break
             ;;
         *)
-            if [[ -z "${_dir_set:-}" && ( "$1" == . || -d "$1" ) ]]; then
+            if [[ -z "${workflow_directory_set:-}" && ( "$1" == . || -d "$1" ) ]]; then
                 DIR="$1"
-                _dir_set=1
+                workflow_directory_set=1
                 shift
             else
                 LAUNCH="custom"

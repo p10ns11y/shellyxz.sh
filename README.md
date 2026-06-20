@@ -373,6 +373,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 
 ## Maintenance
 
+- Shell naming for human debugging: [arch-design/shell-script-readability.md](arch-design/shell-script-readability.md) (enforced via [`.cursor/rules/shell-readability.mdc`](.cursor/rules/shell-readability.mdc) on `*.sh` edits)
 - Run `~/.config/shell/bin/check-shell.sh` after edits — runs **shellcheck on all `*.sh`** plus load-order and reserved-name checks
 - Script reference: [bin/README.md](bin/README.md) — migrate, check-shell, recover, agent-verify-layout, fzf-preview
 - Add `--audit` for extra permission checks (`dev.env` mode 600, `recover-shell.sh` executable, `lib.sh` present)

@@ -1,16 +1,20 @@
 #!/usr/bin/env sh
 # ~/.config/shell/core/path-resolve.sh
 # PATH contract executor + runtime verification (POSIX sh).
+#
+# Vocabulary: path_token, contract_line, phase_name, environment_gate,
+# deny_pattern, resolved_directory, pending_prepend_dirs, path_segment,
+# expected_prepend_order, contract_file_path
 
 SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 PATH_CONTRACT="${PATH_CONTRACT:-$SHELL_ROOT/core/path.contract}"
 LOCAL_PATH_CONTRACT="${LOCAL_PATH_CONTRACT:-$SHELL_ROOT/local/path.contract}"
 TOOL_CONTRACT="${TOOL_CONTRACT:-$SHELL_ROOT/core/tool.contract}"
 
-_path_contract_env_ok() {
-    _cond="$1"
-    [ -z "$_cond" ] && return 0
-    case "$_cond" in
+path_contract_environment_gate_passes() {
+    environment_gate="$1"
+    [ -z "$environment_gate" ] && return 0
+    case "$environment_gate" in
         omarchy)
             resolve_shell_environment 2>/dev/null || true
             case " ${SHELL_ENVIRONMENT:-} " in
@@ -23,13 +27,13 @@ _path_contract_env_ok() {
 }
 
 path_contract_resolve_token() {
-    _tok="$1"
-    [ -n "$_tok" ] || return 1
-    case "$_tok" in
+    path_token="$1"
+    [ -n "$path_token" ] || return 1
+    case "$path_token" in
         PNPM_HOME) printf '%s' "${PNPM_HOME:-}" ;;
         OMARCHY_PATH/bin)
-            _op="${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
-            printf '%s/bin' "$_op"
+            omarchy_root="${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
+            printf '%s/bin' "$omarchy_root"
             ;;
         HOME/bin) printf '%s/bin' "$HOME" ;;
         .local/bin) printf '%s/.local/bin' "$HOME" ;;
@@ -47,148 +51,148 @@ path_contract_resolve_token() {
         .vite-plus/bin) printf '%s/.vite-plus/bin' "$HOME" ;;
         miniconda/condabin) printf '%s/miniconda/condabin' "$HOME" ;;
         PWD/*)
-            _root="${PATH_CONTRACT_PROJECT_ROOT:-$PWD}"
-            printf '%s/%s' "$_root" "${_tok#PWD/}"
+            project_root="${PATH_CONTRACT_PROJECT_ROOT:-$PWD}"
+            printf '%s/%s' "$project_root" "${path_token#PWD/}"
             ;;
-        /*) printf '%s' "$_tok" ;;
-        *) printf '%s/%s' "$HOME" "$_tok" ;;
+        /*) printf '%s' "$path_token" ;;
+        *) printf '%s/%s' "$HOME" "$path_token" ;;
     esac
 }
 
 path_contract_resolve_deny() {
-    _tok="$1"
-    case "$_tok" in
+    path_token="$1"
+    case "$path_token" in
         /condabin) printf '/condabin' ;;
         .local/share/../bin) printf '%s/.local/share/../bin' "$HOME" ;;
         *)
-            path_contract_resolve_token "$_tok"
+            path_contract_resolve_token "$path_token"
             ;;
     esac
 }
 
 path_deny_sweep() {
-    _path_deny_sweep_file() {
-        _contract="$1"
-        [ -f "$_contract" ] || return 0
-        while IFS= read -r _line || [ -n "$_line" ]; do
-            case "$_line" in
+    _path_deny_sweep_contract_file() {
+        contract_file_path="$1"
+        [ -f "$contract_file_path" ] || return 0
+        while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+            case "$contract_line" in
                 \#*) continue ;;
                 deny:*)
-                    _pat="${_line#deny:}"
-                    _dir=$(path_contract_resolve_deny "$_pat")
-                    [ -n "$_dir" ] && path_drop "$_dir"
+                    deny_pattern="${contract_line#deny:}"
+                    resolved_directory=$(path_contract_resolve_deny "$deny_pattern")
+                    [ -n "$resolved_directory" ] && path_drop "$resolved_directory"
                     ;;
             esac
-        done < "$_contract"
+        done < "$contract_file_path"
     }
-    _path_deny_sweep_file "$PATH_CONTRACT"
-    _path_deny_sweep_file "$LOCAL_PATH_CONTRACT"
+    _path_deny_sweep_contract_file "$PATH_CONTRACT"
+    _path_deny_sweep_contract_file "$LOCAL_PATH_CONTRACT"
     export PATH
-    unset _contract _line _pat _dir
+    unset contract_file_path contract_line deny_pattern resolved_directory
 }
 
-_path_contract_phase_wanted() {
-    _want="$1"
-    _phase="$2"
-    if [ -z "$_want" ]; then
-        case "$_phase" in
+path_contract_phase_matches_filter() {
+    phase_filter="$1"
+    phase_name="$2"
+    if [ -z "$phase_filter" ]; then
+        case "$phase_name" in
             post_vite|project) return 1 ;;
             *) return 0 ;;
         esac
     fi
-    case ":$_want:" in
-        *":$_phase:"*) return 0 ;;
+    case ":$phase_filter:" in
+        *":$phase_name:"*) return 0 ;;
         *) return 1 ;;
     esac
 }
 
 _path_contract_apply_prepend_list() {
-    _list="$1"
-    _rev=""
-    _item=""
-    _rest="$_list"
-    while [ -n "$_rest" ]; do
-        case "$_rest" in
-            *" "*) _item="${_rest%% *}"; _rest="${_rest#$_item}"; _rest="${_rest# }" ;;
-            *) _item="$_rest"; _rest="" ;;
+    prepend_directory_list="$1"
+    reversed_directories=""
+    directory_entry=""
+    remaining_words="$prepend_directory_list"
+    while [ -n "$remaining_words" ]; do
+        case "$remaining_words" in
+            *" "*) directory_entry="${remaining_words%% *}"; remaining_words="${remaining_words#"$directory_entry"}"; remaining_words="${remaining_words# }" ;;
+            *) directory_entry="$remaining_words"; remaining_words="" ;;
         esac
-        [ -n "$_item" ] && _rev="$_item $_rev"
+        [ -n "$directory_entry" ] && reversed_directories="$directory_entry $reversed_directories"
     done
-    _rest="$_rev"
-    while [ -n "$_rest" ]; do
-        case "$_rest" in
-            *" "*) _item="${_rest%% *}"; _rest="${_rest#$_item}"; _rest="${_rest# }" ;;
-            *) _item="$_rest"; _rest="" ;;
+    remaining_words="$reversed_directories"
+    while [ -n "$remaining_words" ]; do
+        case "$remaining_words" in
+            *" "*) directory_entry="${remaining_words%% *}"; remaining_words="${remaining_words#"$directory_entry"}"; remaining_words="${remaining_words# }" ;;
+            *) directory_entry="$remaining_words"; remaining_words="" ;;
         esac
-        [ -n "$_item" ] && path_prepend "$_item"
+        [ -n "$directory_entry" ] && path_prepend "$directory_entry"
     done
-    unset _rev _item _rest _list
+    unset reversed_directories directory_entry remaining_words prepend_directory_list
 }
 
 path_contract_apply_file() {
-    _contract="$1"
-    _phase_filter="$2"
-    _skip_post_vite="$3"
-    [ -f "$_contract" ] || return 0
+    contract_file_path="$1"
+    phase_filter="$2"
+    skip_post_vite="$3"
+    [ -f "$contract_file_path" ] || return 0
 
-    _phase=""
-    _prepends=""
-    _flush_phase() {
-        [ -n "$_prepends" ] || return 0
-        _path_contract_apply_prepend_list "$_prepends"
-        _prepends=""
+    phase_name=""
+    pending_prepend_dirs=""
+    _flush_pending_prepends() {
+        [ -n "$pending_prepend_dirs" ] || return 0
+        _path_contract_apply_prepend_list "$pending_prepend_dirs"
+        pending_prepend_dirs=""
     }
 
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
+    while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+        case "$contract_line" in
             \#*|'') continue ;;
             deny:*) continue ;;
             phase:*)
-                _flush_phase
-                _phase="${_line#phase:}"
+                _flush_pending_prepends
+                phase_name="${contract_line#phase:}"
                 continue
                 ;;
             prepend:*)
-                _rest="${_line#prepend:}"
-                _tok="${_rest%%:*}"
-                _cond=""
-                case "$_rest" in
-                    *:*) _cond="${_rest#*:}" ;;
+                line_rest="${contract_line#prepend:}"
+                path_token="${line_rest%%:*}"
+                environment_gate=""
+                case "$line_rest" in
+                    *:*) environment_gate="${line_rest#*:}" ;;
                 esac
-                _path_contract_phase_wanted "$_phase_filter" "$_phase" || continue
-                [ "$_phase" = post_vite ] && [ "$_skip_post_vite" -eq 1 ] && continue
-                _path_contract_env_ok "$_cond" || continue
-                _dir=$(path_contract_resolve_token "$_tok")
-                [ -n "$_dir" ] && _prepends="$_prepends $_dir"
+                path_contract_phase_matches_filter "$phase_filter" "$phase_name" || continue
+                [ "$phase_name" = post_vite ] && [ "$skip_post_vite" -eq 1 ] && continue
+                path_contract_environment_gate_passes "$environment_gate" || continue
+                resolved_directory=$(path_contract_resolve_token "$path_token")
+                [ -n "$resolved_directory" ] && pending_prepend_dirs="$pending_prepend_dirs $resolved_directory"
                 ;;
             append:*)
-                _flush_phase
-                _rest="${_line#append:}"
-                _tok="${_rest%%:*}"
-                _cond=""
-                case "$_rest" in
-                    *:*) _cond="${_rest#*:}" ;;
+                _flush_pending_prepends
+                line_rest="${contract_line#append:}"
+                path_token="${line_rest%%:*}"
+                environment_gate=""
+                case "$line_rest" in
+                    *:*) environment_gate="${line_rest#*:}" ;;
                 esac
-                _path_contract_phase_wanted "$_phase_filter" "$_phase" || continue
-                _path_contract_env_ok "$_cond" || continue
-                _dir=$(path_contract_resolve_token "$_tok")
-                [ -n "$_dir" ] && path_append "$_dir"
+                path_contract_phase_matches_filter "$phase_filter" "$phase_name" || continue
+                path_contract_environment_gate_passes "$environment_gate" || continue
+                resolved_directory=$(path_contract_resolve_token "$path_token")
+                [ -n "$resolved_directory" ] && path_append "$resolved_directory"
                 ;;
             keep:*) ;;
         esac
-    done < "$_contract"
-    _flush_phase
-    unset _phase _prepends _line _rest _tok _cond _dir _contract
+    done < "$contract_file_path"
+    _flush_pending_prepends
+    unset phase_name pending_prepend_dirs contract_line line_rest path_token environment_gate resolved_directory contract_file_path
 }
 
 path_contract_apply_project() {
-    _contract="${1:-${PATH_CONTRACT_PROJECT:-$PWD/.path.contract}}"
-    _root="${PATH_CONTRACT_PROJECT_ROOT:-$PWD}"
-    [ -f "$_contract" ] || return 0
-    PATH_CONTRACT_PROJECT_ROOT="$_root"
+    contract_file_path="${1:-${PATH_CONTRACT_PROJECT:-$PWD/.path.contract}}"
+    project_root="${PATH_CONTRACT_PROJECT_ROOT:-$PWD}"
+    [ -f "$contract_file_path" ] || return 0
+    PATH_CONTRACT_PROJECT_ROOT="$project_root"
     export PATH_CONTRACT_PROJECT_ROOT
-    path_contract_apply_file "$_contract" "project" 1
-    unset _contract _root
+    path_contract_apply_file "$contract_file_path" "project" 1
+    unset contract_file_path project_root
 }
 
 path_contract_apply_core_only() {
@@ -201,25 +205,25 @@ path_contract_apply_core_only() {
 }
 
 path_contract_apply() {
-    _phase_filter=""
-    _skip_post_vite=0
+    phase_filter=""
+    skip_post_vite=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --phase)
                 shift
-                _phase_filter="${_phase_filter}${_phase_filter:+:}$1"
+                phase_filter="${phase_filter}${phase_filter:+:}$1"
                 shift
                 ;;
-            --skip-post-vite) _skip_post_vite=1; shift ;;
+            --skip-post-vite) skip_post_vite=1; shift ;;
             *) shift ;;
         esac
     done
 
     [ -f "$PATH_CONTRACT" ] || [ -f "$LOCAL_PATH_CONTRACT" ] || return 0
 
-    path_contract_apply_file "$PATH_CONTRACT" "$_phase_filter" "$_skip_post_vite"
-    path_contract_apply_file "$LOCAL_PATH_CONTRACT" "$_phase_filter" "$_skip_post_vite"
-    unset _phase_filter _skip_post_vite
+    path_contract_apply_file "$PATH_CONTRACT" "$phase_filter" "$skip_post_vite"
+    path_contract_apply_file "$LOCAL_PATH_CONTRACT" "$phase_filter" "$skip_post_vite"
+    unset phase_filter skip_post_vite
 }
 
 path_contract_reassert() {
@@ -232,169 +236,169 @@ path_contract_reassert() {
 }
 
 _path_contract_collect_phase_prepends_file() {
-    _contract="$1"
-    _target_phase="$2"
-    _include_post_vite="${3:-1}"
-    [ -f "$_contract" ] || return 0
-    _phase=""
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
+    contract_file_path="$1"
+    target_phase_name="$2"
+    include_post_vite="${3:-1}"
+    [ -f "$contract_file_path" ] || return 0
+    phase_name=""
+    while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+        case "$contract_line" in
             phase:*)
-                _phase="${_line#phase:}"
+                phase_name="${contract_line#phase:}"
                 continue
                 ;;
             prepend:*)
-                [ "$_phase" != "$_target_phase" ] && continue
-                [ "$_phase" = post_vite ] && [ "$_include_post_vite" -eq 0 ] && continue
-                _rest="${_line#prepend:}"
-                _tok="${_rest%%:*}"
-                _cond=""
-                case "$_rest" in *:*) _cond="${_rest#*:}" ;; esac
-                _path_contract_env_ok "$_cond" || continue
-                _dir=$(path_contract_resolve_token "$_tok")
-                [ -n "$_dir" ] && [ -d "$_dir" ] && printf '%s\n' "$_dir"
+                [ "$phase_name" != "$target_phase_name" ] && continue
+                [ "$phase_name" = post_vite ] && [ "$include_post_vite" -eq 0 ] && continue
+                line_rest="${contract_line#prepend:}"
+                path_token="${line_rest%%:*}"
+                environment_gate=""
+                case "$line_rest" in *:*) environment_gate="${line_rest#*:}" ;; esac
+                path_contract_environment_gate_passes "$environment_gate" || continue
+                resolved_directory=$(path_contract_resolve_token "$path_token")
+                [ -n "$resolved_directory" ] && [ -d "$resolved_directory" ] && printf '%s\n' "$resolved_directory"
                 ;;
         esac
-    done < "$_contract"
-    unset _contract _phase _line _rest _tok _cond _dir
+    done < "$contract_file_path"
+    unset contract_file_path phase_name contract_line line_rest path_token environment_gate resolved_directory
 }
 
 _path_contract_collect_phase_prepends() {
-    _target_phase="$1"
-    _include_post_vite="${2:-1}"
+    target_phase_name="$1"
+    include_post_vite="${2:-1}"
     # Local overlay wins PATH priority (applied after core); list it first for verify ranks.
-    _path_contract_collect_phase_prepends_file "$LOCAL_PATH_CONTRACT" "$_target_phase" "$_include_post_vite"
-    _path_contract_collect_phase_prepends_file "$PATH_CONTRACT" "$_target_phase" "$_include_post_vite"
-    unset _target_phase _include_post_vite
+    _path_contract_collect_phase_prepends_file "$LOCAL_PATH_CONTRACT" "$target_phase_name" "$include_post_vite"
+    _path_contract_collect_phase_prepends_file "$PATH_CONTRACT" "$target_phase_name" "$include_post_vite"
+    unset target_phase_name include_post_vite
 }
 
 _path_contract_expected_prepend_order() {
-    _include_post_vite="${1:-1}"
-    if [ "$_include_post_vite" -eq 1 ]; then
-        _path_contract_collect_phase_prepends post_vite "$_include_post_vite"
+    include_post_vite="${1:-1}"
+    if [ "$include_post_vite" -eq 1 ]; then
+        _path_contract_collect_phase_prepends post_vite "$include_post_vite"
     fi
-    _path_contract_collect_phase_prepends core "$_include_post_vite"
-    _path_contract_collect_phase_prepends environment "$_include_post_vite"
+    _path_contract_collect_phase_prepends core "$include_post_vite"
+    _path_contract_collect_phase_prepends environment "$include_post_vite"
 }
 
 path_contract_verify() {
-    _json=0
-    _warn_only=0
-    _include_post_vite=1
+    emit_json=0
+    warn_only_mode=0
+    include_post_vite=1
     while [ $# -gt 0 ]; do
         case "$1" in
-            --json) _json=1; shift ;;
-            --warn-only) _warn_only=1; shift ;;
-            --env-only) _include_post_vite=0; shift ;;
+            --json) emit_json=1; shift ;;
+            --warn-only) warn_only_mode=1; shift ;;
+            --env-only) include_post_vite=0; shift ;;
             *) shift ;;
         esac
     done
 
-    _fail=0
+    verify_failed=0
     _path_contract_verify_deny_file() {
-        _contract="$1"
-        [ -f "$_contract" ] || return 0
-        while IFS= read -r _line || [ -n "$_line" ]; do
-            case "$_line" in
+        contract_file_path="$1"
+        [ -f "$contract_file_path" ] || return 0
+        while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+            case "$contract_line" in
                 deny:*)
-                    _pat="${_line#deny:}"
-                    _dir=$(path_contract_resolve_deny "$_pat")
-                    [ -n "$_dir" ] && case ":$PATH:" in
-                        *":${_dir}:"*)
-                            printf 'deny violation: %s in PATH\n' "$_dir" >&2
-                            _fail=1
+                    deny_pattern="${contract_line#deny:}"
+                    resolved_directory=$(path_contract_resolve_deny "$deny_pattern")
+                    [ -n "$resolved_directory" ] && case ":$PATH:" in
+                        *":${resolved_directory}:"*)
+                            printf 'deny violation: %s in PATH\n' "$resolved_directory" >&2
+                            verify_failed=1
                             ;;
                     esac
                     ;;
             esac
-        done < "$_contract"
+        done < "$contract_file_path"
     }
     _path_contract_verify_deny_file "$PATH_CONTRACT"
     _path_contract_verify_deny_file "$LOCAL_PATH_CONTRACT"
-    unset _contract _line _pat _dir
+    unset contract_file_path contract_line deny_pattern resolved_directory
 
-    _seen=""
-    _seg=""
-    for _seg in $(printf '%s' "$PATH" | tr ':' ' '); do
-        [ -n "$_seg" ] || continue
-        case "$_seen" in
-            *"|${_seg}|"*)
-                printf 'duplicate segment: %s\n' "$_seg" >&2
-                _fail=1
+    seen_path_segments=""
+    path_segment=""
+    for path_segment in $(printf '%s' "$PATH" | tr ':' ' '); do
+        [ -n "$path_segment" ] || continue
+        case "$seen_path_segments" in
+            *"|${path_segment}|"*)
+                printf 'duplicate segment: %s\n' "$path_segment" >&2
+                verify_failed=1
                 ;;
         esac
-        _seen="${_seen}|${_seg}|"
+        seen_path_segments="${seen_path_segments}|${path_segment}|"
     done
 
-    _exp_order=$(_path_contract_expected_prepend_order "$_include_post_vite")
-    _e=""
-    while IFS= read -r _e || [ -n "$_e" ]; do
-        [ -n "$_e" ] || continue
+    expected_prepend_order=$(_path_contract_expected_prepend_order "$include_post_vite")
+    expected_directory=""
+    while IFS= read -r expected_directory || [ -n "$expected_directory" ]; do
+        [ -n "$expected_directory" ] || continue
         case ":$PATH:" in
-            *":${_e}:"*) ;;
+            *":${expected_directory}:"*) ;;
             *)
-                printf 'missing managed segment: %s\n' "$_e" >&2
-                _fail=1
+                printf 'missing managed segment: %s\n' "$expected_directory" >&2
+                verify_failed=1
                 ;;
         esac
     done <<EOF
-$_exp_order
+$expected_prepend_order
 EOF
 
-    _prev_rank=0
-    _seg=""
-    for _seg in $(printf '%s' "$PATH" | tr ':' ' '); do
-        [ -n "$_seg" ] || continue
-        _rank=0
-        _e=""
-        _i=0
-        while IFS= read -r _e || [ -n "$_e" ]; do
-            [ -n "$_e" ] || continue
-            _i=$((_i + 1))
-            [ "$_e" = "$_seg" ] && _rank=$_i && break
+    previous_rank=0
+    path_segment=""
+    for path_segment in $(printf '%s' "$PATH" | tr ':' ' '); do
+        [ -n "$path_segment" ] || continue
+        path_segment_rank=0
+        expected_directory=""
+        rank_index=0
+        while IFS= read -r expected_directory || [ -n "$expected_directory" ]; do
+            [ -n "$expected_directory" ] || continue
+            rank_index=$((rank_index + 1))
+            [ "$expected_directory" = "$path_segment" ] && path_segment_rank=$rank_index && break
         done <<EOF
-$_exp_order
+$expected_prepend_order
 EOF
-        [ "$_rank" -eq 0 ] && continue
-        if [ "$_prev_rank" -gt 0 ] && [ "$_rank" -lt "$_prev_rank" ]; then
-            printf 'managed order violation: %s (rank %s) before higher-priority segment\n' "$_seg" "$_rank" >&2
-            _fail=1
+        [ "$path_segment_rank" -eq 0 ] && continue
+        if [ "$previous_rank" -gt 0 ] && [ "$path_segment_rank" -lt "$previous_rank" ]; then
+            printf 'managed order violation: %s (rank %s) before higher-priority segment\n' "$path_segment" "$path_segment_rank" >&2
+            verify_failed=1
         fi
-        _prev_rank=$_rank
+        previous_rank=$path_segment_rank
     done
 
-    if [ "$_json" -eq 1 ]; then
-        if [ "$_fail" -eq 0 ]; then
+    if [ "$emit_json" -eq 1 ]; then
+        if [ "$verify_failed" -eq 0 ]; then
             printf '{"ok":true}\n'
         else
             printf '{"ok":false}\n'
         fi
-    elif [ "$_fail" -ne 0 ]; then
+    elif [ "$verify_failed" -ne 0 ]; then
         printf 'PATH contract verify: FAILED\n' >&2
         printf 'Expected managed order (top = highest priority):\n' >&2
-        printf '%s\n' "$_exp_order" | nl -ba >&2
+        printf '%s\n' "$expected_prepend_order" | nl -ba >&2
         printf 'Actual PATH:\n' >&2
         printf '%s\n' "$PATH" | tr ':' '\n' | nl -ba >&2
     else
-        [ "$_json" -eq 0 ] && printf 'PATH contract verify: OK\n'
+        [ "$emit_json" -eq 0 ] && printf 'PATH contract verify: OK\n'
     fi
 
-    if [ "$_warn_only" -eq 1 ]; then
+    if [ "$warn_only_mode" -eq 1 ]; then
         return 0
     fi
-    return "$_fail"
+    return "$verify_failed"
 }
 
 _tool_pinned_path() {
-    _c="$1"
+    command_name="$1"
     [ -f "$TOOL_CONTRACT" ] || return 1
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
-            pin:"$_c":*)
-                _p="${_line#pin:}"
-                _p="${_p#"${_c}":}"
-                if [ -x "$_p" ]; then
-                    printf '%s\n' "$_p"
+    while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+        case "$contract_line" in
+            pin:"$command_name":*)
+                pin_line_rest="${contract_line#pin:}"
+                pin_line_rest="${pin_line_rest#"$command_name":}"
+                if [ -x "$pin_line_rest" ]; then
+                    printf '%s\n' "$pin_line_rest"
                     return 0
                 fi
                 ;;
@@ -405,20 +409,20 @@ _tool_pinned_path() {
 
 tool_contract_apply() {
     [ -f "$TOOL_CONTRACT" ] || return 0
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
+    while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+        case "$contract_line" in
             \#*|'') continue ;;
             pin:*)
-                _rest="${_line#pin:}"
-                _cmd="${_rest%%:*}"
-                _bin="${_rest#*:}"
-                [ -x "$_bin" ] || continue
+                pin_line_rest="${contract_line#pin:}"
+                command_name="${pin_line_rest%%:*}"
+                pinned_binary_path="${pin_line_rest#*:}"
+                [ -x "$pinned_binary_path" ] || continue
                 if [ -n "${ZSH_VERSION:-}" ] || [ -n "${BASH_VERSION:-}" ]; then
                     # shellcheck disable=SC2139
-                    eval "${_cmd}() { \"${_bin}\" \"\$@\"; }"
+                    eval "${command_name}() { \"${pinned_binary_path}\" \"\$@\"; }"
                 else
                     # shellcheck disable=SC2139
-                    eval "alias ${_cmd}='${_bin}'" 2>/dev/null || true
+                    eval "alias ${command_name}='${pinned_binary_path}'" 2>/dev/null || true
                 fi
                 ;;
             warn_shadow:*) ;;
@@ -428,9 +432,9 @@ tool_contract_apply() {
     if [ -n "${ZSH_VERSION:-}" ]; then
         # shellcheck disable=SC2329
         tool_contract_which() {
-            _p="$(_tool_pinned_path "$1" 2>/dev/null || true)"
-            if [ -n "$_p" ]; then
-                printf '%s\n' "$_p"
+            pinned_binary_path="$(_tool_pinned_path "$1" 2>/dev/null || true)"
+            if [ -n "$pinned_binary_path" ]; then
+                printf '%s\n' "$pinned_binary_path"
                 return 0
             fi
             whence -p "$1" 2>/dev/null && return 0
@@ -445,45 +449,45 @@ tool_contract_apply() {
 }
 
 path_shadow_report() {
-    _warn_only=0
+    warn_only_mode=0
     while [ $# -gt 0 ]; do
         case "$1" in
-            --warn) _warn_only=1; shift ;;
+            --warn) warn_only_mode=1; shift ;;
             *) shift ;;
         esac
     done
     [ -f "$TOOL_CONTRACT" ] || return 0
-    _found=0
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
+    shadow_found=0
+    while IFS= read -r contract_line || [ -n "$contract_line" ]; do
+        case "$contract_line" in
             warn_shadow:*)
-                _cmds="${_line#warn_shadow:}"
-                _cmd=""
-                for _cmd in $_cmds; do
-                    _pin=""
-                    while IFS= read -r _pline || [ -n "$_pline" ]; do
-                        case "$_pline" in
-                            pin:"$_cmd":*)
-                                _pin="${_pline#pin:}"
-                                _pin="${_pin#"${_cmd}":}"
+                shadow_command_list="${contract_line#warn_shadow:}"
+                shadow_command=""
+                for shadow_command in $shadow_command_list; do
+                    pinned_binary_path=""
+                    while IFS= read -r tool_contract_line || [ -n "$tool_contract_line" ]; do
+                        case "$tool_contract_line" in
+                            pin:"$shadow_command":*)
+                                pinned_binary_path="${tool_contract_line#pin:}"
+                                pinned_binary_path="${pinned_binary_path#"$shadow_command":}"
                                 ;;
                         esac
                     done < "$TOOL_CONTRACT"
-                    [ -z "$_pin" ] && continue
+                    [ -z "$pinned_binary_path" ] && continue
                     if [ -n "${ZSH_VERSION:-}" ]; then
-                        _resolved=$(whence -p "$_cmd" 2>/dev/null || true)
+                        resolved_binary_path=$(whence -p "$shadow_command" 2>/dev/null || true)
                     else
-                        _resolved=$(command -v "$_cmd" 2>/dev/null || true)
+                        resolved_binary_path=$(command -v "$shadow_command" 2>/dev/null || true)
                     fi
-                    [ -z "$_resolved" ] && continue
-                    [ "$_resolved" = "$_pin" ] && continue
-                    printf 'shadow: %s resolves to %s (pinned: %s)\n' "$_cmd" "$_resolved" "$_pin" >&2
-                    _found=1
+                    [ -z "$resolved_binary_path" ] && continue
+                    [ "$resolved_binary_path" = "$pinned_binary_path" ] && continue
+                    printf 'shadow: %s resolves to %s (pinned: %s)\n' "$shadow_command" "$resolved_binary_path" "$pinned_binary_path" >&2
+                    shadow_found=1
                 done
                 ;;
         esac
     done < "$TOOL_CONTRACT"
-    return "$_found"
+    return "$shadow_found"
 }
 
-unset _tok _dir _line _rest _cond _phase _prepends _phase_filter _skip_post_vite 2>/dev/null || true
+unset path_token resolved_directory contract_line line_rest environment_gate phase_name pending_prepend_dirs phase_filter skip_post_vite 2>/dev/null || true

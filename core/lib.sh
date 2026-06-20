@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 # ~/.config/shell/core/lib.sh
 # Shared safe-loading helpers — distro-agnostic core.
+#
+# Vocabulary: source_candidate_path, file_owner_uid, environment_preset_name,
+# environment_script_path, omarchy_module_path, secrets_line, secret_key
 
 SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 
@@ -28,24 +31,24 @@ detect_editor_terminal() {
 }
 
 _file_is_safe_to_source() {
-    _f="$1"
-    [ -n "$_f" ] && [ -f "$_f" ] || return 1
-    [ -L "$_f" ] && return 1
-    _uid=$(stat -c '%u' "$_f" 2>/dev/null) || return 1
-    _me=$(id -u 2>/dev/null) || return 1
-    [ "$_uid" = "$_me" ] || [ "$_uid" = 0 ] || return 1
-    _perm=$(stat -c '%a' "$_f" 2>/dev/null) || return 1
-    case $((_perm % 10)) in
+    source_candidate_path="$1"
+    [ -n "$source_candidate_path" ] && [ -f "$source_candidate_path" ] || return 1
+    [ -L "$source_candidate_path" ] && return 1
+    file_owner_uid=$(stat -c '%u' "$source_candidate_path" 2>/dev/null) || return 1
+    current_user_uid=$(id -u 2>/dev/null) || return 1
+    [ "$file_owner_uid" = "$current_user_uid" ] || [ "$file_owner_uid" = 0 ] || return 1
+    file_mode_octal=$(stat -c '%a' "$source_candidate_path" 2>/dev/null) || return 1
+    case $((file_mode_octal % 10)) in
         2|3|6|7) return 1 ;;
     esac
     return 0
 }
 
 source_if_safe() {
-    _f="$1"
-    if _file_is_safe_to_source "$_f"; then
+    source_candidate_path="$1"
+    if _file_is_safe_to_source "$source_candidate_path"; then
         # shellcheck disable=SC1090
-        . "$_f"
+        . "$source_candidate_path"
         return 0
     fi
     return 1
@@ -74,83 +77,83 @@ resolve_shell_environment() {
 
 source_environments() {
     resolve_shell_environment
-    for _shell_env in $SHELL_ENVIRONMENT; do
-        _ef="$SHELL_ROOT/environments/$_shell_env/env.sh"
-        if [ -f "$_ef" ]; then
+    for environment_preset_name in $SHELL_ENVIRONMENT; do
+        environment_script_path="$SHELL_ROOT/environments/$environment_preset_name/env.sh"
+        if [ -f "$environment_script_path" ]; then
             # shellcheck disable=SC1090
-            . "$_ef"
+            . "$environment_script_path"
         elif [ "${SHELL_ENVIRONMENT_WARN:-0}" = 1 ]; then
-            printf 'lib.sh: missing environment: %s\n' "$_ef" >&2
+            printf 'lib.sh: missing environment: %s\n' "$environment_script_path" >&2
         fi
     done
-    unset _shell_env _ef
+    unset environment_preset_name environment_script_path
 }
 
 source_environment_shell() {
-    _shell_part="$1"
+    shell_module_name="$1"
     resolve_shell_environment
-    for _shell_env in $SHELL_ENVIRONMENT; do
-        _ef="$SHELL_ROOT/environments/$_shell_env/${_shell_part}.sh"
-        if [ -f "$_ef" ]; then
+    for environment_preset_name in $SHELL_ENVIRONMENT; do
+        environment_script_path="$SHELL_ROOT/environments/$environment_preset_name/${shell_module_name}.sh"
+        if [ -f "$environment_script_path" ]; then
             # shellcheck disable=SC1090
-            . "$_ef"
+            . "$environment_script_path"
         fi
     done
-    unset _shell_part _shell_env _ef
+    unset shell_module_name environment_preset_name environment_script_path
 }
 
 omarchy_file() {
-    _part="$1"
-    _path="$OMARCHY_ROOT/default/bash/$_part"
-    if [ -f "$_path" ]; then
-        printf '%s\n' "$_path"
+    omarchy_module_name="$1"
+    omarchy_module_path="$OMARCHY_ROOT/default/bash/$omarchy_module_name"
+    if [ -f "$omarchy_module_path" ]; then
+        printf '%s\n' "$omarchy_module_path"
         return 0
     fi
     if [ "${OMARCHY_WARN:-0}" = 1 ]; then
-        printf 'lib.sh: missing Omarchy module: %s\n' "$_path" >&2
+        printf 'lib.sh: missing Omarchy module: %s\n' "$omarchy_module_path" >&2
     fi
     return 1
 }
 
 source_omarchy() {
-    _part="$1"
-    _path=$(omarchy_file "$_part") || return 1
+    omarchy_module_name="$1"
+    omarchy_module_path=$(omarchy_file "$omarchy_module_name") || return 1
     # shellcheck disable=SC1090
-    . "$_path"
+    . "$omarchy_module_path"
 }
 
 load_secrets_file() {
-    _file="$1"
-    _file_is_safe_to_source "$_file" || return 1
-    _line _key _val
-    while IFS= read -r _line || [ -n "$_line" ]; do
-        case "$_line" in
+    secrets_file_path="$1"
+    _file_is_safe_to_source "$secrets_file_path" || return 1
+    secrets_line secret_key secret_value
+    while IFS= read -r secrets_line || [ -n "$secrets_line" ]; do
+        case "$secrets_line" in
             ''|'#'*) continue ;;
-            export\ *) _line="${_line#export }" ;;
+            export\ *) secrets_line="${secrets_line#export }" ;;
         esac
-        _key="${_line%%=*}"
-        _val="${_line#*=}"
-        case "$_key" in
+        secret_key="${secrets_line%%=*}"
+        secret_value="${secrets_line#*=}"
+        case "$secret_key" in
             *[!A-Za-z0-9_]*|""|[0-9]*) continue ;;
         esac
-        case "$_val" in
-            \"*\") _val="${_val#\"}"; _val="${_val%\"}" ;;
-            \'*\') _val="${_val#\'}"; _val="${_val%\'}" ;;
+        case "$secret_value" in
+            \"*\") secret_value="${secret_value#\"}"; secret_value="${secret_value%\"}" ;;
+            \'*\') secret_value="${secret_value#\'}"; secret_value="${secret_value%\'}" ;;
         esac
-        export "$_key=$_val"
-    done < "$_file"
+        export "$secret_key=$secret_value"
+    done < "$secrets_file_path"
 }
 
 shell_truth_seeker() {
     [ "${SHELL_TRUTH_SEEKER:-1}" = 1 ] || return 0
     if [ -n "${ZSH_VERSION+set}" ]; then
-        _shell_bin=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
-        [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+        resolved_shell_binary=$(command -v zsh 2>/dev/null || echo /usr/bin/zsh)
+        [ -x "$resolved_shell_binary" ] && export SHELL="$resolved_shell_binary"
     elif [ -n "${BASH_VERSION+set}" ]; then
-        _shell_bin=$(command -v bash 2>/dev/null || echo /usr/bin/bash)
-        [ -x "$_shell_bin" ] && export SHELL="$_shell_bin"
+        resolved_shell_binary=$(command -v bash 2>/dev/null || echo /usr/bin/bash)
+        [ -x "$resolved_shell_binary" ] && export SHELL="$resolved_shell_binary"
     fi
-    unset _shell_bin
+    unset resolved_shell_binary
 }
 
-unset _f _uid _me _perm _part _path _line _key _val _shell_bin _shell_part _shell_env _ef 2>/dev/null || true
+unset source_candidate_path file_owner_uid current_user_uid file_mode_octal omarchy_module_name omarchy_module_path secrets_file_path secrets_line secret_key secret_value environment_preset_name environment_script_path shell_module_name 2>/dev/null || true

@@ -40,11 +40,11 @@ export CONDA_CHANGEPS1=false
 if command -v fzf >/dev/null 2>&1; then
     detect_editor_terminal 2>/dev/null || true
     if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = no ] && command -v bat >/dev/null 2>&1; then
-        _fzf_preview="${HOME}/.config/shell/bin/fzf-preview.sh"
+        fzf_preview_script_path="${HOME}/.config/shell/bin/fzf-preview.sh"
         # shellcheck disable=SC2089,SC2090
         export FZF_DEFAULT_OPTS='--height 50% --layout=reverse --border rounded'
-        export FZF_CTRL_T_OPTS="--preview-window=right:60%:wrap --preview '${_fzf_preview} {}'"
-        export FZF_CTRL_R_OPTS="--preview-window=down:5:wrap --preview '${_fzf_preview} {}'"
+        export FZF_CTRL_T_OPTS="--preview-window=right:60%:wrap --preview '${fzf_preview_script_path} {}'"
+        export FZF_CTRL_R_OPTS="--preview-window=down:5:wrap --preview '${fzf_preview_script_path} {}'"
     else
         # shellcheck disable=SC2090
         export FZF_DEFAULT_OPTS='--height 50% --layout=reverse --border rounded'
@@ -61,10 +61,10 @@ export MKL_NUM_THREADS=12
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
 
 if _is_interactive_session 2>/dev/null; then
-    _sock="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
-    [ -S "$_sock" ] && export SSH_AUTH_SOCK="$_sock"
-    _tty=$(tty 2>/dev/null) && [ -n "$_tty" ] && export GPG_TTY="$_tty"
-    unset _sock _tty
+    ssh_agent_socket_path="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+    [ -S "$ssh_agent_socket_path" ] && export SSH_AUTH_SOCK="$ssh_agent_socket_path"
+    gpg_tty_device=$(tty 2>/dev/null) && [ -n "$gpg_tty_device" ] && export GPG_TTY="$gpg_tty_device"
+    unset ssh_agent_socket_path gpg_tty_device
 fi
 
 # Vite+ shell integration (vp function, completions) — PATH owned by contract.

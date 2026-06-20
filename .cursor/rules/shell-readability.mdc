@@ -1,0 +1,42 @@
+---
+description: Human-readable shell script naming for ~/.config/shell — no opaque scratch variables
+globs: "**/*.sh"
+alwaysApply: false
+---
+
+# Shell script readability
+
+**Audience:** Human maintainers are co-primary with agents. When PATH or init breaks, you read shell under stress — names must scan without decoding `_tok` / `_rest` soup.
+
+## Non-negotiables
+
+1. **No opaque scratch scalars** in functions longer than ~5 lines or crossing a function boundary:
+   - Banned: `_tok`, `_rest`, `_line`, `_dir`, `_seg`, `_e`, `_p`, `_c`, `_f`, `_i`, `_pat`, `_cond`, `_rev`, generic `_list`, `_want`, bare `_fail`
+2. **Domain-prefixed locals** tied to repo nouns (see [arch-design/shell-script-readability.md](../arch-design/shell-script-readability.md)):
+   - PATH contract: `path_token`, `contract_line`, `phase_name`, `environment_gate`, `deny_pattern`, `prepend_directory`, `resolved_directory`, `pending_prepend_dirs`
+   - PATH segments: `path_segment`, `path_segment_rank`, `seen_path_segments`
+   - Files: `contract_file_path`
+3. **No magical abbreviations** — internal helpers must read without opening another file:
+   - Bad: `_flush_phase`, undocumented `_cond`
+   - Good: `_flush_pending_prepends`, `path_contract_environment_gate_passes`
+4. **Public API stability** — keep exported names (`path_contract_apply`, `path_prepend`, `verify_layout_ok`). Rename locals and private helpers only unless deliberately changing API.
+5. **Dialect split:**
+   - POSIX `sh` core (`core/`, `templates/core/`): underscore + domain locals (`_prepend_directory`)
+   - bash libs (`bin/lib/`): prefer `local` + full words (`session`, `pane_height`)
+6. **Scope discipline** — when editing a file, rename locals in touched functions; no drive-by renames across unrelated files in the same PR.
+
+## Enforcement
+
+- **Cursor rule + review** are the gate. `check-shell.sh` does not judge semantic naming (no LLM overhead).
+- Canonical lexicon: [arch-design/shell-script-readability.md](../arch-design/shell-script-readability.md)
+
+## When adding PATH contract logic
+
+Use vocabulary from `path.contract` line types:
+
+| Contract line | Variable names |
+|---------------|----------------|
+| `phase:core` | `phase_name`, `phase_filter` |
+| `prepend:TOKEN` | `path_token`, `resolved_directory`, `pending_prepend_dirs` |
+| `deny:PATTERN` | `deny_pattern`, `resolved_directory` |
+| `append:TOKEN` | `path_token`, `resolved_directory` |
