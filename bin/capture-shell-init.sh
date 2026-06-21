@@ -116,6 +116,32 @@ is_expected_managed_init() {
     grep -qF "$stripped" "$tpl" 2>/dev/null
 }
 
+is_redundant_env_export() {
+    local line="$1"
+    local var_name env_file
+    [[ "$line" =~ ^[[:space:]]*export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)= ]] || return 1
+    var_name="${BASH_REMATCH[1]}"
+    for env_file in "$CONFIG_DIR/core/env.sh" "$CONFIG_DIR/templates/core/env.sh"; do
+        [[ -f "$env_file" ]] || continue
+        grep -qE "^export ${var_name}=" "$env_file" 2>/dev/null && return 0
+    done
+    return 1
+}
+
+is_redundant_path_contract_prepend() {
+    local line="$1"
+    local contract_file path_token
+    [[ "$line" == *'PATH='* ]] || return 1
+    for contract_file in "$CONFIG_DIR/core/path.contract" "$CONFIG_DIR/templates/core/path.contract"; do
+        [[ -f "$contract_file" ]] || continue
+        while IFS= read -r path_token; do
+            [[ -n "$path_token" ]] || continue
+            [[ "$line" == *"$path_token"* ]] && return 0
+        done < <(grep -E '^prepend:' "$contract_file" 2>/dev/null | cut -d: -f2 | cut -d: -f1)
+    done
+    return 1
+}
+
 manifest_match() {
     local line="$1"
     [[ -f "$MANIFEST" ]] || return 1
@@ -182,6 +208,12 @@ scan_rc() {
                 action="remove from login rc — already applied when sourcing ~/.config/shell/env.sh ($managed)"
             fi
             printf '  L%-4s DUPLICATE %s\n    %s\n    → %s\n' "$n" "$managed" "$line" "$action"
+        elif is_managed_rc "$rc" && is_redundant_env_export "$line"; then
+            duplicates=$((duplicates + 1))
+            printf '  L%-4s DUPLICATE core/env.sh\n    %s\n    → remove from rc (already in core/env.sh)\n' "$n" "$line"
+        elif is_managed_rc "$rc" && is_redundant_path_contract_prepend "$line"; then
+            duplicates=$((duplicates + 1))
+            printf '  L%-4s DUPLICATE core/path.contract\n    %s\n    → remove from rc (prepend token already in path.contract)\n' "$n" "$line"
         else
             printf '  L%-4s → %s\n    %s\n' "$n" "$dest" "$line"
         fi

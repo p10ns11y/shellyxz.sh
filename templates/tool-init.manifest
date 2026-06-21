@@ -56,6 +56,12 @@ rustup-local:
   owner: core/path.contract
   note: use path.contract prepend, not ~/.local/bin/env
 
+pnpm:
+  shell: env
+  pattern: 'PNPM_HOME'
+  owner: core/env.sh
+  note: PNPM_HOME export in core/env.sh; bin dir via path.contract prepend:PNPM_HOME — remove pnpm setup block from rc
+
 grok:
   shell: zsh
   pattern: '.grok/completions'

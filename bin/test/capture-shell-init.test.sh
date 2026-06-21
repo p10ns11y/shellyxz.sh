@@ -54,5 +54,28 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# pnpm setup block on managed rc — PNPM_HOME already in core/env.sh + path.contract
+cp "$ROOT/templates/zshrc" "$TEST_HOME/.zshrc"
+cat >> "$TEST_HOME/.zshrc" <<'EOF'
+
+# pnpm
+export PNPM_HOME="/tmp/test/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
+EOF
+out5=$(HOME="$TEST_HOME" CONFIG_DIR="$ROOT" bash "$ROOT/bin/capture-shell-init.sh" 2>&1 || true)
+pnpm_out=$(printf '%s' "$out5" | awk '/Scanning.*\.zshrc$/{p=1} p && /Scanning/{if (!/\.zshrc$/) exit} p')
+if printf '%s' "$pnpm_out" | grep -q 'DUPLICATE.*core/env.sh' \
+    && printf '%s' "$pnpm_out" | grep -q 'DUPLICATE.*managed: core/env.sh'; then
+    printf 'ok   pnpm setup block flagged as DUPLICATE on managed rc\n'
+else
+    printf 'FAIL pnpm setup block should be DUPLICATE (core/env.sh)\n' >&2
+    printf '%s\n' "$pnpm_out" >&2
+    FAIL=$((FAIL + 1))
+fi
+
 echo "=== $FAIL failure(s) ==="
 [[ "$FAIL" -eq 0 ]]
