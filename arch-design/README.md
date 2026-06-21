@@ -13,5 +13,7 @@
 | [test-of-travelled-time-from-future.md](test-of-travelled-time-from-future.md) | Risk / thrive analysis |
 | [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) | `$SHELL` stale behavior |
 | [../motivation.md](../motivation.md) | Project genesis |
+| [plans/shell-kernel-ontology.md](plans/shell-kernel-ontology.md) | **Agent ontology** — machine graph + SN-O0/O1 plan |
+| [../.agents/ontology/INDEX.md](../.agents/ontology/INDEX.md) | Live ontology index (path, boundary, load order) |
 
 Operational scripts: [../bin/README.md](../bin/README.md). Environment presets: [../environments/README.md](../environments/README.md).

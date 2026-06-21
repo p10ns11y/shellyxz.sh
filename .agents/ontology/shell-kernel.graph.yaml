@@ -1,0 +1,342 @@
+# Shellyxz shell kernel ontology — SN-O0 Phase 1 (path + boundary + load order)
+# Canonical graph. Verification file paths deferred until after SN-4a (SN-O1).
+meta:
+  version: "1.0"
+  project: shellyxz-shell
+  layout: monorepo
+  layout_variant: pre_sn4
+  boundary_note: >
+    KernelPluginBoundary is conceptual (PLUGIN.md). Remap Artifact paths to
+    plugins/verification/ during SN-4; do not model bin/agent-* paths until SN-O1.
+  last_updated: "2026-06-21"
+
+nodes:
+  # --- Domains ---
+  - id: shellyxz:PathContractDomain
+    type: Domain
+    name: Path Contract Domain
+    subgraph: path
+    stability_score: 92
+    fused_summary: >
+      Declarative PATH build from path.contract layers (core, local, project phase)
+      via path_contract_apply; runtime verify via path_contract_verify; lexicon ties
+      contract line syntax to readable local variable names.
+    source_refs:
+      - core/path.contract
+      - core/path-resolve.sh
+      - arch-design/shell-script-readability.md
+
+  - id: shellyxz:KernelPluginBoundary
+    type: Domain
+    name: Kernel vs Verification Plugin Boundary
+    subgraph: boundary
+    stability_score: 90
+    fused_summary: >
+      Two products in one tree: portable kernel (PATH, migrate, recover) and optional
+      verification plugin (ab/av/at, tmux, cockpit). Kernel public hooks only; plugin
+      must not change load order or require kernel deps.
+    source_refs:
+      - PLUGIN.md
+      - arch-design/architecture.md
+
+  - id: shellyxz:LoadOrder
+    type: Domain
+    name: Shell Load Order
+    subgraph: load_order
+    stability_score: 88
+    fused_summary: >
+      login/profile → env.sh path_contract_apply (core then local) → presets →
+      tool hooks → direnv phase:project → path_contract_reassert at zshrc tail.
+    source_refs:
+      - arch-design/shell.md
+      - core/env.sh
+
+  # --- Boundaries ---
+  - id: shellyxz:Kernel
+    type: Boundary
+    name: Kernel
+    subgraph: boundary
+    must_not:
+      - Hardcode agent vendor CLIs (grok, cursor agent)
+      - Require tmux, Python, nvim, or Cursor for source ~/.zshrc
+      - Put machine-specific PATH in core/path.contract
+      - Change verification semantics without PLUGIN.md update
+    source_refs:
+      - PLUGIN.md
+      - core/env.sh
+
+  - id: shellyxz:VerificationPlugin
+    type: Boundary
+    name: Verification Plugin
+    subgraph: boundary
+    may_assume:
+      - tmux session; not editor integrated terminal
+      - Optional tools lazygit bat fzf yazi difftastic rg dust
+      - Per-project cockpit manifests (.agents/verification/, cockpit.yaml)
+      - SHELL_AGENT_BUILD_CMD via env (not hardcoded in kernel)
+      - SHELL_AGENT_STRICT_PATH or ab --strict for core-only PATH
+    must_not:
+      - Change kernel load order without check-shell.sh update
+      - Add required kernel dependencies (e.g. Python mandatory for zshrc)
+    source_refs:
+      - PLUGIN.md
+      - arch-design/VERIFICATION.md
+
+  # --- Public hooks ---
+  - id: shellyxz:PublicHook_verify_workflow_root
+    type: Hook
+    name: verify_workflow_root
+    file: core/functions.sh
+    signature: verify_workflow_root() — git-aware project root
+    source_refs:
+      - PLUGIN.md
+      - core/functions.sh
+
+  - id: shellyxz:PublicHook_SHELL_ROOT
+    type: Hook
+    name: SHELL_ROOT / SHELL_CONFIG_BIN
+    signature: Paths to ~/.config/shell
+    source_refs:
+      - PLUGIN.md
+      - core/env.sh
+
+  - id: shellyxz:PublicHook_detect_editor_terminal
+    type: Hook
+    name: detect_editor_terminal
+    file: core/functions.sh
+    signature: SHELL_IN_EDITOR_TERMINAL — skip broken integrated terminals
+    source_refs:
+      - PLUGIN.md
+      - core/functions.sh
+
+  # --- PATH concepts ---
+  - id: shellyxz:PathContract
+    type: Concept
+    name: Path Contract File
+    syntax: "path.contract v2 declarative lines"
+    lexicon_vars: [contract_file_path, contract_line]
+    source_refs:
+      - core/path.contract
+      - arch-design/shell-script-readability.md
+
+  - id: shellyxz:PathPhase
+    type: Concept
+    name: Path Phase
+    syntax: "phase:environment | phase:core | phase:inherit | phase:append | phase:project"
+    lexicon_vars: [phase_name, phase_filter]
+    source_refs:
+      - core/path.contract
+      - core/path-resolve.sh
+
+  - id: shellyxz:ContractLine_prepend
+    type: Concept
+    name: prepend line
+    syntax: "prepend:TOKEN or prepend:TOKEN:environment_gate"
+    lexicon_vars: [path_token, resolved_directory, environment_gate, pending_prepend_dirs]
+    source_refs:
+      - core/path.contract
+      - arch-design/shell-script-readability.md
+
+  - id: shellyxz:ContractLine_append
+    type: Concept
+    name: append line
+    syntax: "append:TOKEN"
+    lexicon_vars: [path_token, resolved_directory]
+    source_refs:
+      - core/path.contract
+      - arch-design/shell-script-readability.md
+
+  - id: shellyxz:ContractLine_deny
+    type: Concept
+    name: deny line
+    syntax: "deny:PATTERN"
+    lexicon_vars: [deny_pattern, resolved_directory]
+    source_refs:
+      - core/path.contract
+      - arch-design/shell-script-readability.md
+
+  - id: shellyxz:EnvironmentGate
+    type: Concept
+    name: Environment Gate
+    syntax: "prepend:TOKEN:omarchy — third field gates on preset"
+    lexicon_vars: [environment_gate]
+    source_refs:
+      - core/path-resolve.sh
+      - arch-design/shell-script-readability.md
+
+  - id: shellyxz:ReadabilityLexicon
+    type: Concept
+    name: PATH Readability Lexicon
+    documented_in:
+      - arch-design/shell-script-readability.md
+      - .cursor/rules/shell-readability.mdc
+    source_refs:
+      - arch-design/shell-script-readability.md
+      - .cursor/rules/shell-readability.mdc
+
+  # --- PATH artifacts (layers) ---
+  - id: shellyxz:Artifact_core_path_contract
+    type: Artifact
+    name: core/path.contract
+    path: core/path.contract
+    role: Forkable PATH defaults; no personal toolchains
+    source_refs:
+      - core/path.contract
+      - arch-design/architecture.md
+
+  - id: shellyxz:Artifact_local_path_contract
+    type: Artifact
+    name: local/path.contract
+    path: local/path.contract
+    role: Machine overlay; wins which over core; no project repo paths
+    source_refs:
+      - local/path.contract.example
+      - arch-design/architecture.md
+
+  - id: shellyxz:Artifact_project_path_contract
+    type: Artifact
+    name: repo .path.contract
+    path: .path.contract
+    role: phase:project only; direnv-scoped; must not replace global contract
+    source_refs:
+      - .path.contract.example
+      - arch-design/shell.md
+
+  - id: shellyxz:Artifact_tool_contract
+    type: Artifact
+    name: core/tool.contract
+    path: core/tool.contract
+    role: Pin clear/tput/git + shadow warn; not every binary
+    source_refs:
+      - core/tool.contract
+      - PLUGIN.md
+
+  # --- PATH public API ---
+  - id: shellyxz:Fn_path_contract_apply
+    type: Function
+    name: path_contract_apply
+    export: true
+    file: core/path-resolve.sh
+    signature: path_contract_apply [--phase NAME]
+    source_refs:
+      - core/path-resolve.sh
+      - core/env.sh
+
+  - id: shellyxz:Fn_path_contract_apply_project
+    type: Function
+    name: path_contract_apply_project
+    export: true
+    file: core/path-resolve.sh
+    signature: path_contract_apply_project CONTRACT_FILE
+    source_refs:
+      - core/path-resolve.sh
+      - bin/path-contract-project.sh
+
+  - id: shellyxz:Fn_path_contract_reassert
+    type: Function
+    name: path_contract_reassert
+    export: true
+    file: core/path-resolve.sh
+    signature: path_contract_reassert
+    source_refs:
+      - core/path-resolve.sh
+      - templates/zshrc
+
+  - id: shellyxz:Fn_path_contract_verify
+    type: Function
+    name: path_contract_verify
+    export: true
+    file: core/path-resolve.sh
+    signature: path_contract_verify
+    source_refs:
+      - core/path-resolve.sh
+      - bin/check-shell.sh
+
+  - id: shellyxz:Fn_path_contract_apply_core_only
+    type: Function
+    name: path_contract_apply_core_only
+    export: true
+    file: core/path-resolve.sh
+    signature: path_contract_apply_core_only — skips local overlay (strict PATH)
+    source_refs:
+      - core/path-resolve.sh
+      - PLUGIN.md
+
+  - id: shellyxz:Fn_path_prepend
+    type: Function
+    name: path_prepend
+    export: true
+    file: core/path.sh
+    signature: path_prepend DIRECTORY
+    source_refs:
+      - core/path.sh
+      - core/path-resolve.sh
+
+  # --- Invariants ---
+  - id: shellyxz:Inv_local_wins_core
+    type: Invariant
+    name: local wins core on which
+    severity: error
+    check_ref: bin/check-shell.sh path contract overlay order
+    source_refs:
+      - arch-design/architecture.md
+      - bin/check-shell.sh
+
+  - id: shellyxz:Inv_direnv_owns_project
+    type: Invariant
+    name: direnv owns project PATH
+    severity: error
+    fused_summary: Project PATH via direnv + phase:project; .envrc must not rebuild full PATH
+    source_refs:
+      - arch-design/architecture.md
+      - arch-design/shell.md
+
+  - id: shellyxz:Inv_reassert_strips_junk
+    type: Invariant
+    name: path_contract_reassert at zshrc tail
+    severity: error
+    fused_summary: Reapplies core+local phases; strips deny patterns (e.g. /condabin) again
+    source_refs:
+      - templates/zshrc
+      - arch-design/architecture.md
+
+  - id: shellyxz:Inv_kernel_survives_plugin_delete
+    type: Invariant
+    name: kernel works if plugin deleted
+    severity: error
+    source_refs:
+      - PLUGIN.md
+      - arch-design/test-of-travelled-time-from-future.md
+
+edges:
+  - { from: shellyxz:Kernel, to: shellyxz:PathContractDomain, type: owns }
+  - { from: shellyxz:Kernel, to: shellyxz:LoadOrder, type: owns }
+  - { from: shellyxz:VerificationPlugin, to: shellyxz:Kernel, type: dependsOn, note: calls PublicHooks only }
+  - { from: shellyxz:Kernel, to: shellyxz:VerificationPlugin, type: mustNot, note: kernel must not require plugin }
+  - { from: shellyxz:Kernel, to: shellyxz:PublicHook_verify_workflow_root, type: owns }
+  - { from: shellyxz:Kernel, to: shellyxz:PublicHook_SHELL_ROOT, type: owns }
+  - { from: shellyxz:Kernel, to: shellyxz:PublicHook_detect_editor_terminal, type: owns }
+  - { from: shellyxz:PathContractDomain, to: shellyxz:PathContract, type: owns }
+  - { from: shellyxz:PathContract, to: shellyxz:PathPhase, type: owns }
+  - { from: shellyxz:PathPhase, to: shellyxz:ContractLine_prepend, type: owns }
+  - { from: shellyxz:PathPhase, to: shellyxz:ContractLine_append, type: owns }
+  - { from: shellyxz:PathPhase, to: shellyxz:ContractLine_deny, type: owns }
+  - { from: shellyxz:ContractLine_prepend, to: shellyxz:EnvironmentGate, type: resolvesTo }
+  - { from: shellyxz:ContractLine_prepend, to: shellyxz:ReadabilityLexicon, type: usesLexicon }
+  - { from: shellyxz:ContractLine_deny, to: shellyxz:ReadabilityLexicon, type: usesLexicon }
+  - { from: shellyxz:PathContractDomain, to: shellyxz:Artifact_core_path_contract, type: owns }
+  - { from: shellyxz:PathContractDomain, to: shellyxz:Artifact_local_path_contract, type: owns }
+  - { from: shellyxz:PathContractDomain, to: shellyxz:Artifact_project_path_contract, type: owns }
+  - { from: shellyxz:PathContractDomain, to: shellyxz:Artifact_tool_contract, type: owns }
+  - { from: shellyxz:Fn_path_contract_apply, to: shellyxz:Artifact_core_path_contract, type: resolvesTo }
+  - { from: shellyxz:Fn_path_contract_apply, to: shellyxz:Artifact_local_path_contract, type: resolvesTo }
+  - { from: shellyxz:Fn_path_contract_apply_project, to: shellyxz:Artifact_project_path_contract, type: resolvesTo }
+  - { from: shellyxz:Inv_local_wins_core, to: shellyxz:Artifact_local_path_contract, type: enforces }
+  - { from: shellyxz:Inv_direnv_owns_project, to: shellyxz:Artifact_project_path_contract, type: enforces }
+  - { from: shellyxz:Inv_reassert_strips_junk, to: shellyxz:Fn_path_contract_reassert, type: enforces }
+  - { from: shellyxz:Inv_kernel_survives_plugin_delete, to: shellyxz:Kernel, type: enforces }
+  - { from: shellyxz:LoadOrder, to: shellyxz:Fn_path_contract_apply, type: appliesBefore }
+  - { from: shellyxz:LoadOrder, to: shellyxz:Fn_path_contract_reassert, type: appliesBefore }
+  - { from: shellyxz:KernelPluginBoundary, to: shellyxz:Kernel, type: documentedIn, note: PLUGIN.md }
+  - { from: shellyxz:KernelPluginBoundary, to: shellyxz:VerificationPlugin, type: documentedIn, note: PLUGIN.md }
+  - { from: shellyxz:PathContractDomain, to: shellyxz:KernelPluginBoundary, type: documentedIn, note: architecture.md PATH table }
