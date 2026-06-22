@@ -52,6 +52,14 @@ if [[ "$SCRIPT_SRC" != "$TARGET_SCRIPT" ]] && [[ -f "$SCRIPT_SRC" ]]; then
     chmod +x "$CONFIG_DIR/bin/migrate.sh" "$CONFIG_DIR/bin/tasks/"*.sh 2>/dev/null || true
 fi
 
+PLUGIN_SRC="$(cd "$SCRIPT_DIR/../plugins/verification" 2>/dev/null && pwd || true)"
+if [[ -n "$PLUGIN_SRC" ]] && [[ -d "$PLUGIN_SRC" ]]; then
+    mkdir -p "$CONFIG_DIR/plugins"
+    cp -a "$PLUGIN_SRC" "$CONFIG_DIR/plugins/verification" 2>/dev/null || true
+    chmod +x "$CONFIG_DIR/plugins/verification/bin/"*.sh 2>/dev/null || true
+    chmod +x "$CONFIG_DIR/bin/agent-"*.sh "$CONFIG_DIR/bin/cockpit-mcp.sh" 2>/dev/null || true
+fi
+
 export BACKUP_DIR
 BACKUP_DIR="$CONFIG_DIR/backups/$(date +%Y%m%d-%H%M%S)"
 # shellcheck disable=SC1091

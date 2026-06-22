@@ -82,11 +82,18 @@ bootstrap_from_remote() {
         bin/tasks/install-rc.sh bin/tasks/scaffold.sh bin/tasks/git-commit.sh
         bin/check-shell.sh bin/check-template-sync.sh bin/scaffold-environment.sh
         bin/capture-shell-init.sh bin/recover-shell.sh bin/README.md
-        bin/agent-verify-layout.sh bin/agent-build-layout.sh bin/fzf-preview.sh
+        bin/agent-verify-layout.sh bin/agent-build-layout.sh bin/agent-test-layout.sh \
+        bin/cockpit-mcp.sh bin/sync-tmux-verify.sh bin/tmux-keymap-menu.sh \
+        bin/tmux-cycle-layout.sh bin/tmux-mode-sync.sh bin/verify-pane-launch.sh \
+        bin/run-project-tests.sh bin/fzf-preview.sh bin/verify-workflow-root.sh
+        plugins/verification/README.md
         environments/README.md arch-design/README.md
         README.md arch-design/shell.md arch-design/SHELL-env-var-behavior.md
         arch-design/VERIFICATION.md arch-design/human-in-the-loop-workflow.md
-        starship.ex.toml tmux.verify.conf.ex tmux.verify-soc-theme.conf.ex tmux.status-mode.conf.ex yazi.ex.toml git.ex.config .gitignore
+        starship.ex.toml yazi.ex.toml git.ex.config .gitignore
+        plugins/verification/conf/tmux.verify.conf.ex \
+        plugins/verification/conf/tmux.verify-soc-theme.conf.ex \
+        plugins/verification/conf/tmux.status-mode.conf.ex
     )
 
     if ! command -v curl &>/dev/null; then

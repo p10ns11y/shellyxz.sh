@@ -1,20 +1,10 @@
 #!/usr/bin/env bash
-# Cycle layout: re-apply golden φ on verify window, else tmux next-layout.
+# Shim → plugins/verification (SN-4). Stable path for tmux binds and migrate.
 set -euo pipefail
-
-if [ -z "${TMUX:-}" ]; then
-    echo "tmux-cycle-layout: must run inside tmux" >&2
+shell_root="${SHELL_ROOT:-$HOME/.config/shell}"
+plugin_script="${shell_root}/plugins/verification/bin/$(basename "$0")"
+if [ ! -x "$plugin_script" ]; then
+    echo "$(basename "$0"): missing $plugin_script" >&2
     exit 1
 fi
-
-SESSION="$(tmux display-message -p '#{session_name}')"
-WIN="$(tmux display-message -p '#{window_name}')"
-
-if [ "$WIN" = verify ]; then
-    # shellcheck source=/dev/null
-    source "${HOME}/.config/shell/bin/lib/verify-layout.sh"
-    verify_layout_apply_golden_proportions "$SESSION"
-    tmux display-message -d 1500 'verify layout: golden proportions' 2>/dev/null || true
-else
-    tmux next-layout
-fi
+exec "$plugin_script" "$@"

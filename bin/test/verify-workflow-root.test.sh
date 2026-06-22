@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export VERIFY_LAUNCH_LIB_DIR="$ROOT/bin/lib"
 # shellcheck source=/dev/null
-source "$ROOT/bin/lib/verify-launch.sh"
+source "$ROOT/plugins/verification/lib/verify-launch.sh"
 
 TMP=""
 failures=0

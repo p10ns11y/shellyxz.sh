@@ -24,7 +24,7 @@ project_test_cmd() {
     local runner="${root}/bin/run-project-tests.sh"
 
     if [ ! -x "$runner" ]; then
-        runner="$HOME/.config/shell/bin/run-project-tests.sh"
+        runner="${SHELL_VERIFICATION_BIN:-${SHELL_ROOT:-$HOME/.config/shell}/plugins/verification/bin}/run-project-tests.sh"
     fi
 
     if [ ! -x "$runner" ]; then

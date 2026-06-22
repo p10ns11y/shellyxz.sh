@@ -3,11 +3,11 @@
 meta:
   version: "1.0"
   project: shellyxz-shell
-  layout: monorepo
-  layout_variant: pre_sn4
+  layout: plugins_verification
+  layout_variant: sn4_4a
   boundary_note: >
-    KernelPluginBoundary is conceptual (PLUGIN.md). Remap Artifact paths to
-    plugins/verification/ during SN-4; do not model bin/agent-* paths until SN-O1.
+    Verification implementation under plugins/verification/; bin/* shims stable.
+    Per-project cockpit manifests remain at .agents/verification/ in each repo.
   last_updated: "2026-06-21"
 
 nodes:

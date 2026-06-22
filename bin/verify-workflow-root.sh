@@ -6,6 +6,6 @@ set -euo pipefail
 DIR="${1:-.}"
 
 # shellcheck source=/dev/null
-source "${VERIFY_LAUNCH_LIB_DIR:-$HOME/.config/shell/bin/lib}/verify-launch.sh"
+source "${SHELL_VERIFICATION_LIB:-${SHELL_ROOT:-$HOME/.config/shell}/plugins/verification/lib}/verify-launch.sh"
 
 verify_workflow_root "$DIR"

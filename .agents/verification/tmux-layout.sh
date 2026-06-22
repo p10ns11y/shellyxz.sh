@@ -19,9 +19,9 @@ if [ -z "${TMUX:-}" ]; then
 fi
 
 # shellcheck source=/dev/null
-source "$HOME/.config/shell/bin/lib/verify-launch.sh"
+source "${SHELL_VERIFICATION_LIB:-${HOME}/.config/shell/plugins/verification/lib}/verify-launch.sh"
 # shellcheck source=/dev/null
-source "$HOME/.config/shell/bin/lib/verify-layout.sh"
+source "${SHELL_VERIFICATION_LIB:-${HOME}/.config/shell/plugins/verification/lib}/verify-layout.sh"
 
 SESSION="$(tmux display-message -p '#{session_name}')"
 ROOT="$(verify_workflow_root "$ROOT")"
