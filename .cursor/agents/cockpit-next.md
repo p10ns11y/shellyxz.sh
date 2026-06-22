@@ -21,7 +21,7 @@ Read and follow [`arch-design/coming-next.md`](arch-design/coming-next.md) for b
 | Verify layout | `bin/agent-verify-layout.sh`, `bin/lib/verify-layout.sh`, `.agents/verification/manifest.yaml` |
 | Test layout | `bin/agent-test-layout.sh`, `.agents/verification/tests.yaml` |
 | Test runner | `bin/run-project-tests.sh`, `bin/lib/project-tests.sh`, `bin/lib/parse-project-tests.py` |
-| tmux binds | `tmux.verify.conf.ex`, `bin/data/tmux-keymaps.tsv`, `bin/tmux-keymap-menu.sh` |
+| tmux binds | `plugins/verification/conf/tmux.verify.conf.ex`, `plugins/verification/data/tmux-keymaps.tsv`, `bin/tmux-keymap-menu.sh` |
 | Skill / templates | `.agents/skills/verification-cockpit/`, `.cursor/skills/verification-cockpit/` |
 | Docs | `arch-design/VERIFICATION.md`, `arch-design/human-in-the-loop-workflow.md` |
 
@@ -36,7 +36,7 @@ Execute in dependency order unless the user names a specific item:
 - Merge `manifest.yaml` + `tests.yaml` into `.agents/verification/cockpit.yaml` with `cockpits.verify` and `cockpits.test` sections.
 - Each section defines a **layout** (geometry + pane roles), not raw tmux primitives.
 - Update verification-cockpit skill templates to generate one file in one pass.
-- Keep backward compatibility or migrate dogfood `.agents/verification/` and `.cursor/verify/` together.
+- Keep backward compatibility or migrate this repo's `.agents/verification/` and `.cursor/verify/` together.
 
 ### 2. Per-test `watch_command`
 
@@ -72,7 +72,7 @@ Execute in dependency order unless the user names a specific item:
 ## Implementation rules
 
 1. **Minimal diff** — one work stream per PR when possible; match existing shell style (bash, shellcheck-clean).
-2. **Dogfood** — after layout/runner changes, verify against `.agents/verification/` in this repo.
+2. **Local verify** — after layout/runner changes, run `av` against `.agents/verification/` in this repo.
 3. **No eval on untrusted input** — manifest is repo-local but treat commands as structured data.
 4. **Preserve ab/av/at aliases** — shell aliases in `core/aliases.sh`; tmux binds are additive.
 5. **Test before done** — run relevant `bin/test/*.test.sh`, `bin/check-shell.sh`, and manual tmux smoke only when tmux is available.

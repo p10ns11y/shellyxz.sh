@@ -106,10 +106,10 @@ Each card **must** include:
 
 **Done when:** Observable pass condition.
 
-**Verify:** Commands or dogfood steps.
+**Verify:** Commands or manual verify steps.
 ```
 
-Priority: **SN-1 dogfood gate** (no new code) before feature cards.
+Priority: **SN-1 verify first** (no new code) before feature cards.
 
 ### 4. Mermaid guardrails
 

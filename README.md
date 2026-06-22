@@ -98,6 +98,9 @@ Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 
 ```
 ~/.config/shell/
+├── plugins/              # Optional feature plugins (see PLUGIN.md)
+│   └── verification/     # ab/av/at cockpit — plugins/verification/README.md
+├── PLUGIN.md             # Kernel vs verification-plugin boundary
 ├── arch-design/          # architecture.md (current state), coming-next (backlog), shell.md, …
 ├── planned-features/     # done/ — shipped epics with diagrams + PR/commit evidence
 │   └── README.md         # Index of design docs
@@ -374,7 +377,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 ## Maintenance
 
 - Shell naming for human debugging: [arch-design/shell-script-readability.md](arch-design/shell-script-readability.md) (always-on [`.cursor/rules/shell-readability.mdc`](.cursor/rules/shell-readability.mdc))
-- Run `~/.config/shell/bin/check-shell.sh` after edits — runs **shellcheck on all `*.sh`** plus load-order and reserved-name checks
+- Run `~/.config/shell/bin/check-shell.sh` after edits — runs **shellcheck on all `*.sh`** plus load-order and reserved-name checks (`shellyhow` is a common alias for the same script)
 - Script reference: [bin/README.md](bin/README.md) — migrate, check-shell, recover, agent-verify-layout, fzf-preview
 - Add `--audit` for extra permission checks (`dev.env` mode 600, `recover-shell.sh` executable, `lib.sh` present)
 - Run `~/.config/shell/bin/migrate.sh` to refresh **managed** rc files (`~/.zshrc`, `~/.bashrc`, fish config)
@@ -383,6 +386,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 - Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
 - **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
 - See [PLUGIN.md](PLUGIN.md) for kernel vs verification-plugin boundary (what must work without tmux/agents)
+- See [plugins/verification/README.md](plugins/verification/README.md) for verification plugin layout, install paths, and headless `cockpit-mcp` verbs
 - See [arch-design/architecture.md](arch-design/architecture.md) for **current** system map, scorecard, and PATH layers
 - See [arch-design/coming-next.md](arch-design/coming-next.md) for backlog (next items + last 10 done)
 - See [planned-features/done/](planned-features/done/) for shipped sprint archives with diagrams and PR links

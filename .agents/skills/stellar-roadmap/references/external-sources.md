@@ -25,7 +25,7 @@ Copy into every stellar-roadmap document. Add project-specific rows at the top.
 
 | Doc | URL | Use |
 |-----|-----|-----|
-| intuitive-shell-plan | https://github.com/p10ns11y/collab-finder/blob/main/reports/intuitive-shell-plan.md | Blueprint card format; dogfood gate first |
+| intuitive-shell-plan | https://github.com/p10ns11y/collab-finder/blob/main/reports/intuitive-shell-plan.md | Blueprint card format; verify first |
 | batch-2-engineering-blueprints | https://github.com/p10ns11y/collab-finder/blob/main/reports/batch-2-engineering-blueprints.md | Scorecard grades; gantt; done-when tables |
 | single-pr-intuitive-product | https://github.com/p10ns11y/collab-finder/blob/main/reports/single-pr-intuitive-product.md | Musk 5-step strict order; 2nd/3rd order guards |
 

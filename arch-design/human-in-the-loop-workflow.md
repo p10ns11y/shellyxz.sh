@@ -77,7 +77,7 @@ Use `av --scan` when you want the checklist; plain `av` only opens the cockpit. 
 
 ## Cockpit tour (what each pane is for)
 
-After `av`, you get the golden φ verify grid (this repo dogfoods `.agents/verification/`):
+After `av`, you get the golden φ verify grid (this repo uses `.agents/verification/` as its local stress-test layout):
 
 ```
 +----------------------------+------------------+

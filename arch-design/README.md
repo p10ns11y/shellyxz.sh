@@ -8,7 +8,8 @@
 | [coming-next.md](coming-next.md) | **Backlog** — next items + last 10 done (short) |
 | [../planned-features/](../planned-features/) | Shipped epics — full diagrams, PR links, commit SHAs |
 | [shell.md](shell.md) | Load order, PATH contract detail, migrate policy |
-| [VERIFICATION.md](VERIFICATION.md) | ab/av/at, cockpit-mcp, tmux workflow |
+| [VERIFICATION.md](VERIFICATION.md) | ab/av/at workflow philosophy, tmux rituals |
+| [../plugins/verification/README.md](../plugins/verification/README.md) | Verification plugin — file map, install, headless verbs |
 | [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) | Repeatable review rituals |
 | [test-of-travelled-time-from-future.md](test-of-travelled-time-from-future.md) | Risk / thrive analysis |
 | [SHELL-env-var-behavior.md](SHELL-env-var-behavior.md) | `$SHELL` stale behavior |

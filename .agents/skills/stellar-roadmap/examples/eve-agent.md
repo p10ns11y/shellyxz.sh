@@ -55,7 +55,7 @@ Ship production agents that survive crashes, platform churn, and channel sprawl 
 
 ## Typical SN backlog (customize)
 
-1. **SN-1** Dogfood gate — `npx eve@latest` dev; one channel; no new tools
+1. **SN-1** Verify first — `npx eve@latest` dev; one channel; no new tools
 2. **SN-2** Harden `instructions.md` + one focused `skills/` playbook
 3. **SN-3** Core `tools/` with zod + env-based API URLs
 4. **SN-4** `sandbox/sandbox.ts` if bash/code execution is in scope

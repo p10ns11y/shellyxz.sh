@@ -9,7 +9,7 @@
 | [shell-kernel.md](shell-kernel.md) | Portable shell / dotfiles kernel + PLUGIN boundary | Target project's `arch-design/coming-next.md` (or equivalent) |
 | [eve-agent.md](eve-agent.md) | [Vercel Eve](https://vercel.com/eve) agent directory | *(create `arch-design/coming-next.md` in target repo)* |
 
-**Shell config dogfood:** full overlay with live paths in skills library [shellyxz-shell-kernel.md](../../examples/overlays/shellyxz-shell-kernel.md).
+**Shell config local overlay:** full overlay with live paths in skills library [shellyxz-shell-kernel.md](https://github.com/p10ns11y/skills/blob/main/examples/overlays/shellyxz-shell-kernel.md) (external; not vendored in this repo).
 
 **Usage:** Tell the agent: `Load stellar-roadmap/examples/shell-kernel.md overlay; expand full coming-next only for SN-N being edited.`
 

@@ -19,7 +19,7 @@ Ship computer (kernel: PATH, migrate, recover) + command bridge (ab/av/at, tmux,
 
 ## Open SN priority (template)
 
-1. **SN-1** Dogfood gate — run `av` in repo, no new code
+1. **SN-1** Verify first — run `av` in repo, no new code
 2. **SN-2** Per-project env fragment (direnv / phase)
 3. **SN-3** Agent strict PATH (plugin only)
 4. **SN-4** Modular split of verification plugins

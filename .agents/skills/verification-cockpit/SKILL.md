@@ -31,7 +31,7 @@ Open that project in Cursor, then invoke the skill. It generates `.agents/verifi
 
 ## When to run
 
-- Target project (or **this shell repo** as dogfood/stress test) needs a verification dashboard
+- Target project (or **this shell repo** as a local stress test) needs a verification dashboard
 - `AGENTS.md` / README lists verify commands not reflected in panes
 - Stack changed (new `pnpm` scripts, Rust crate, CI jobs)
 - User asks for "verification cockpit", "av layout", or "mission control"

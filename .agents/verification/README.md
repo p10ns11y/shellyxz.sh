@@ -1,4 +1,4 @@
-# Verification cockpit — shell (dogfood)
+# Verification cockpit — shell (local stress test)
 
 Golden-ratio layout for **shell config verification** — every pane surfaces a concrete failure mode. No file browser or system monitor clutter.
 
@@ -33,7 +33,7 @@ Pane indices: `0=GIT` `1=SYNC` `2=CHECK:watch` `3=CMD` (tmux reindexes during sp
 ```bash
 av                  # this layout (delegates from agent-verify-layout.sh)
 av --scan           # + agent_scan in CMD
-av --generic        # skip dogfood layout
+av --generic        # skip this repo's layout; use generic 4-pane cockpit
 ```
 
 ## Regenerate
