@@ -96,7 +96,8 @@ vf() {
 
 # Canonical workflow root (layout walk-up → git toplevel → cwd). Used by ab / av / agent_scan.
 _verify_workflow_root() {
-    local script="${SHELL_CONFIG_BIN:-$HOME/.config/shell/bin}/verify-workflow-root.sh"
+    local script
+    script="${SHELL_CONFIG_BIN:-${SHELL_ROOT:-$HOME/.config/shell}/bin}/verify-workflow-root.sh"
     if [ ! -x "$script" ]; then
         echo "_verify_workflow_root: missing $script" >&2
         return 1
@@ -157,11 +158,11 @@ _agent_tmux_guard() {
 # Agent build layout — full-pane agent TUI (SHELL_AGENT_BUILD_CMD). Requires native terminal + tmux.
 agent_build() {
     _agent_tmux_guard || return 1
-    local script="$HOME/.config/shell/bin/agent-build-layout.sh"
-    if [ ! -x "$script" ]; then
-        echo "agent_build: missing $script" >&2
+    local script
+    script="$(verification_script_path agent-build-layout.sh)" || {
+        echo "agent_build: missing agent-build-layout.sh (plugins/verification/bin or bin shim)" >&2
         return 1
-    fi
+    }
     local dir="." args=() workflow_directory_set=""
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -232,11 +233,11 @@ agent_verify() {
         esac
     done
     dir="$(_verify_workflow_root "$dir")" || return 1
-    local script="$HOME/.config/shell/bin/agent-verify-layout.sh"
-    if [ ! -x "$script" ]; then
-        echo "agent_verify: missing $script" >&2
+    local script
+    script="$(verification_script_path agent-verify-layout.sh)" || {
+        echo "agent_verify: missing agent-verify-layout.sh (plugins/verification/bin or bin shim)" >&2
         return 1
-    fi
+    }
     local args=()
     if [ "$use_generic" = 1 ]; then
         args+=(--generic)
@@ -263,11 +264,11 @@ agent_verify() {
 # Test cockpit — btop left + project tests right (at / agent_test). Requires native terminal + tmux.
 agent_test() {
     _agent_tmux_guard || return 1
-    local script="$HOME/.config/shell/bin/agent-test-layout.sh"
-    if [ ! -x "$script" ]; then
-        echo "agent_test: missing $script" >&2
+    local script
+    script="$(verification_script_path agent-test-layout.sh)" || {
+        echo "agent_test: missing agent-test-layout.sh (plugins/verification/bin or bin shim)" >&2
         return 1
-    fi
+    }
     local dir="." args=() workflow_directory_set=""
     while [ $# -gt 0 ]; do
         case "$1" in
