@@ -61,5 +61,5 @@ flowchart LR
 |------|-------|
 | SN-O1 | VerificationBridge nodes, skill, `check-ontology.sh` |
 | SN-4b | Optional separate verification repo |
-| HODA overlay | `arch-design/overlays/shell-kernel-decision-hooks.md` |
-| Graph viz | `.agents/ontology/GRAPH.md` + `bin/render-ontology-graph.sh` |
+| HODA overlay | **Shipped** — [#12](ontology-viz-hoda-pr12.md) |
+| Graph viz | **Shipped** — [#12](ontology-viz-hoda-pr12.md) |
