@@ -66,6 +66,34 @@ install_managed_rc() {
 
 bootstrap_from_remote() {
     local rel dest dir url
+    local verification_plugin_files=(
+        plugins/verification/README.md
+        plugins/verification/bin/agent-build-layout.sh
+        plugins/verification/bin/agent-verify-layout.sh
+        plugins/verification/bin/agent-test-layout.sh
+        plugins/verification/bin/cockpit-mcp.sh
+        plugins/verification/bin/sync-tmux-verify.sh
+        plugins/verification/bin/tmux-keymap-menu.sh
+        plugins/verification/bin/tmux-cycle-layout.sh
+        plugins/verification/bin/tmux-mode-sync.sh
+        plugins/verification/bin/verify-pane-launch.sh
+        plugins/verification/bin/run-project-tests.sh
+        plugins/verification/bin/project-test-watch.sh
+        plugins/verification/lib/verify-launch.sh
+        plugins/verification/lib/verify-layout.sh
+        plugins/verification/lib/project-tests.sh
+        plugins/verification/lib/parse-project-tests.sh
+        plugins/verification/lib/parse-project-tests.py
+        plugins/verification/lib/parse-project-tests-run.sh
+        plugins/verification/lib/parse-project-tests-discover.sh
+        plugins/verification/lib/discover-tests.sh
+        plugins/verification/lib/test-allowlist.sh
+        plugins/verification/lib/tmux-status-mode.sh
+        plugins/verification/data/tmux-keymaps.tsv
+        plugins/verification/conf/tmux.verify.conf.ex
+        plugins/verification/conf/tmux.verify-soc-theme.conf.ex
+        plugins/verification/conf/tmux.status-mode.conf.ex
+    )
     local files=(
         lib.sh env.sh aliases.sh functions.sh personal.sh
         core/lib.sh core/path.sh core/path-resolve.sh core/path.contract core/tool.contract core/env.sh core/aliases.sh core/functions.sh
@@ -86,15 +114,12 @@ bootstrap_from_remote() {
         bin/cockpit-mcp.sh bin/sync-tmux-verify.sh bin/tmux-keymap-menu.sh \
         bin/tmux-cycle-layout.sh bin/tmux-mode-sync.sh bin/verify-pane-launch.sh \
         bin/run-project-tests.sh bin/fzf-preview.sh bin/verify-workflow-root.sh
-        plugins/verification/README.md
         environments/README.md arch-design/README.md
         README.md arch-design/shell.md arch-design/SHELL-env-var-behavior.md
         arch-design/VERIFICATION.md arch-design/human-in-the-loop-workflow.md
         starship.ex.toml yazi.ex.toml git.ex.config .gitignore
-        plugins/verification/conf/tmux.verify.conf.ex \
-        plugins/verification/conf/tmux.verify-soc-theme.conf.ex \
-        plugins/verification/conf/tmux.status-mode.conf.ex
     )
+    files+=( "${verification_plugin_files[@]}" )
 
     if ! command -v curl &>/dev/null; then
         warn "curl not found — cannot bootstrap from $SHELL_CONFIG_RAW"
@@ -105,6 +130,8 @@ bootstrap_from_remote() {
     mkdir -p "$CONFIG_DIR/bin" "$CONFIG_DIR/core" "$CONFIG_DIR/environments/generic" "$CONFIG_DIR/environments/omarchy"
     mkdir -p "$CONFIG_DIR/templates/login" "$CONFIG_DIR/templates/core" "$CONFIG_DIR/local"
     mkdir -p "$CONFIG_DIR/bin/lib" "$CONFIG_DIR/bin/tasks"
+    mkdir -p "$CONFIG_DIR/plugins/verification/bin" "$CONFIG_DIR/plugins/verification/lib" \
+        "$CONFIG_DIR/plugins/verification/data" "$CONFIG_DIR/plugins/verification/conf"
 
     for rel in "${files[@]}"; do
         dest="$CONFIG_DIR/$rel"
@@ -123,12 +150,13 @@ bootstrap_from_remote() {
     done
 
     chmod +x "$CONFIG_DIR/bin/"*.sh "$CONFIG_DIR/bin/tasks/"*.sh 2>/dev/null || true
+    chmod +x "$CONFIG_DIR/plugins/verification/bin/"*.sh 2>/dev/null || true
     success "Remote bootstrap complete"
 }
 
 config_needs_bootstrap() {
     local f
-    for f in core/lib.sh core/env.sh bin/check-shell.sh; do
+    for f in core/lib.sh core/env.sh bin/check-shell.sh plugins/verification/lib/verify-launch.sh; do
         [[ -f "$CONFIG_DIR/$f" ]] || return 0
     done
     return 1

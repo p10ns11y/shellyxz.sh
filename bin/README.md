@@ -258,7 +258,7 @@ Library: `bin/lib/tmux-status-mode.sh` — format string source of truth.
 | `Prefix+?` | Open menu |
 | Click status-right (`?` hint) | Open menu |
 
-Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leader keys.
+Data file: `plugins/verification/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leader keys.
 
 ---
 
@@ -331,7 +331,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 | `--watch` | Re-run on `TEST_WATCH_INTERVAL` (default 60s) |
 | `--all` | Run every test in manifest (ignore `max_run`) |
 
-**Requires:** `python` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
+**Requires:** `python` on PATH (`plugins/verification/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
 
 ---
 
@@ -341,7 +341,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 
 | Script | Role |
 |--------|------|
-| `bin/lib/verify-launch.sh` | Library: `verify_launch_pane`, `verify_apply_theme`, `verify_maybe_rescan` |
+| `plugins/verification/lib/verify-launch.sh` | Library: `verify_launch_pane`, `verify_apply_theme`, `verify_maybe_rescan` |
 | `bin/verify-pane-launch.sh` | In-pane confirm gate for `verify` / `mutate` tiers |
 
 **Tiers:** `monitor`/`watch` auto-launch; `verify` prompts `[y/N]`; `mutate` requires `av --launch-mutate` and typing `YES`.

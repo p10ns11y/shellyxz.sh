@@ -1,8 +1,8 @@
 # Shell kernel ontology — plan
 
-**Status:** SN-O0 shipped (Phase 1 graph). **Live graph:** [`.agents/ontology/`](../.agents/ontology/INDEX.md)
+**Status:** SN-O0 shipped · SN-4a shipped (plugin split + ab/av/at fix). **Live graph:** [`.agents/ontology/`](../.agents/ontology/INDEX.md)
 
-*Last updated: 2026-06-21*
+*Last updated: 2026-06-22*
 
 ---
 
@@ -30,7 +30,7 @@ Machine-readable domain graph so agents load **addressable** semantics (kernel v
 | Order | Item | Notes |
 |-------|------|-------|
 | 1 | **SN-O0** (this) | Boundary + PATH graph before physical split |
-| 2 | **SN-4** | `plugins/verification/` + bin shims; use [INDEX.md](../.agents/ontology/INDEX.md) split checklist |
+| 2 | **SN-4a** | `plugins/verification/` + bin shims — **shipped** in PR #11 |
 | 3 | **SN-O1** | VerificationBridge nodes, skill/rule, drift gate |
 
 Ontology **helps** SN-4: `mustNot` / `may_assume` / `PublicHook` nodes route file moves. Do not wait for SN-4 to model boundary semantics.
