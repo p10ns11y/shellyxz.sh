@@ -459,13 +459,20 @@ grep -q 'agent_build' "$FUNCS_FILE" \
 grep -q '^vf()' "$FUNCS_FILE" \
     && ok 'functions.sh: vf' \
     || warn 'functions.sh: vf missing'
+VERIFY_PLUGIN="${CONFIG_DIR}/plugins/verification"
 [[ -x "$CONFIG_DIR/bin/agent-verify-layout.sh" ]] \
-    && ok 'agent-verify-layout.sh executable' \
-    || warn 'agent-verify-layout.sh missing or not executable'
+    && ok 'agent-verify-layout.sh executable (shim)' \
+    || warn 'agent-verify-layout.sh shim missing or not executable'
+[[ -x "$VERIFY_PLUGIN/bin/agent-verify-layout.sh" ]] \
+    && ok 'plugins/verification: agent-verify-layout.sh' \
+    || warn 'plugins/verification: agent-verify-layout.sh missing'
 [[ -x "$CONFIG_DIR/bin/agent-build-layout.sh" ]] \
-    && ok 'agent-build-layout.sh executable' \
-    || warn 'agent-build-layout.sh missing or not executable'
-VERIFY_LAUNCH="$CONFIG_DIR/bin/lib/verify-launch.sh"
+    && ok 'agent-build-layout.sh executable (shim)' \
+    || warn 'agent-build-layout.sh shim missing or not executable'
+[[ -x "$VERIFY_PLUGIN/bin/agent-build-layout.sh" ]] \
+    && ok 'plugins/verification: agent-build-layout.sh' \
+    || warn 'plugins/verification: agent-build-layout.sh missing'
+VERIFY_LAUNCH="$VERIFY_PLUGIN/lib/verify-launch.sh"
 grep -q 'agent_strict_path_check' "$VERIFY_LAUNCH" 2>/dev/null \
     && ok 'verify-launch.sh has agent strict PATH helpers' \
     || warn 'verify-launch.sh missing agent strict PATH (SN-3)'
@@ -473,13 +480,16 @@ grep -q 'path_contract_apply_core_only' "$PATH_RESOLVE" 2>/dev/null \
     && ok 'path-resolve.sh has path_contract_apply_core_only' \
     || warn 'path-resolve.sh missing path_contract_apply_core_only'
 [[ -x "$CONFIG_DIR/bin/cockpit-mcp.sh" ]] \
-    && ok 'bin/cockpit-mcp.sh present (SN-7 headless verbs)' \
-    || warn 'bin/cockpit-mcp.sh missing'
-[[ -x "$CONFIG_DIR/bin/lib/discover-tests.sh" ]] \
+    && ok 'bin/cockpit-mcp.sh present (SN-7 headless shim)' \
+    || warn 'bin/cockpit-mcp.sh shim missing'
+[[ -x "$VERIFY_PLUGIN/bin/cockpit-mcp.sh" ]] \
+    && ok 'plugins/verification: cockpit-mcp.sh' \
+    || warn 'plugins/verification: cockpit-mcp.sh missing'
+[[ -x "$VERIFY_PLUGIN/lib/discover-tests.sh" ]] \
     && ok 'discover-tests.sh present (SN-8 canonical emitter)' \
     || warn 'discover-tests.sh missing'
 
-[[ -x "$CONFIG_DIR/bin/lib/parse-project-tests-discover.sh" ]] \
+[[ -x "$VERIFY_PLUGIN/lib/parse-project-tests-discover.sh" ]] \
     && ok 'parse-project-tests-discover.sh present (SN-8 shim)' \
     || warn 'parse-project-tests-discover.sh missing'
 [[ -f "$HOME/.config/tmux/tmux.conf" ]] \
@@ -523,8 +533,8 @@ fi
 [[ -x "$CONFIG_DIR/bin/tmux-keymap-menu.sh" ]] \
     && ok 'tmux-keymap-menu.sh executable' \
     || warn 'tmux-keymap-menu.sh missing or not executable'
-[[ -f "$CONFIG_DIR/bin/data/tmux-keymaps.tsv" ]] \
-    && ok 'tmux-keymaps.tsv present' \
+[[ -f "$VERIFY_PLUGIN/data/tmux-keymaps.tsv" ]] \
+    && ok 'tmux-keymaps.tsv present (plugins/verification)' \
     || warn 'tmux-keymaps.tsv missing'
 if [[ -x "$CONFIG_DIR/bin/test/verify-workflow-root.test.sh" ]]; then
     if "$CONFIG_DIR/bin/test/verify-workflow-root.test.sh" >/tmp/verify-workflow-root.test.out 2>&1; then

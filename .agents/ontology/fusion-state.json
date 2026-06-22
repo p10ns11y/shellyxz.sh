@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "project": "shellyxz-shell",
+  "last_updated": "2026-06-21T00:00:00Z",
+  "fused_abstractions": [
+    {
+      "id": "path-contract-domain",
+      "name": "Path Contract Domain",
+      "stability_score": 92,
+      "source_files": [
+        "core/path.contract",
+        "core/path-resolve.sh",
+        "arch-design/shell-script-readability.md"
+      ],
+      "related_concepts": [
+        "kernel-plugin-boundary",
+        "load-order"
+      ],
+      "last_used": "2026-06-21T00:00:00Z",
+      "usage_count": 0,
+      "compressed_representation": "Declarative PATH from path.contract (core → local → project phase) via path_contract_apply; verify via path_contract_verify; contract line syntax maps to lexicon locals (path_token, contract_line, deny_pattern, pending_prepend_dirs).",
+      "expansion_hint": "Load subgraph path in shell-kernel.graph.yaml; full prose in arch-design/shell.md and shell-script-readability.md"
+    },
+    {
+      "id": "kernel-plugin-boundary",
+      "name": "Kernel vs Verification Plugin",
+      "stability_score": 90,
+      "source_files": [
+        "PLUGIN.md",
+        "arch-design/architecture.md"
+      ],
+      "related_concepts": [
+        "path-contract-domain",
+        "load-order"
+      ],
+      "last_used": "2026-06-21T00:00:00Z",
+      "usage_count": 0,
+      "compressed_representation": "Kernel = portable PATH/migrate/recover (works alone). Plugin = ab/av/at/tmux/cockpit (optional). Plugin calls PublicHooks only; must not change load order or add kernel deps. SN-4 moves plugin files to plugins/verification/ — update Artifact paths, not boundary semantics.",
+      "expansion_hint": "Read PLUGIN.md decision table; ontology nodes shellyxz:Kernel and shellyxz:VerificationPlugin"
+    },
+    {
+      "id": "load-order",
+      "name": "Shell Load Order",
+      "stability_score": 88,
+      "source_files": [
+        "arch-design/shell.md",
+        "core/env.sh",
+        "templates/zshrc"
+      ],
+      "related_concepts": [
+        "path-contract-domain"
+      ],
+      "last_used": "2026-06-21T00:00:00Z",
+      "usage_count": 0,
+      "compressed_representation": "login/profile → env.sh path_contract_apply (core then local, post_vite phase) → environment presets → tool hooks → direnv phase:project → path_contract_reassert at zshrc tail. direnv owns project; contract owns machine.",
+      "expansion_hint": "architecture.md PATH precedence sequence diagram; shell.md load-order reference"
+    }
+  ],
+  "global_stats": {
+    "total_fusions_performed": 1,
+    "total_tokens_saved": 0,
+    "average_q_factor": 1.0
+  }
+}

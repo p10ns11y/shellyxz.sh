@@ -2,7 +2,7 @@
 
 Executable helpers for **setup**, **verification**, and **recovery** of `~/.config/shell/`. Run from a working shell unless noted; paths assume `$HOME/.config/shell`.
 
-See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design/VERIFICATION.md) (cockpit workflow), [human-in-the-loop-workflow.md](../arch-design/human-in-the-loop-workflow.md) (repeatable drills), [shell.md](../arch-design/shell.md) (load order).
+See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design/VERIFICATION.md) (cockpit workflow), [plugins/verification/README.md](../plugins/verification/README.md) (plugin file map), [human-in-the-loop-workflow.md](../arch-design/human-in-the-loop-workflow.md) (repeatable drills), [shell.md](../arch-design/shell.md) (load order).
 
 ---
 
@@ -45,7 +45,7 @@ git config --global include.path ~/.config/git/verification
 ~/.config/shell/bin/check-shell.sh
 ```
 
-`migrate.sh` auto-fetches missing core files from `SHELL_CONFIG_RAW`. **Limitation:** remote bootstrap fetches only the file list in `bootstrap_from_remote()` inside `migrate.sh` — verification scaffolds (tmux/yazi/git examples) require a full clone or `migrate.sh --bootstrap` after those files exist locally.
+`migrate.sh` auto-fetches missing core files from `SHELL_CONFIG_RAW`. Remote bootstrap fetches core, templates, bin shims, and the full `plugins/verification/` tree (see [bootstrap file list](#bootstrap-file-list-remote-fetch)). For a fork, set `SHELL_CONFIG_RAW`.
 
 Override source for forks:
 
@@ -241,7 +241,7 @@ verify_workflow_root /path/to/dir # explicit start
 ~/.config/shell/bin/tmux-mode-sync.sh set-editor insert|normal|''
 ```
 
-Library: `bin/lib/tmux-status-mode.sh` — format string source of truth.
+Library: `plugins/verification/lib/tmux-status-mode.sh` — format string source of truth.
 
 ---
 
@@ -258,7 +258,7 @@ Library: `bin/lib/tmux-status-mode.sh` — format string source of truth.
 | `Prefix+?` | Open menu |
 | Click status-right (`?` hint) | Open menu |
 
-Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leader keys.
+Data file: `plugins/verification/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leader keys.
 
 ---
 
@@ -331,7 +331,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 | `--watch` | Re-run on `TEST_WATCH_INTERVAL` (default 60s) |
 | `--all` | Run every test in manifest (ignore `max_run`) |
 
-**Requires:** `python` on PATH (`bin/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
+**Requires:** `python` on PATH (`plugins/verification/lib/parse-project-tests.py`). No PyYAML — minimal stdlib parser.
 
 ---
 
@@ -341,7 +341,7 @@ Data file: `bin/data/tmux-keymaps.tsv` — shell aliases, tmux binds, nvim leade
 
 | Script | Role |
 |--------|------|
-| `bin/lib/verify-launch.sh` | Library: `verify_launch_pane`, `verify_apply_theme`, `verify_maybe_rescan` |
+| `plugins/verification/lib/verify-launch.sh` | Library: `verify_launch_pane`, `verify_apply_theme`, `verify_maybe_rescan` |
 | `bin/verify-pane-launch.sh` | In-pane confirm gate for `verify` / `mutate` tiers |
 
 **Tiers:** `monitor`/`watch` auto-launch; `verify` prompts `[y/N]`; `mutate` requires `av --launch-mutate` and typing `YES`.
@@ -414,8 +414,9 @@ Files fetched by `bootstrap_from_remote()` when missing (authoritative list in `
 | **Core** | `core/{lib,path,path.contract,env,aliases,functions}.sh`, root shims (`env.sh`, `lib.sh`, …) |
 | **Environments** | `environments/{generic,omarchy}/*`, `environment.example`, `environments/README.md` |
 | **Templates** | `templates/{zshrc,bashrc,fish.config.fish,login/*,core/*}` |
-| **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, `bin/agent-build-layout.sh`, `bin/agent-verify-layout.sh` |
-| **Docs & examples** | `README.md`, `arch-design/{shell,VERIFICATION,SHELL-env-var-behavior}.md`, `starship.ex.toml`, `yazi.ex.toml`, `git.ex.config`, `.gitignore` |
+| **Bin** | `bin/migrate.sh`, `bin/lib/`, `bin/tasks/`, `bin/check-shell.sh`, `bin/check-template-sync.sh`, `bin/scaffold-environment.sh`, `bin/recover-shell.sh`, `bin/fzf-preview.sh`, agent layout shims (`bin/agent-*-layout.sh`, `bin/cockpit-mcp.sh`, …) |
+| **Verification plugin** | `plugins/verification/{bin,lib,data,conf}/*` — layouts, tmux helpers, test runner, keymap data |
+| **Docs & examples** | `README.md`, `PLUGIN.md`, `plugins/README.md`, `arch-design/{shell,VERIFICATION,SHELL-env-var-behavior}.md`, `starship.ex.toml`, `yazi.ex.toml`, `git.ex.config`, `.gitignore` |
 | **Local** | `local/personal.sh` |
 
 Files already present are never overwritten.

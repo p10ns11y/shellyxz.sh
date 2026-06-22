@@ -165,7 +165,7 @@ Keep only:
 **Explicitly remove from "minimal":**
 
 - `ab` / `av` / `at` and all tmux layout scripts
-- `.agents/verification/` dogfood
+- `.agents/verification/` local stress-test layout
 - Cursor agent definitions
 - `starship`/`yazi`/`git.ex.config` scaffolding in migrate (copy examples to wiki, not migrate)
 - Omarchy as built-in preset → `local/omarchy.sh` you maintain privately

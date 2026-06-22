@@ -9,6 +9,39 @@ SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 
 OMARCHY_ROOT="${OMARCHY_ROOT:-$HOME/.local/share/omarchy}"
 
+# Resolve verification plugin script (plugins/verification/bin, then bin shim).
+verification_script_path() {
+    script_name="$1"
+    shell_root="${SHELL_ROOT:-$HOME/.config/shell}"
+    if [ -n "${SHELL_VERIFICATION_BIN:-}" ] && [ -x "${SHELL_VERIFICATION_BIN}/${script_name}" ]; then
+        printf '%s\n' "${SHELL_VERIFICATION_BIN}/${script_name}"
+        return 0
+    fi
+    if [ -x "${shell_root}/plugins/verification/bin/${script_name}" ]; then
+        printf '%s\n' "${shell_root}/plugins/verification/bin/${script_name}"
+        return 0
+    fi
+    if [ -x "${shell_root}/bin/${script_name}" ]; then
+        printf '%s\n' "${shell_root}/bin/${script_name}"
+        return 0
+    fi
+    return 1
+}
+
+# Resolve verification plugin lib directory (verify-launch.sh, verify-layout.sh, …).
+verification_lib_dir() {
+    shell_root="${SHELL_ROOT:-$HOME/.config/shell}"
+    if [ -n "${SHELL_VERIFICATION_LIB:-}" ] && [ -f "${SHELL_VERIFICATION_LIB}/verify-launch.sh" ]; then
+        printf '%s\n' "${SHELL_VERIFICATION_LIB}"
+        return 0
+    fi
+    if [ -f "${shell_root}/plugins/verification/lib/verify-launch.sh" ]; then
+        printf '%s\n' "${shell_root}/plugins/verification/lib"
+        return 0
+    fi
+    return 1
+}
+
 _is_interactive_session() {
     [ -t 0 ] && [ -t 1 ]
 }

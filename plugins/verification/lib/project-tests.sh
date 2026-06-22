@@ -22,12 +22,15 @@ project_test_cmd() {
     local root="${1:?root}"
     local mode="${2:-once}"
     local runner="${root}/bin/run-project-tests.sh"
+    local shell_root="${SHELL_ROOT:-$HOME/.config/shell}"
 
     if [ ! -x "$runner" ]; then
-        runner="$HOME/.config/shell/bin/run-project-tests.sh"
+        # shellcheck source=/dev/null
+        . "${shell_root}/core/lib.sh"
+        runner="$(verification_script_path run-project-tests.sh 2>/dev/null || true)"
     fi
 
-    if [ ! -x "$runner" ]; then
+    if [ -z "$runner" ] || [ ! -x "$runner" ]; then
         printf '%s' "echo 'at: missing run-project-tests.sh'"
         return 0
     fi

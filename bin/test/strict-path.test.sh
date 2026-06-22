@@ -5,7 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # shellcheck source=/dev/null
-source "$ROOT/bin/lib/verify-launch.sh"
+VERIFY_LIB="${ROOT}/plugins/verification/lib"
+source "$VERIFY_LIB/verify-launch.sh"
 
 # Regression: PATH="$(agent_strict_path_apply)" ran in subshell and dropped path_shadow_report.
 agent_strict_path_check || true

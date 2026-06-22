@@ -95,7 +95,7 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 
 `status-right-length` is set to **120** so mode labels are not truncated (default Omarchy `50` hides them).
 
-**Keymap menu:** `~/.config/shell/bin/tmux-keymap-menu.sh` — fzf popup (or tmux `display-menu` fallback). Data: `bin/data/tmux-keymaps.tsv`.
+**Keymap menu:** `~/.config/shell/bin/tmux-keymap-menu.sh` — fzf popup (or tmux `display-menu` fallback). Data: `plugins/verification/data/tmux-keymaps.tsv`.
 
 **Mnemonic:** **ab** = agent **b**uild · **av** = agent **v**erify · tmux **B** / **V** (shifted — does not conflict with tmux `b` last-window).
 
@@ -112,7 +112,7 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 | Cockpit layout script | `bin/agent-verify-layout.sh` |
 | tmux base | Omarchy → `~/.config/tmux/tmux.conf` |
 | tmux verify bindings | `tmux.verify.conf.ex` + `tmux.status-mode.conf.ex` → `~/.config/tmux/verify.conf` |
-| tmux mode display | `bin/tmux-mode-sync.sh` + `bin/lib/tmux-status-mode.sh` |
+| tmux mode display | `bin/tmux-mode-sync.sh` + `plugins/verification/lib/tmux-status-mode.sh` |
 | yazi defaults | `yazi.ex.toml` → `~/.config/yazi/yazi.toml` |
 | git delta | `git.ex.config` → `~/.config/git/verification` |
 | nvim Telescope + Harpoon | `~/.config/nvim/lua/plugins/verification-workflow.lua` |
@@ -130,7 +130,7 @@ Explicit cause-and-effect — layout scripts only send keys when you ask (e.g. `
 
 ### Project-specific cockpit
 
-When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (SOC-style mission-control theme, project watch panes). Generate per repo with the [`verification-cockpit` skill](../.agents/skills/verification-cockpit/SKILL.md). **Dogfood:** this shell repo ships [`.agents/verification/`](../.agents/verification/README.md) as a stress test (`check-shell.sh` watch + template sync).
+When a project has `.agents/verification/tmux-layout.sh`, `av` delegates to it (SOC-style mission-control theme, project watch panes). Generate per repo with the [`verification-cockpit` skill](../.agents/skills/verification-cockpit/SKILL.md). This shell repo ships a **local stress-test layout** at [`.agents/verification/`](../.agents/verification/README.md) (`check-shell.sh` watch + template sync). Plugin implementation details: [plugins/verification/README.md](../plugins/verification/README.md).
 
 | Artifact | Purpose |
 |----------|---------|

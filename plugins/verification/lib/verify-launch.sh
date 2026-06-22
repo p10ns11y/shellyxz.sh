@@ -3,8 +3,9 @@
 # Sourced by .agents/verification/tmux-layout.sh or called via verify-pane-launch.sh.
 set -euo pipefail
 
-VERIFY_LAUNCH_LIB_DIR="${VERIFY_LAUNCH_LIB_DIR:-$HOME/.config/shell/bin/lib}"
-VERIFY_PANE_LAUNCH="${VERIFY_PANE_LAUNCH:-$HOME/.config/shell/bin/verify-pane-launch.sh}"
+VERIFY_LAUNCH_LIB_DIR="${VERIFY_LAUNCH_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+VERIFY_PLUGIN_ROOT="${VERIFY_PLUGIN_ROOT:-$(cd "$VERIFY_LAUNCH_LIB_DIR/.." && pwd)}"
+VERIFY_PANE_LAUNCH="${VERIFY_PANE_LAUNCH:-$VERIFY_PLUGIN_ROOT/bin/verify-pane-launch.sh}"
 
 # Pane index base for the verify window (0 by default; may be 1 in user tmux config).
 verify_pane_base() {
@@ -160,7 +161,11 @@ verify_apply_theme() {
     local session="${1:?session}"
     local project="${2:-}"
     local risk="${3:-medium}"
-    local soc_ex="${HOME}/.config/shell/tmux.verify-soc-theme.conf.ex"
+    local shell_root="${SHELL_ROOT:-$HOME/.config/shell}"
+    local soc_ex="${shell_root}/tmux.verify-soc-theme.conf.ex"
+    if [ ! -f "$soc_ex" ]; then
+        soc_ex="${VERIFY_PLUGIN_ROOT}/conf/tmux.verify-soc-theme.conf.ex"
+    fi
     local project_theme="${4:-}"
 
     tmux set-option -t "$session" @verify_project_name "$project"
@@ -173,7 +178,7 @@ verify_apply_theme() {
         tmux source-file "$project_theme"
     fi
 
-    local mode_sync="${HOME}/.config/shell/bin/tmux-mode-sync.sh"
+    local mode_sync="${SHELL_VERIFICATION_BIN:-$VERIFY_PLUGIN_ROOT/bin}/tmux-mode-sync.sh"
     if [ -x "$mode_sync" ]; then
         if [ -f "$soc_ex" ]; then
             "$mode_sync" apply-soc

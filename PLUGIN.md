@@ -52,6 +52,7 @@ The verification plugin **may** assume a richer environment. It is allowed to br
 | Desktop integration (Omarchy, Ghostty) | `environments/omarchy/`, docs |
 | Agent build command via env (target) | `SHELL_AGENT_BUILD_CMD` — **not** hardcoded in kernel |
 | Strict PATH before agent launch | `SHELL_AGENT_STRICT_PATH=1` or `ab --strict` — core contract only + shadow audit |
+| Verification implementation | `plugins/verification/` (bin shims at `bin/agent-*`, `cockpit-mcp.sh`) |
 
 **Plugin must not:**
 

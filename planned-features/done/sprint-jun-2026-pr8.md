@@ -7,7 +7,7 @@
 
 ## Merge checklist (PR #8)
 
-- [x] SN-1 dogfood gate
+- [x] SN-1 verify first
 - [x] SN-2 `phase:project` + direnv hook
 - [x] SN-3 agent strict PATH + `ab --strict`
 - [x] SN-5 sh test discovery (python optional)
@@ -29,7 +29,7 @@ gantt
   title Sprint Jun 2026
   dateFormat YYYY-MM-DD
   section Done
-  SN-1 Dogfood gate           :done, sn1, 2026-06-18, 1d
+  SN-1 Verify first            :done, sn1, 2026-06-18, 1d
   SN-2 direnv project fragment :done, sn2, 2026-06-19, 3d
   SN-6 Doc triage             :done, sn6, after sn2, 2d
   SN-3 Agent strict PATH      :done, sn3, after sn6, 2d
@@ -43,7 +43,7 @@ gantt
 
 | SN | Item | Commit | Area |
 |----|------|--------|------|
-| SN-1 | Dogfood gate | — | manual verify |
+| SN-1 | Verify first | — | manual verify |
 | SN-2 | `phase:project` direnv fragment | `afb4fc0` | `path-contract-project.sh`, `path-resolve.sh` |
 | SN-6 | Doc triage + omarchy overlay | `f7dafb1` | `arch-design/README.md`, `local/omarchy.sh.example` |
 | SN-3 | Agent strict PATH | `2c76358` | `agent-build-layout.sh`, `tool.contract` |
@@ -67,7 +67,7 @@ gantt
 
 ---
 
-## SN-1 · Dogfood gate
+## SN-1 · Verify first
 
 **Problem:** Lock in kernel trust before expanding the bridge.
 

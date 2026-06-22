@@ -4,8 +4,9 @@ Agent-facing assets for this repo and distributable templates for other projects
 
 | Path | Purpose |
 |------|---------|
-| [skills/](skills/README.md) | Dogfood copy of distributable skills (canonical: [agent skills library](https://github.com/p10ns11y/skills)) |
-| [verification/](verification/README.md) | Dogfood tmux verify cockpit (`av` delegates here) |
+| [ontology/](ontology/INDEX.md) | **Shell kernel ontology** — graph, fusion-state, agent subgraph index (SN-O0) |
+| [skills/](skills/README.md) | Local copy of distributable skills (canonical: [agent skills library](https://github.com/p10ns11y/skills)) |
+| [verification/](verification/README.md) | Local stress-test tmux verify cockpit (`av` delegates here) |
 
 ## Adopt skills in another project
 

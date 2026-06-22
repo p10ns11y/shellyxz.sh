@@ -4,7 +4,7 @@
 **Update this file** when kernel or verification bridge shape changes on `master`.  
 **Backlog:** [coming-next.md](coming-next.md) · **Shipped epics:** [../planned-features/done/](../planned-features/done/)
 
-*Last updated: 2026-06-19 (SN-TS + SN-8)*
+*Last updated: 2026-06-22 (SN-O0 + SN-4a)*
 
 ---
 
@@ -38,12 +38,16 @@ flowchart TB
     L6[path_contract_reassert]
   end
 
-  subgraph plugin["Verification bridge — ops deck"]
-    AB[ab / agent-build-layout]
-    AV[av / cockpit.yaml layouts]
-    AT[at / parse-project-tests]
-    MCP[cockpit-mcp.sh headless]
-    TM[tmux keymap + SOC themes]
+  subgraph plugin["Verification plugin — plugins/verification/"]
+    PV[plugins/verification/bin]
+    PLIB[plugins/verification/lib]
+    SHIM[bin shims ab av at]
+  end
+
+  subgraph bridge["Per-project cockpit"]
+    AB[ab / av / at]
+    MCP[cockpit-mcp headless]
+    CY[cockpit.yaml per repo]
   end
 
   L1 --> L2 --> L3 --> L4 --> L5 --> L6
@@ -52,16 +56,19 @@ flowchart TB
   PR --> EN
   EN --> L2
   RC --> L6
-  AB --> AV
-  AV --> TM
-  MCP -.-> AV
+  SHIM --> PV
+  PV --> PLIB
+  AB --> SHIM
+  MCP --> SHIM
+  CY -.-> AB
 ```
 
 **Rules:**
 
 - `path_contract_apply` runs **core then local** (local wins `which`). Verify ranks **local before core** — `check-shell` guards line order.
 - **Project PATH** is direnv-scoped: repo `.path.contract` with `phase:project` only ([shell.md § PATH layers](shell.md#path-layer-precedence-machine-vs-project)).
-- **Headless bridge:** `bin/cockpit-mcp.sh verify|test|scan` — same verbs as tmux, for MCP/CI ([VERIFICATION.md](VERIFICATION.md)).
+- **Headless bridge:** `bin/cockpit-mcp.sh` shims → `plugins/verification/bin/cockpit-mcp.sh` — same verbs as tmux ([VERIFICATION.md](VERIFICATION.md)).
+- **Physical split (SN-4a):** implementation under `plugins/verification/`; stable `bin/*` shims + `verification_script_path` in `core/lib.sh`.
 
 ---
 
@@ -118,9 +125,12 @@ flowchart LR
     PY[discover_tests JSON]
     MCP[cockpit-mcp headless]
     TS[ts per-project tmux]
+    SP[plugins/verification SN-4a]
+    ON[ontology graph SN-O0]
   end
   subgraph open["Open"]
-    SP[plugins/ physical split SN-4]
+    S4B[SN-4b optional separate repo]
+    O1[SN-O1 ontology drift gate]
   end
   shipped --> open
 ```
@@ -130,12 +140,13 @@ flowchart LR
 | PATH declarative + verify | **A** | Phased contract, runtime check, deny list, project phase | `path_contract_verify`, PR #6 + #8 |
 | Kernel forkability | **A-** | Personal paths in `local/` not `core/` | `check-shell` personal-token grep |
 | Per-project PATH (direnv) | **A-** | `phase:project` + `path-contract-project.sh` | [PR #8](../planned-features/done/sprint-jun-2026-pr8.md) |
-| Plugin boundary docs | **B+** | PLUGIN.md + arch split | Still one tree until SN-4 |
-| Agent vendor decoupling | **B+** | Env vars; no hardcoded agent in layout | `agent-build-layout.sh` |
+| Plugin boundary docs | **A-** | PLUGIN.md + physical `plugins/verification/` | [PLUGIN.md](../PLUGIN.md), PR #11 |
+| Agent vendor decoupling | **B+** | Env vars; no hardcoded agent in layout | `plugins/verification/bin/agent-build-layout.sh` |
 | Agent PATH hardening | **B+** | Pins, shadow report, `ab --strict` | `tool.contract`, PR #8 |
-| Cockpit daily driver | **A-** | ab/av/at + navigators + MCP verbs | tmux + `cockpit-mcp.sh` |
-| Test runner portability | **A-** | `discover-tests.sh` canonical emitter; py parity test | `test-allowlist.sh`, SN-8 |
-| Modular packaging | **B** | PLUGIN boundary done; physical split next | SN-4 |
+| Cockpit daily driver | **A-** | ab/av/at + navigators + MCP verbs | tmux shims + `plugins/verification/` |
+| Test runner portability | **A-** | `discover-tests.sh` canonical emitter; py parity test | `plugins/verification/lib/`, SN-8 |
+| Modular packaging | **A-** | SN-4a physical split; bin shims stable | `plugins/verification/`, `verification_script_path` |
+| Agent ontology | **B+** | Machine graph for PATH + boundary | `.agents/ontology/`, SN-O0 |
 
 ---
 
@@ -186,11 +197,12 @@ mindmap
       path-contract-project.sh
       shell.md
     Plugin
-      agent-build-layout.sh
-      cockpit-mcp.sh
-      parse-project-tests
+      plugins/verification/
+      bin shims
       cockpit.yaml
       tmux keymap SOC
+    Agents
+      ontology graph
     Docs
       architecture.md
       coming-next.md

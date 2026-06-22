@@ -3,7 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PARSER="$ROOT/bin/lib/parse-project-tests.py"
+VERIFY_LIB="$ROOT/plugins/verification/lib"
+PARSER="$VERIFY_LIB/parse-project-tests.py"
 FAIL=0
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -53,7 +54,7 @@ assert_contains 'tests.yaml fallback' shellcheck \
     python "$PARSER" "$ROOT/.agents/verification/tests.yaml" "$ROOT"
 
 # shellcheck source=/dev/null
-source "$ROOT/bin/lib/parse-project-tests.sh"
+source "$VERIFY_LIB/parse-project-tests.sh"
 assert_contains 'bash wrapper returns json' max_run \
     parse_project_tests_json "$ROOT"
 
@@ -67,24 +68,24 @@ assert_contains 'python --run summary' 'at summary' \
     python "$PARSER" --run --root "$TMP"
 
 # shellcheck source=/dev/null
-source "$ROOT/bin/lib/project-tests.sh"
+source "$VERIFY_LIB/project-tests.sh"
 assert_ok 'bash delegates allowlist to python' run_manifest_command "$ROOT/bin/check-shell.sh --help"
 assert_fail 'bash delegates reject metachar' run_manifest_command "echo ok; rm -rf /"
 
 assert_contains 'sh discover finds shellcheck' shellcheck \
-    sh "$ROOT/bin/lib/parse-project-tests-discover.sh" "$ROOT"
+    sh "$VERIFY_LIB/parse-project-tests-discover.sh" "$ROOT"
 
 assert_contains 'discover-tests canonical emitter' shellcheck \
-    sh "$ROOT/bin/lib/discover-tests.sh" "$ROOT"
+    sh "$VERIFY_LIB/discover-tests.sh" "$ROOT"
 
 assert_contains 'sh discover without python via wrapper' shellcheck \
     env PATH=/usr/bin:/bin bash -c "
-        source \"$ROOT/bin/lib/parse-project-tests.sh\"
+        source \"$VERIFY_LIB/parse-project-tests.sh\"
         parse_project_tests_json \"$ROOT\"
     "
 
 if command -v python >/dev/null 2>&1; then
-    sh_norm="$(sh "$ROOT/bin/lib/discover-tests.sh" "$ROOT" | python -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')"
+    sh_norm="$(sh "$VERIFY_LIB/discover-tests.sh" "$ROOT" | python -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')"
     py_norm="$(python "$PARSER" --discover "$ROOT" | python -c 'import json,sys; print(json.dumps(json.load(sys.stdin), sort_keys=True))')"
     if [ "$sh_norm" = "$py_norm" ]; then
         printf 'ok   py/sh discover_tests JSON parity\n'
@@ -97,7 +98,7 @@ if command -v python >/dev/null 2>&1; then
 fi
 
 # shellcheck source=/dev/null
-source "$ROOT/bin/lib/test-allowlist.sh"
+source "$VERIFY_LIB/test-allowlist.sh"
 assert_ok 'sh allowlist absolute path' run_allowlisted_command "$ROOT/bin/check-shell.sh --help"
 assert_fail 'sh allowlist reject metachar' run_allowlisted_command "echo ok; rm -rf /"
 assert_fail 'sh allowlist reject unknown runner' run_allowlisted_command "curl http://evil"

@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Shellyxz Shell Kernel Ontology",
+  "description": "Pragmatic knowledge graph for agent context. JSON-LD-ready node ids (shellyxz:Concept).",
+  "type": "object",
+  "required": ["meta", "nodes", "edges"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["version", "project", "layout"],
+      "properties": {
+        "version": { "type": "string", "enum": ["1.0"] },
+        "project": { "type": "string" },
+        "layout": { "type": "string", "enum": ["monorepo", "plugins_verification"] },
+        "layout_variant": { "type": "string" },
+        "boundary_note": { "type": "string" },
+        "last_updated": { "type": "string", "format": "date" }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "name", "source_refs"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^shellyxz:[A-Za-z0-9_]+$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Domain", "Concept", "Artifact", "Function", "Invariant", "Boundary", "Hook"]
+          },
+          "name": { "type": "string" },
+          "fused_summary": { "type": "string" },
+          "stability_score": { "type": "number", "minimum": 0, "maximum": 100 },
+          "source_refs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "syntax": { "type": "string" },
+          "lexicon_vars": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "path": { "type": "string" },
+          "role": { "type": "string" },
+          "export": { "type": "boolean" },
+          "file": { "type": "string" },
+          "signature": { "type": "string" },
+          "severity": { "type": "string", "enum": ["error", "warn"] },
+          "check_ref": { "type": "string" },
+          "must_not": { "type": "array", "items": { "type": "string" } },
+          "may_assume": { "type": "array", "items": { "type": "string" } },
+          "documented_in": { "type": "array", "items": { "type": "string" } },
+          "subgraph": {
+            "type": "string",
+            "enum": ["path", "boundary", "load_order", "verify"]
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "type"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": [
+              "owns",
+              "appliesBefore",
+              "resolvesTo",
+              "enforces",
+              "documentedIn",
+              "mustNot",
+              "dependsOn",
+              "verifies",
+              "usesLexicon"
+            ]
+          },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

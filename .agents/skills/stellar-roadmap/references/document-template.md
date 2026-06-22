@@ -126,7 +126,7 @@ flowchart TD
 
 ## 7. Blueprint cards — next work
 
-### SN-1 · Dogfood gate (no new code)
+### SN-1 · Verify first (no new code)
 
 **Problem:** ...
 

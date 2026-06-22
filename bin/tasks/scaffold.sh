@@ -28,9 +28,25 @@ TMUXINCLUDE
     log "Appended verify.conf include to tmux.conf"
 fi
 
-if [[ ! -f "$TMUX_DIR/verify.conf" ]] && [[ -f "$CONFIG_DIR/tmux.verify.conf.ex" ]]; then
-    cp "$CONFIG_DIR/tmux.verify.conf.ex" "$TMUX_DIR/verify.conf"
-    log "Installed ~/.config/tmux/verify.conf"
+for tmux_template in tmux.verify.conf.ex tmux.verify-soc-theme.conf.ex tmux.status-mode.conf.ex; do
+    if [[ ! -f "$CONFIG_DIR/$tmux_template" ]]; then
+        if [[ -f "$CONFIG_DIR/plugins/verification/conf/$tmux_template" ]]; then
+            cp "$CONFIG_DIR/plugins/verification/conf/$tmux_template" "$CONFIG_DIR/$tmux_template"
+            log "Installed $CONFIG_DIR/$tmux_template from plugins/verification"
+        elif [[ -f "$CONFIG_DIR/$tmux_template" ]]; then
+            :
+        fi
+    fi
+done
+
+if [[ ! -f "$TMUX_DIR/verify.conf" ]]; then
+    if [[ -f "$CONFIG_DIR/tmux.verify.conf.ex" ]]; then
+        cp "$CONFIG_DIR/tmux.verify.conf.ex" "$TMUX_DIR/verify.conf"
+        log "Installed ~/.config/tmux/verify.conf"
+    elif [[ -f "$CONFIG_DIR/plugins/verification/conf/tmux.verify.conf.ex" ]]; then
+        cp "$CONFIG_DIR/plugins/verification/conf/tmux.verify.conf.ex" "$TMUX_DIR/verify.conf"
+        log "Installed ~/.config/tmux/verify.conf from plugins/verification"
+    fi
 fi
 
 YAZI_DEST="$HOME/.config/yazi/yazi.toml"
@@ -54,6 +70,7 @@ if [[ -f "$GIT_VERIF" ]] && command -v git &>/dev/null; then
     fi
 fi
 
+chmod +x "$CONFIG_DIR/plugins/verification/bin/"*.sh 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/agent-verify-layout.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/agent-build-layout.sh" 2>/dev/null || true
 chmod +x "$CONFIG_DIR/bin/fzf-preview.sh" 2>/dev/null || true

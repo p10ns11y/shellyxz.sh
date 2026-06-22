@@ -4,8 +4,16 @@
 set -euo pipefail
 
 DIR="${1:-.}"
+SHELL_ROOT="${SHELL_ROOT:-$HOME/.config/shell}"
 
 # shellcheck source=/dev/null
-source "${VERIFY_LAUNCH_LIB_DIR:-$HOME/.config/shell/bin/lib}/verify-launch.sh"
+. "${SHELL_ROOT}/core/lib.sh"
+verification_lib="$(verification_lib_dir)" || {
+    echo "verify-workflow-root: missing plugins/verification/lib/verify-launch.sh" >&2
+    exit 1
+}
+
+# shellcheck source=/dev/null
+source "${verification_lib}/verify-launch.sh"
 
 verify_workflow_root "$DIR"
