@@ -8,7 +8,7 @@ meta:
   boundary_note: >
     Verification implementation under plugins/verification/; bin/* shims stable.
     Per-project cockpit manifests remain at .agents/verification/ in each repo.
-  last_updated: "2026-06-21"
+  last_updated: "2026-06-22"
 
 nodes:
   # --- Domains ---
@@ -308,6 +308,199 @@ nodes:
       - PLUGIN.md
       - arch-design/test-of-travelled-time-from-future.md
 
+  # --- Verification bridge (SN-O1) ---
+  - id: shellyxz:VerificationBridge
+    type: Domain
+    name: Verification Bridge
+    subgraph: verify
+    stability_score: 88
+    fused_summary: >
+      ab/av/at verbs delegate to plugin scripts via verification_script_path;
+      bin shims keep stable entrypoints; cockpit-mcp headless parity;
+      per-repo cockpit.yaml manifests.
+    source_refs:
+      - arch-design/VERIFICATION.md
+      - plugins/verification/README.md
+      - core/functions.sh
+
+  - id: shellyxz:Verb_ab
+    type: Concept
+    name: ab (agent build)
+    syntax: "alias ab='agent_build'"
+    subgraph: verify
+    source_refs:
+      - core/aliases.sh
+      - core/functions.sh
+
+  - id: shellyxz:Verb_av
+    type: Concept
+    name: av (agent verify)
+    syntax: "alias av='agent_verify'"
+    subgraph: verify
+    source_refs:
+      - core/aliases.sh
+      - core/functions.sh
+
+  - id: shellyxz:Verb_at
+    type: Concept
+    name: at (agent test)
+    syntax: "alias at='agent_test'"
+    subgraph: verify
+    source_refs:
+      - core/aliases.sh
+      - core/functions.sh
+
+  - id: shellyxz:Concept_SHELL_AGENT_STRICT_PATH
+    type: Concept
+    name: SHELL_AGENT_STRICT_PATH
+    syntax: "SHELL_AGENT_STRICT_PATH=1 or ab --strict — core-only PATH in agent pane"
+    subgraph: verify
+    source_refs:
+      - PLUGIN.md
+      - plugins/verification/lib/verify-launch.sh
+
+  - id: shellyxz:Artifact_cockpit_yaml
+    type: Artifact
+    name: cockpit.yaml
+    path: .agents/verification/cockpit.yaml
+    role: Per-repo verify/test manifest (host-agnostic schema)
+    subgraph: verify
+    source_refs:
+      - arch-design/VERIFICATION.md
+      - .agents/verification/cockpit.yaml
+
+  - id: shellyxz:Artifact_plugins_verification
+    type: Artifact
+    name: plugins/verification/
+    path: plugins/verification
+    role: Verification plugin tree (bin, lib, data, conf)
+    subgraph: verify
+    source_refs:
+      - plugins/verification/README.md
+      - PLUGIN.md
+
+  - id: shellyxz:Artifact_shim_agent_build
+    type: Artifact
+    name: bin/agent-build-layout.sh
+    path: bin/agent-build-layout.sh
+    role: Stable shim → plugins/verification/bin/
+    subgraph: verify
+    source_refs:
+      - bin/agent-build-layout.sh
+      - plugins/verification/README.md
+
+  - id: shellyxz:Artifact_shim_agent_verify
+    type: Artifact
+    name: bin/agent-verify-layout.sh
+    path: bin/agent-verify-layout.sh
+    role: Stable shim → plugins/verification/bin/
+    subgraph: verify
+    source_refs:
+      - bin/agent-verify-layout.sh
+      - plugins/verification/README.md
+
+  - id: shellyxz:Artifact_shim_agent_test
+    type: Artifact
+    name: bin/agent-test-layout.sh
+    path: bin/agent-test-layout.sh
+    role: Stable shim → plugins/verification/bin/
+    subgraph: verify
+    source_refs:
+      - bin/agent-test-layout.sh
+      - plugins/verification/README.md
+
+  - id: shellyxz:Artifact_cockpit_mcp
+    type: Artifact
+    name: bin/cockpit-mcp.sh
+    path: bin/cockpit-mcp.sh
+    role: Headless verify/test/scan (MCP hosts)
+    subgraph: verify
+    source_refs:
+      - plugins/verification/bin/cockpit-mcp.sh
+      - arch-design/VERIFICATION.md
+
+  - id: shellyxz:Fn_verification_script_path
+    type: Function
+    name: verification_script_path
+    export: false
+    file: core/lib.sh
+    signature: verification_script_path SCRIPT — plugin bin, then shim
+    subgraph: verify
+    source_refs:
+      - core/lib.sh
+      - templates/core/lib.sh
+
+  - id: shellyxz:Fn_verification_lib_dir
+    type: Function
+    name: verification_lib_dir
+    export: false
+    file: core/lib.sh
+    signature: verification_lib_dir — plugin lib directory
+    subgraph: verify
+    source_refs:
+      - core/lib.sh
+      - templates/core/lib.sh
+
+  - id: shellyxz:Fn_agent_build
+    type: Function
+    name: agent_build
+    export: true
+    file: core/functions.sh
+    signature: agent_build — tmux build layout (ab)
+    subgraph: verify
+    source_refs:
+      - core/functions.sh
+      - plugins/verification/bin/agent-build-layout.sh
+
+  - id: shellyxz:Fn_agent_verify
+    type: Function
+    name: agent_verify
+    export: true
+    file: core/functions.sh
+    signature: agent_verify — tmux verify layout (av)
+    subgraph: verify
+    source_refs:
+      - core/functions.sh
+      - plugins/verification/bin/agent-verify-layout.sh
+
+  - id: shellyxz:Fn_agent_test
+    type: Function
+    name: agent_test
+    export: true
+    file: core/functions.sh
+    signature: agent_test — tmux test layout (at)
+    subgraph: verify
+    source_refs:
+      - core/functions.sh
+      - plugins/verification/bin/agent-test-layout.sh
+
+  - id: shellyxz:Env_SHELL_VERIFICATION_ROOT
+    type: Concept
+    name: SHELL_VERIFICATION_ROOT
+    syntax: "export SHELL_VERIFICATION_ROOT=$SHELL_ROOT/plugins/verification"
+    subgraph: verify
+    source_refs:
+      - core/env.sh
+      - templates/core/env.sh
+
+  - id: shellyxz:Env_SHELL_VERIFICATION_BIN
+    type: Concept
+    name: SHELL_VERIFICATION_BIN
+    syntax: "export SHELL_VERIFICATION_BIN=$SHELL_VERIFICATION_ROOT/bin"
+    subgraph: verify
+    source_refs:
+      - core/env.sh
+      - templates/core/env.sh
+
+  - id: shellyxz:Env_SHELL_VERIFICATION_LIB
+    type: Concept
+    name: SHELL_VERIFICATION_LIB
+    syntax: "export SHELL_VERIFICATION_LIB=$SHELL_VERIFICATION_ROOT/lib"
+    subgraph: verify
+    source_refs:
+      - core/env.sh
+      - templates/core/env.sh
+
 edges:
   - { from: shellyxz:Kernel, to: shellyxz:PathContractDomain, type: owns }
   - { from: shellyxz:Kernel, to: shellyxz:LoadOrder, type: owns }
@@ -340,3 +533,26 @@ edges:
   - { from: shellyxz:KernelPluginBoundary, to: shellyxz:Kernel, type: documentedIn, note: PLUGIN.md }
   - { from: shellyxz:KernelPluginBoundary, to: shellyxz:VerificationPlugin, type: documentedIn, note: PLUGIN.md }
   - { from: shellyxz:PathContractDomain, to: shellyxz:KernelPluginBoundary, type: documentedIn, note: architecture.md PATH table }
+  - { from: shellyxz:VerificationPlugin, to: shellyxz:VerificationBridge, type: owns }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Verb_ab, type: owns }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Verb_av, type: owns }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Verb_at, type: owns }
+  - { from: shellyxz:Verb_ab, to: shellyxz:Fn_agent_build, type: resolvesTo }
+  - { from: shellyxz:Verb_av, to: shellyxz:Fn_agent_verify, type: resolvesTo }
+  - { from: shellyxz:Verb_at, to: shellyxz:Fn_agent_test, type: resolvesTo }
+  - { from: shellyxz:Fn_agent_build, to: shellyxz:Fn_verification_script_path, type: resolvesTo }
+  - { from: shellyxz:Fn_agent_verify, to: shellyxz:Fn_verification_script_path, type: resolvesTo }
+  - { from: shellyxz:Fn_agent_test, to: shellyxz:Fn_verification_script_path, type: resolvesTo }
+  - { from: shellyxz:Fn_verification_script_path, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
+  - { from: shellyxz:Fn_verification_lib_dir, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Artifact_cockpit_yaml, type: documentedIn, note: per-repo manifest }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Artifact_cockpit_mcp, type: owns }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Concept_SHELL_AGENT_STRICT_PATH, type: owns }
+  - { from: shellyxz:Concept_SHELL_AGENT_STRICT_PATH, to: shellyxz:Fn_agent_build, type: enforces }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Env_SHELL_VERIFICATION_ROOT, type: owns }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Env_SHELL_VERIFICATION_BIN, type: owns }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:Env_SHELL_VERIFICATION_LIB, type: owns }
+  - { from: shellyxz:Artifact_shim_agent_build, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
+  - { from: shellyxz:Artifact_shim_agent_verify, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
+  - { from: shellyxz:Artifact_shim_agent_test, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
+  - { from: shellyxz:VerificationBridge, to: shellyxz:KernelPluginBoundary, type: documentedIn, note: VERIFICATION.md }

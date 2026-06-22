@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "project": "shellyxz-shell",
-  "last_updated": "2026-06-21T00:00:00Z",
+  "last_updated": "2026-06-22T00:00:00Z",
   "fused_abstractions": [
     {
       "id": "path-contract-domain",
@@ -54,6 +54,25 @@
       "usage_count": 0,
       "compressed_representation": "login/profile → env.sh path_contract_apply (core then local, post_vite phase) → environment presets → tool hooks → direnv phase:project → path_contract_reassert at zshrc tail. direnv owns project; contract owns machine.",
       "expansion_hint": "architecture.md PATH precedence sequence diagram; shell.md load-order reference"
+    },
+    {
+      "id": "verification-bridge",
+      "name": "Verification Bridge (ab/av/at)",
+      "stability_score": 88,
+      "source_files": [
+        "arch-design/VERIFICATION.md",
+        "plugins/verification/README.md",
+        "core/functions.sh",
+        "core/lib.sh"
+      ],
+      "related_concepts": [
+        "kernel-plugin-boundary",
+        "load-order"
+      ],
+      "last_used": "2026-06-22T00:00:00Z",
+      "usage_count": 0,
+      "compressed_representation": "ab/av/at call agent_* in core/functions.sh → verification_script_path resolves plugins/verification/bin (shim fallback). cockpit-mcp headless parity. Per-repo cockpit.yaml. SHELL_AGENT_STRICT_PATH gates core-only PATH.",
+      "expansion_hint": "Load subgraph verify in shell-kernel.graph.yaml; full prose in VERIFICATION.md"
     }
   ],
   "global_stats": {

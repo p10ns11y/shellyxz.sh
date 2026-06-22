@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # render-ontology-graph.sh — emit Mermaid flowchart from shell-kernel.graph.yaml
-# Usage: bin/render-ontology-graph.sh [--subgraph path|boundary|load_order|all]
+# Usage: bin/render-ontology-graph.sh [--subgraph path|boundary|load_order|verify|all]
 set -euo pipefail
 
 GRAPH_FILE="${SHELL_ROOT:-$HOME/.config/shell}/.agents/ontology/shell-kernel.graph.yaml"
@@ -73,6 +73,14 @@ def node_subgraph(node_id: str) -> str:
         return "load_order"
     if "Kernel" in node_id or "Verification" in node_id or "Plugin" in node_id:
         return "boundary"
+    if "Verb_" in node_id or "VerificationBridge" in node_id:
+        return "verify"
+    if "Fn_agent" in node_id or "Fn_verification" in node_id or "Fn_cockpit" in node_id:
+        return "verify"
+    if "Artifact_agent" in node_id or "Artifact_cockpit" in node_id or "Artifact_plugins" in node_id:
+        return "verify"
+    if "Concept_SHELL_AGENT" in node_id or "Env_SHELL_VERIFICATION" in node_id:
+        return "verify"
     return "other"
 
 subgraphs = defaultdict(list)

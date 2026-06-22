@@ -7,6 +7,7 @@ This repo vendors copies under `.agents/skills/` for local use and offline testi
 | Skill | Use in |
 |-------|--------|
 | [verification-cockpit](verification-cockpit/SKILL.md) | Any repo using the `av` workflow — **including this one** as a stress test |
+| [shell-kernel-ontology](shell-kernel-ontology/SKILL.md) | Kernel/plugin/PATH/verify subgraph routing — edit `core/` or `plugins/verification/` |
 | [stellar-roadmap](stellar-roadmap/SKILL.md) | Architecture backlog docs (`coming-next.md`, blueprint cards SN-*) — pairs with ai-optimization, fusion-sage, higher-order-decision-architect |
 
 ## Local use (this repo)
