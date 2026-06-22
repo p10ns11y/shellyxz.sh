@@ -43,6 +43,8 @@ Use when `/stellar-roadmap` is invoked with architecture backlog work.
 | Confidence | Note % on thrive bets in SN-7 class cards |
 | Monitoring §10 | Leading indicators, not autopsy triggers |
 
+**Shell kernel overlay:** [arch-design/overlays/shell-kernel-decision-hooks.md](../../../arch-design/overlays/shell-kernel-decision-hooks.md) — post–SN-4a PATH/plugin/ontology decisions.
+
 **Avoid in HODA + thrive docs:**
 
 - "Pivot to minimal only" without acceleration alternative

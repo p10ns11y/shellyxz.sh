@@ -1,6 +1,6 @@
 # Shell kernel ontology index
 
-**Graph:** [shell-kernel.graph.yaml](shell-kernel.graph.yaml) · **Schema:** [ontology.schema.json](ontology.schema.json) · **Fusion cache:** [fusion-state.json](fusion-state.json)
+**Graph:** [shell-kernel.graph.yaml](shell-kernel.graph.yaml) · **Visualization:** [GRAPH.md](GRAPH.md) · **Schema:** [ontology.schema.json](ontology.schema.json) · **Fusion cache:** [fusion-state.json](fusion-state.json)
 
 **Plan:** [arch-design/plans/shell-kernel-ontology.md](../../arch-design/plans/shell-kernel-ontology.md) · **Human docs:** [PLUGIN.md](../../PLUGIN.md) · [architecture.md](../../arch-design/architecture.md)
 
@@ -15,7 +15,7 @@
 | `path` | `shellyxz:PathContractDomain` | [shell-script-readability.md](../../arch-design/shell-script-readability.md), [shell.md](../../arch-design/shell.md) |
 | `boundary` | `shellyxz:KernelPluginBoundary`, `shellyxz:Kernel`, `shellyxz:VerificationPlugin` | [PLUGIN.md](../../PLUGIN.md) |
 | `load_order` | `shellyxz:LoadOrder` | [shell.md](../../arch-design/shell.md), [architecture.md](../../arch-design/architecture.md) |
-| `verify` | *SN-O1 — add VerificationBridge nodes* | [VERIFICATION.md](../../arch-design/VERIFICATION.md) · [plugins/verification/](../../plugins/verification/README.md) |
+| `verify` | *SN-O1 — add VerificationBridge nodes* | [VERIFICATION.md](../../arch-design/VERIFICATION.md) · [plugins/verification/](../../plugins/verification/README.md) · [GRAPH.md](GRAPH.md) |
 
 ---
 
