@@ -45,11 +45,11 @@ flowchart TB
   KPB -.->|doc| VP
   K --> KPB
   VP -.->|depends| K
-  K -.x|mustNot| VP
+  K -.->|mustNot| VP
   K --> PH_vwr
   K --> PH_root
   K --> PH_det
-  Inv_del ==>|enforces| K
+  Inv_del -->|enforces| K
 ```
 
 **Post–SN-4a:** implementation lives in `plugins/verification/`; `bin/*` shims + `verification_script_path` keep stable entrypoints.
@@ -96,9 +96,9 @@ flowchart TB
   Fn_apply -->|resolves| Core
   Fn_apply -->|resolves| Local
   Fn_proj -->|resolves| Proj
-  Inv_local ==>|enforces| Local
-  Inv_dir ==>|enforces| Proj
-  Inv_re ==>|enforces| Fn_re
+  Inv_local -->|enforces| Local
+  Inv_dir -->|enforces| Proj
+  Inv_re -->|enforces| Fn_re
 ```
 
 ---

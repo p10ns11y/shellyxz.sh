@@ -100,11 +100,11 @@ print("flowchart TB")
 edge_styles = {
     "owns": "-->",
     "dependsOn": "-.->|depends|",
-    "mustNot": "-.x|mustNot|",
+    "mustNot": "-.->|mustNot|",
     "documentedIn": "-.->|doc|",
     "resolvesTo": "-->|resolves|",
     "usesLexicon": "-->|lexicon|",
-    "enforces": "==>|enforces|",
+    "enforces": "-->|enforces|",
     "appliesBefore": "-->|before|",
 }
 
