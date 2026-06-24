@@ -13,7 +13,6 @@ prepend:HOME/bin
 prepend:.local/bin
 prepend:mise/shims
 prepend:.cargo/bin
-prepend:PNPM_HOME
 prepend:.bun/bin
 
 phase:inherit
