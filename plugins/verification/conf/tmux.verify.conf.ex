@@ -26,7 +26,7 @@
 set -g @workflow_status on
 set -g @workflow_mode ''
 
-source-file ~/.config/shell/tmux.status-mode.conf.ex
+source-file ~/.config/shell/plugins/verification/conf/tmux.status-mode.conf.ex
 
 # Keymap helper — Prefix+? or click status-right
 bind ? run-shell '~/.config/shell/bin/tmux-keymap-menu.sh'
