@@ -126,11 +126,10 @@ flowchart LR
     MCP[cockpit-mcp headless]
     TS[ts per-project tmux]
     SP[plugins/verification SN-4a]
-    ON[ontology graph SN-O0]
+    ON[ontology graph SN-O0+O1]
   end
   subgraph open["Open"]
     S4B[SN-4b optional separate repo]
-    O1[SN-O1 ontology drift gate]
   end
   shipped --> open
 ```
@@ -146,7 +145,7 @@ flowchart LR
 | Cockpit daily driver | **A-** | ab/av/at + navigators + MCP verbs | tmux shims + `plugins/verification/` |
 | Test runner portability | **A-** | `discover-tests.sh` canonical emitter; py parity test | `plugins/verification/lib/`, SN-8 |
 | Modular packaging | **A-** | SN-4a physical split; bin shims stable | `plugins/verification/`, `verification_script_path` |
-| Agent ontology | **B+** | Machine graph for PATH + boundary | `.agents/ontology/`, SN-O0 |
+| Agent ontology | **A-** | Graph + verify subgraph + drift gate | `.agents/ontology/`, `check-ontology.sh`, SN-O1 |
 
 ---
 

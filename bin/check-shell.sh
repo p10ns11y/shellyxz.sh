@@ -615,6 +615,7 @@ if [[ "$AUDIT" == true ]]; then
     [[ -x "$CONFIG_DIR/bin/recover-shell.sh" ]] && ok 'recover-shell.sh is executable' || warn 'recover-shell.sh missing or not executable'
     [[ -f "$LIB_FILE" ]] && ok 'lib.sh present' || fail 'lib.sh missing'
     [[ -x "$CONFIG_DIR/bin/check-template-sync.sh" ]] && "$CONFIG_DIR/bin/check-template-sync.sh" || warn 'template sync check failed'
+    [[ -x "$CONFIG_DIR/bin/check-ontology.sh" ]] && "$CONFIG_DIR/bin/check-ontology.sh" || warn 'ontology drift check failed'
 fi
 
 echo ""

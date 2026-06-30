@@ -4,7 +4,7 @@
 
 **Plan:** [arch-design/plans/shell-kernel-ontology.md](../../arch-design/plans/shell-kernel-ontology.md) · **Human docs:** [PLUGIN.md](../../PLUGIN.md) · [architecture.md](../../arch-design/architecture.md)
 
-*SN-O0 (Phase 1): path + boundary + load order. SN-4a: implementation in `plugins/verification/`; bin shims stable.*
+*SN-O0 (Phase 1): path + boundary + load order. SN-O1: verification bridge + drift gate. SN-4a: implementation in `plugins/verification/`; bin shims stable.*
 
 ---
 
@@ -15,7 +15,7 @@
 | `path` | `shellyxz:PathContractDomain` | [shell-script-readability.md](../../arch-design/shell-script-readability.md), [shell.md](../../arch-design/shell.md) |
 | `boundary` | `shellyxz:KernelPluginBoundary`, `shellyxz:Kernel`, `shellyxz:VerificationPlugin` | [PLUGIN.md](../../PLUGIN.md) |
 | `load_order` | `shellyxz:LoadOrder` | [shell.md](../../arch-design/shell.md), [architecture.md](../../arch-design/architecture.md) |
-| `verify` | *SN-O1 — add VerificationBridge nodes* | [VERIFICATION.md](../../arch-design/VERIFICATION.md) · [plugins/verification/](../../plugins/verification/README.md) · [GRAPH.md](GRAPH.md) |
+| `verify` | `shellyxz:VerificationBridge`, `shellyxz:Verb_ab` / `av` / `at` | [VERIFICATION.md](../../arch-design/VERIFICATION.md) · [plugins/verification/](../../plugins/verification/README.md) · [GRAPH.md](GRAPH.md) |
 
 ---
 
@@ -25,6 +25,8 @@
 |------------|-------|
 | Path contract | `core/path.contract`, `local/path.contract`, `core/path-resolve.sh` |
 | Verification plugin | `plugins/verification/bin/`, `plugins/verification/lib/` |
+| Verification verbs | `ab`/`av`/`at` → `agent_*` → `verification_script_path` |
+| Drift gate | `bin/check-ontology.sh`, `bin/extract-ontology-facts.sh` |
 | Tool pins | `core/tool.contract` |
 | Project PATH | repo `.path.contract`, `bin/path-contract-project.sh`, direnv `.envrc` |
 | Public hooks | `core/functions.sh` (`verify_workflow_root`, `detect_editor_terminal`), `core/env.sh` (`SHELL_ROOT`) |

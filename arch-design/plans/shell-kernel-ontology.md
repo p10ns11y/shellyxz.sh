@@ -1,6 +1,6 @@
 # Shell kernel ontology — plan
 
-**Status:** SN-O0 shipped · SN-4a shipped (plugin split + ab/av/at fix). **Live graph:** [`.agents/ontology/`](../.agents/ontology/INDEX.md)
+**Status:** SN-O0 shipped · SN-4a shipped · **SN-O1 shipped** (verification bridge + drift gate). **Live graph:** [`.agents/ontology/`](../.agents/ontology/INDEX.md)
 
 *Last updated: 2026-06-22*
 
@@ -12,7 +12,9 @@ Machine-readable domain graph so agents load **addressable** semantics (kernel v
 
 ---
 
-## What shipped (SN-O0)
+## What shipped
+
+### SN-O0
 
 | Asset | Path |
 |-------|------|
@@ -21,7 +23,18 @@ Machine-readable domain graph so agents load **addressable** semantics (kernel v
 | Fusion cache | `.agents/ontology/fusion-state.json` |
 | Index | `.agents/ontology/INDEX.md` |
 
-**Phase 1 scope:** `PathContractDomain`, `KernelPluginBoundary`, `LoadOrder`, lexicon links, invariants, public hooks. No verification file paths yet (SN-O1 after SN-4a).
+**Phase 1 scope:** `PathContractDomain`, `KernelPluginBoundary`, `LoadOrder`, lexicon links, invariants, public hooks.
+
+### SN-O1
+
+| Asset | Path |
+|-------|------|
+| VerificationBridge nodes | `shell-kernel.graph.yaml` (`verify` subgraph) |
+| Skill | `.agents/skills/shell-kernel-ontology/SKILL.md` |
+| Router rule | `.cursor/rules/ontology-router.mdc` |
+| Extract | `bin/extract-ontology-facts.sh` |
+| Drift gate | `bin/check-ontology.sh` (wired to `check-shell.sh --audit`) |
+| Viz | `GRAPH.md` verify subgraph; `render-ontology-graph.sh --subgraph verify` |
 
 ---
 
@@ -29,33 +42,9 @@ Machine-readable domain graph so agents load **addressable** semantics (kernel v
 
 | Order | Item | Notes |
 |-------|------|-------|
-| 1 | **SN-O0** (this) | Boundary + PATH graph before physical split |
-| 2 | **SN-4a** | `plugins/verification/` + bin shims — **shipped** in PR #11 |
-| 3 | **SN-O1** | VerificationBridge nodes, skill/rule, drift gate |
-
-Ontology **helps** SN-4: `mustNot` / `may_assume` / `PublicHook` nodes route file moves. Do not wait for SN-4 to model boundary semantics.
-
----
-
-## Remaining phases
-
-### SN-O1 Phase 2 — Verification bridge (after SN-4a)
-
-- Nodes: `ab`, `av`, `at`, `cockpit-mcp`, `cockpit.yaml`, `SHELL_AGENT_STRICT_PATH`
-- Remap plugin `Artifact` paths to `plugins/verification/`
-- `meta.layout` → `plugins_verification`
-
-### SN-O1 Phase 3 — Skill + rule
-
-- `.agents/skills/shell-kernel-ontology/SKILL.md`
-- `.cursor/rules/ontology-router.mdc` (thin subgraph router)
-- ai-optimization + fusion-sage overlays
-
-### SN-O1 Phase 4 — Drift gate
-
-- `bin/extract-ontology-facts.sh` → `shell-kernel.extracted.yaml`
-- `bin/check-ontology.sh` wired to `check-shell.sh --audit`
-- Optional `exports/shell-kernel.jsonld`
+| 1 | **SN-O0** | Boundary + PATH graph before physical split — **shipped** |
+| 2 | **SN-4a** | `plugins/verification/` + bin shims — **shipped** PR #11 |
+| 3 | **SN-O1** | VerificationBridge, skill/rule, drift gate — **shipped** |
 
 ---
 
@@ -66,7 +55,7 @@ Ontology **helps** SN-4: `mustNot` / `may_assume` / `PublicHook` nodes route fil
 | `path` | `shellyxz:PathContractDomain` | shell-script-readability.md, shell.md |
 | `boundary` | `shellyxz:KernelPluginBoundary` | PLUGIN.md |
 | `load_order` | `shellyxz:LoadOrder` | shell.md, architecture.md |
-| `verify` | *SN-O1* | VERIFICATION.md |
+| `verify` | `shellyxz:VerificationBridge` | VERIFICATION.md |
 
 ---
 
@@ -85,7 +74,8 @@ Ontology **helps** SN-4: `mustNot` / `may_assume` / `PublicHook` nodes route fil
 |--------|---------|
 | SN-4 PR | Includes ontology path remap + INDEX checklist |
 | Agent edits `core/` | Uses lexicon vars from graph |
-| `check-ontology.sh` (SN-O1) | Green on master |
+| `check-ontology.sh` | Green on master |
+| `check-shell.sh --audit` | Ontology section passes |
 
 ---
 

@@ -11,7 +11,7 @@
 | Method | When to use | Renders where |
 |--------|-------------|---------------|
 | **This file (curated Mermaid)** | Reading architecture, PR review, agents | GitHub, Cursor markdown preview |
-| **`bin/render-ontology-graph.sh`** | After graph edits; CI/drift later (SN-O1) | stdout → paste or pipe to file |
+| **`bin/render-ontology-graph.sh`** | After graph edits; drift gate (`check-ontology.sh`) | stdout → paste or pipe to file |
 | **INDEX.md tables** | Lookup concept → files without diagram | Everywhere |
 
 **Why Mermaid:** already used in [architecture.md](../../arch-design/architecture.md) and [coming-next.md](../../arch-design/coming-next.md); zero install; diffs stay readable. Full auto-layout of 40+ nodes is a hairball — use **subgraph views** below, not one mega-chart.
@@ -22,7 +22,9 @@
 bin/render-ontology-graph.sh --subgraph boundary
 bin/render-ontology-graph.sh --subgraph path
 bin/render-ontology-graph.sh --subgraph load_order
+bin/render-ontology-graph.sh --subgraph verify
 bin/render-ontology-graph.sh --subgraph all > .agents/ontology/graph.generated.mmd
+bin/check-ontology.sh
 ```
 
 ---
@@ -121,9 +123,46 @@ Detail sequence: [architecture.md § PATH precedence](../../arch-design/architec
 
 ---
 
-## SN-O1 (next)
+## Verify subgraph (ab/av/at bridge)
 
-Verification bridge nodes (`ab`, `av`, `at`, `cockpit-mcp`, resolver artifacts) will extend the **boundary** subgraph. Drift gate: `check-ontology.sh` compares extracted facts to this graph.
+```mermaid
+flowchart TB
+  subgraph verify["verify"]
+    VB["Verification Bridge<br/><small>Domain</small>"]
+    Vab["ab (agent build)<br/><small>Concept</small>"]
+    Vav["av (agent verify)<br/><small>Concept</small>"]
+    Vat["at (agent test)<br/><small>Concept</small>"]
+    Fn_ab["agent_build<br/><small>Function</small>"]
+    Fn_av["agent_verify<br/><small>Function</small>"]
+    Fn_at["agent_test<br/><small>Function</small>"]
+    Res["verification_script_path<br/><small>Function</small>"]
+    Plug["plugins/verification/<br/><small>Artifact</small>"]
+    Shim_b["bin/agent-build-layout.sh<br/><small>Artifact</small>"]
+    Shim_v["bin/agent-verify-layout.sh<br/><small>Artifact</small>"]
+    Shim_t["bin/agent-test-layout.sh<br/><small>Artifact</small>"]
+    Mcp["bin/cockpit-mcp.sh<br/><small>Artifact</small>"]
+    Strict["SHELL_AGENT_STRICT_PATH<br/><small>Concept</small>"]
+  end
+
+  VB --> Vab
+  VB --> Vav
+  VB --> Vat
+  Vab -->|resolves| Fn_ab
+  Vav -->|resolves| Fn_av
+  Vat -->|resolves| Fn_at
+  Fn_ab -->|resolves| Res
+  Fn_av -->|resolves| Res
+  Fn_at -->|resolves| Res
+  Res -->|resolves| Plug
+  Shim_b -->|resolves| Plug
+  Shim_v -->|resolves| Plug
+  Shim_t -->|resolves| Plug
+  VB --> Mcp
+  VB --> Strict
+  Strict -->|enforces| Fn_ab
+```
+
+**Drift gate:** `bin/check-ontology.sh` compares [shell-kernel.graph.yaml](shell-kernel.graph.yaml) to `bin/extract-ontology-facts.sh` output. Wired into `check-shell.sh --audit`.
 
 ---
 

@@ -1,0 +1,35 @@
+---
+description: Route shell kernel edits through ontology subgraphs (path, boundary, load_order, verify)
+globs: core/**,plugins/verification/**,bin/**,.agents/ontology/**,templates/core/**
+alwaysApply: false
+---
+
+# Ontology subgraph router
+
+When editing matched paths, load the shell kernel ontology **before** inferring layout from memory.
+
+## Router
+
+| If you are changing… | Load subgraph | Start here |
+|---------------------|---------------|------------|
+| `path.contract`, `path-resolve.sh`, PATH lexicon | `path` | [INDEX.md](../.agents/ontology/INDEX.md) → `shellyxz:PathContractDomain` |
+| Kernel vs plugin, shims, PLUGIN boundary | `boundary` | `shellyxz:KernelPluginBoundary` |
+| `env.sh`, zshrc load order, direnv project PATH | `load_order` | `shellyxz:LoadOrder` |
+| `ab`/`av`/`at`, resolver, cockpit-mcp, verify lib | `verify` | `shellyxz:VerificationBridge` |
+
+**Skill:** [`.agents/skills/shell-kernel-ontology/SKILL.md`](../.agents/skills/shell-kernel-ontology/SKILL.md)
+
+## Non-negotiables
+
+1. **Resolver, not hardcode** — use `verification_script_path` / `verification_lib_dir`; never assume `bin/lib/`.
+2. **Shims stay** — plugin scripts live under `plugins/verification/`; `bin/*` remains thin exec shims.
+3. **Graph + tree** — structural moves update `shell-kernel.graph.yaml` in the same PR.
+4. **Drift gate** — run `bin/check-ontology.sh` (or `check-shell.sh --audit`) before claiming done.
+
+## Viz
+
+```bash
+bin/render-ontology-graph.sh --subgraph verify
+```
+
+Human boundary prose stays canonical in [PLUGIN.md](../PLUGIN.md); the graph is the agent index.

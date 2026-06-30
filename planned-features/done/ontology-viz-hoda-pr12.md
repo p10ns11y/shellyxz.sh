@@ -55,7 +55,6 @@ flowchart LR
 
 | Item | Track |
 |------|-------|
-| VerificationBridge nodes in graph | O1a |
-| `shell-kernel-ontology` skill + router rule | O1b |
-| `check-ontology.sh` drift gate | O1c |
-| Wire render script into check-ontology | O1c optional |
+| VerificationBridge nodes in graph | **Shipped** — [sn-o1-ontology-verification.md](sn-o1-ontology-verification.md) |
+| `shell-kernel-ontology` skill + router rule | **Shipped** |
+| `check-ontology.sh` drift gate | **Shipped** |

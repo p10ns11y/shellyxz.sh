@@ -15,7 +15,7 @@
 | **Kernel / plugin boundary** | `core/*`, `plugins/verification/*`, `bin/*` shims, `verification_script_path` | Kernel must survive `rm -rf plugins/verification`; plugin calls **PublicHooks only** |
 | **Load order** | `env.sh`, `templates/zshrc`, direnv fragments | `path_contract_apply` → presets → hooks → `phase:project` → `path_contract_reassert` |
 | **Verification bridge** | `ab`/`av`/`at`, tmux binds, `cockpit-mcp`, per-repo `.agents/verification/` | tmux + MCP share verbs; per-project cockpit stays in each repo |
-| **Ontology drift** | New public API, moved paths, invariants | Graph + `check-ontology.sh` (SN-O1) must stay aligned with `check-shell.sh` |
+| **Ontology drift** | New public API, moved paths, invariants | Graph + `check-ontology.sh` must stay aligned with `check-shell.sh` |
 
 ---
 

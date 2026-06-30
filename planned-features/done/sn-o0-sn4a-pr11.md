@@ -59,7 +59,7 @@ flowchart LR
 
 | Item | Track |
 |------|-------|
-| SN-O1 | VerificationBridge nodes, skill, `check-ontology.sh` |
+| SN-O1 | **Shipped** — [sn-o1-ontology-verification.md](sn-o1-ontology-verification.md) |
 | SN-4b | Optional separate verification repo |
 | HODA overlay | **Shipped** — [#12](ontology-viz-hoda-pr12.md) |
 | Graph viz | **Shipped** — [#12](ontology-viz-hoda-pr12.md) |
