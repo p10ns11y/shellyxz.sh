@@ -65,7 +65,7 @@ flowchart TB
 | `top`/`du`/`df` | aliases.sh → btop/dust/duf | Done |
 | `lg` | aliases.sh | Done |
 | tmux prefix `C-a` | Omarchy uses **`C-Space`** | **Extend Omarchy tmux**, do not replace |
-| `eval "$(mise activate)"` in editor | `detect_editor_terminal` + shims | Keep guard; cockpit runs in **Ghostty/tmux**, not Cursor integrated terminal |
+| `eval "$(mise activate)"` in editor | `detect_editor_terminal` + shims | Keep mise skip in editor; cockpit only requires `$TMUX` (Cursor agent viewport OK) |
 | `cat`/`grep`/`find` → bat/rg/fd | Not aliased yet | Add **guarded** aliases in aliases.sh (`command -v` checks) |
 | `procs` | Not installed (optional) | Guard alias; document `pacman -S procs` in doc |
 | `delta` | Not in git config | Add `git.ex.config` example + migrate copy when absent |
@@ -167,9 +167,9 @@ Bind convenience alias: `av` → `agent_verify`.
 
 ### 1d. `detect_editor_terminal` integration
 
-All tmux-heavy helpers call `detect_editor_terminal` first and print:
+`detect_editor_terminal` still skips mise in editor shells. `_agent_tmux_guard` only requires `$TMUX` (Cursor agent viewport terminal is allowed).
 
-> Run in Ghostty/tmux (`t` or Super+Alt+Return), not Cursor integrated terminal.
+> Start tmux first (`t` or Super+Alt+Return)
 
 ---
 
@@ -306,7 +306,7 @@ Sections:
 3. **Cockpit layout** — ASCII diagram + Omarchy key reference (`C-Space`, `h`/`v` splits, `M-1..9` windows)
 4. **Agent super-flow** — 7-step loop with concrete commands (`z`, `y`, `agent_scan`, `lg`, `av`)
 5. **Daily rhythm** — `ff` → `t` → `z project` → verify
-6. **Cursor vs native terminal** — when to use Ghostty/tmux vs editor terminal
+6. **Terminal + tmux** — `$TMUX` required; Cursor agent viewport OK; mise may still skip in editor shells
 7. **Optional installs** — procs, delta, TPM plugins
 
 Cross-link from [README.md](README.md) Maintenance/Troubleshooting (one row + link).
@@ -356,7 +356,7 @@ lg                             # lazygit in review pane
 
 In nvim: `:Lazy` → confirm telescope extra loaded; `<leader>sg` opens live_grep; `<leader>vh` adds harpoon pin.
 
-In Cursor integrated terminal: `agent_verify` should **refuse** gracefully; mise hook remains skipped.
+In Cursor agent terminal with `$TMUX` set: `agent_verify` should run; mise hook may still be skipped.
 
 ---
 

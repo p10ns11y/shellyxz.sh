@@ -292,7 +292,7 @@ Data file: `plugins/verification/data/tmux-keymaps.tsv` — shell aliases, tmux 
 
 **Entry points:**
 
-- Shell: `agent_verify` / `av` (from `functions.sh` — also blocks Cursor integrated terminal)
+- Shell: `agent_verify` / `av` (from `functions.sh` — requires `$TMUX`)
 - tmux: `Prefix+V` (`C-Space` `V` with Omarchy prefix) via `~/.config/tmux/verify.conf`
 
 **No `--help`** — do not pass `-h` (it is interpreted as a directory).

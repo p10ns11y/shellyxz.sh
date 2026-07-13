@@ -140,22 +140,15 @@ agent_scan() {
     done
 }
 
-# Refuse cockpit layouts in editor integrated terminals (Cursor phantom-tab UX).
+# Require tmux for cockpit layouts (Cursor agent viewport terminal is OK when $TMUX is set).
 _agent_tmux_guard() {
-    if command -v detect_editor_terminal >/dev/null 2>&1; then
-        detect_editor_terminal 2>/dev/null
-        if [ "${SHELL_IN_EDITOR_TERMINAL:-no}" = yes ]; then
-            echo "Run in Ghostty/tmux (t or Super+Alt+Return), not Cursor integrated terminal." >&2
-            return 1
-        fi
-    fi
     if [ -z "${TMUX:-}" ]; then
         echo "Start tmux first (t or Super+Alt+Return)" >&2
         return 1
     fi
 }
 
-# Agent build layout — full-pane agent TUI (SHELL_AGENT_BUILD_CMD). Requires native terminal + tmux.
+# Agent build layout — full-pane agent TUI (SHELL_AGENT_BUILD_CMD). Requires tmux.
 agent_build() {
     _agent_tmux_guard || return 1
     local script

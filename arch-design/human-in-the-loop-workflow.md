@@ -2,7 +2,7 @@
 
 Repeatable rituals for reviewing agent output before you commit. This doc is the **muscle-memory playbook**; [VERIFICATION.md](VERIFICATION.md) covers tooling, keymaps, and setup.
 
-**Rule of thumb:** run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). Cursor’s integrated terminal refuses `agent_build` / `agent_verify` (`ab` / `av`) by design.
+**Rule of thumb:** run verification in **tmux** (`t`, Super+Alt+Return, or Cursor agent viewport with `$TMUX` set). `agent_build` / `agent_verify` (`ab` / `av`) require `$TMUX`, not a specific terminal app.
 
 See [VERIFICATION.md — What happens (ab → av)](VERIFICATION.md#what-happens-when-you-run-ab-then-av) for exact side effects (`av --scan`, `@workflow_dir`, status bar).
 

@@ -410,7 +410,7 @@ source ~/.zshrc   # or: source ~/.bashrc
 | PATH differs in `zsh` vs `zsh -l` | login dotfiles missing | Run `bin/migrate.sh` (generates `~/.zprofile` when absent) |
 | `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
 | All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
-| `agent_verify` / `agent_build` refuses in Cursor | editor terminal guard | Use Ghostty/tmux (`t` or Super+Alt+Return); see [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) |
+| `agent_verify` / `agent_build` refuses | not in tmux (`$TMUX` unset) | Start tmux (`t` or Super+Alt+Return), or attach in Cursor agent terminal; see [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) |
 | Plain git/lazygit diffs (no color) | `include.path` not set | `git config --global include.path ~/.config/git/verification` |
 | `gdf`/`gdfs` unknown | difftastic not on PATH | `paru -S difftastic` (Arch) or install `difft`; `source ~/.zshrc` |
 

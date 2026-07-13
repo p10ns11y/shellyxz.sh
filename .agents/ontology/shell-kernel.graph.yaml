@@ -70,7 +70,7 @@ nodes:
     name: Verification Plugin
     subgraph: boundary
     may_assume:
-      - tmux session; not editor integrated terminal
+      - tmux session ($TMUX set)
       - Optional tools lazygit bat fzf yazi difftastic rg dust
       - Per-project cockpit manifests (.agents/verification/, cockpit.yaml)
       - SHELL_AGENT_BUILD_CMD via env (not hardcoded in kernel)

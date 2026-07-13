@@ -15,7 +15,7 @@ See [README.md](../README.md) for shell setup; [shell.md](shell.md) for load ord
 - **Composability** — pipe rg → fzf → nvim; jq + bat on JSON agent reports.
 - **Human stays in the loop** — tools collapse time between "agent done" and "I understand + I act".
 
-Run verification in **Ghostty + tmux** (`t` or Super+Alt+Return). **Current architecture:** [architecture.md](architecture.md). Cursor integrated terminals skip `mise activate` and refuse `agent_build` / `agent_verify` (`ab` / `av`; legacy `af`/`aw`/`agent_work`).
+Run verification in **tmux** (`t`, Super+Alt+Return, or Cursor agent viewport terminal with `$TMUX` set). **Current architecture:** [architecture.md](architecture.md). Editor-integrated shells may still skip `mise activate`; `agent_build` / `agent_verify` (`ab` / `av`) only require tmux.
 
 ### `t` vs `ts` (tmux sessions)
 

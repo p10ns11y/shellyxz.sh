@@ -46,7 +46,7 @@ The verification plugin **may** assume a richer environment. It is allowed to br
 
 | May assume | Location |
 |------------|----------|
-| tmux session active; not in editor integrated terminal | `core/functions.sh` (`_agent_tmux_guard`) |
+| tmux session active (`$TMUX` set) | `core/functions.sh` (`_agent_tmux_guard`) |
 | Optional tools: lazygit, bat, fzf, yazi, difftastic, rg, dust | `aliases.sh`, layouts, `agent_scan` |
 | Per-project cockpit manifests | `.agents/verification/`, `cockpit.yaml` |
 | Desktop integration (Omarchy, Ghostty) | `environments/omarchy/`, docs |

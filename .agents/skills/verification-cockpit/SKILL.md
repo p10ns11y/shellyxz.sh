@@ -178,7 +178,7 @@ If no cockpit section exists, add under setup/verify:
 
 ## Test
 
-In Ghostty + tmux (not Cursor integrated terminal):
+In tmux (Ghostty, Cursor agent viewport, or any terminal with `$TMUX` set):
 
 ```bash
 t && z <project>
