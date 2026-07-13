@@ -27,10 +27,11 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 ### Path A — git clone (full tree, recommended)
 
 ```bash
-git clone git@github.com:p10ns11y/shellyxz.sh.git ~/.config/shell
+git clone https://github.com/p10ns11y/shellyxz.sh.git ~/.config/shell
+# SSH: git@github.com:p10ns11y/shellyxz.sh.git
 ~/.config/shell/bin/migrate.sh
 source ~/.zshrc    # or ~/.bashrc
-git config --global include.path ~/.config/git/verification   # if migrate did not set it
+git config --global include.path ~/.config/git/verification   # only if migrate did not set it
 ~/.config/shell/bin/check-shell.sh
 ```
 

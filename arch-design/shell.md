@@ -76,7 +76,7 @@ Unix shells do not read one config file. They read **different files depending o
 | `~/.bashrc` | bash interactive | Interactive bash | Full stack via `env.sh` + environment hooks + modules |
 | `~/.config/fish/config.fish` | fish main | Interactive fish | Fish has no separate profile/rc split — one file does it all |
 
-**PATH, cargo, vite-plus:** owned by `core/env.sh` (`path_prepend` + `source_if_safe` for `~/.vite-plus/env`). Login files delegate via `env.sh`; they do **not** source `~/.cargo/env` or `~/.local/bin/env`.
+**PATH, cargo, vite-plus:** owned by `core/path.contract` (+ optional `local/path.contract`), applied by `path_contract_apply` in `env.sh`; vite-plus via `source_if_safe` for `~/.vite-plus/env`. Login files delegate via `env.sh`; they do **not** source `~/.cargo/env` or `~/.local/bin/env`.
 
 ### Login vs interactive vs non-interactive
 
@@ -108,11 +108,14 @@ That is why `path_debug` can differ between `zsh` and `zsh -l`: login adds `zpro
 
 | You want to… | Edit this | Not this |
 |--------------|-----------|----------|
-| Add an alias | `aliases.sh` or `personal.sh` | `~/.zshrc` |
-| Fix PATH | `env.sh` | `~/.zprofile` (already delegates to `env.sh`) |
+| Add an alias | `aliases.sh` (common) or `local/personal.sh` (work) | `~/.zshrc` |
+| Fix PATH | `core/path.contract` or `local/path.contract` | ad-hoc `path_prepend` in `env.sh` / `~/.zprofile` |
 | Add a function | `functions.sh` | rc files |
+| API keys / secrets | `~/.config/secrets/dev.env` (mode 600, `KEY=value` only) | `.envrc` inside `~/.config/shell/` |
 | Change load order or add a tool init | `migrate.sh` template, then `--force-rc` | hand-edit rc without migrating |
 | One-off experiment | `exec fish` / `bash -l` | `chsh` |
+
+After editing modules: `reload` (or `source ~/.zshrc` / `~/.bashrc`), then `bin/check-shell.sh`.
 
 ### Switching shells
 
@@ -202,7 +205,7 @@ You rarely need `chsh`. Most switching is **temporary** (`exec bash` on a server
 | File | Role | Sourced by |
 |------|------|------------|
 | `lib.sh` | Safe sourcing (Omarchy, secrets, permission checks) | `env.sh`, `personal.sh` |
-| `env.sh` | `path_prepend`/`path_append`, `path_drop`, exports, `source_environments`, vite-plus via `source_if_safe` | zsh, bash, fish (via bass) |
+| `env.sh` | `path_contract_apply`, exports, `source_environments`, vite-plus via `source_if_safe` | zsh, bash, fish (via bass) |
 | `aliases.sh` | yazi `y()`, guarded `cat`/`grep`/`find`/`ps`, `gdf`/`gdfs`, monitoring (`top`→btop), `ff`/`lg`; **chains** `personal.sh` | zsh, bash, fish (via bass) |
 | `personal.sh` | Work aliases (`agrepos`, …); loads `~/.config/secrets/dev.env` via `load_secrets_file` | via `aliases.sh` tail only |
 | `functions.sh` | Custom functions (`path_debug`, `shell_debug`, `reload`) | zsh, bash rc files; fish (via bass) |
@@ -250,24 +253,18 @@ source ~/.zshrc
 
 ```mermaid
 flowchart LR
-    subgraph path_prepend["path_prepend (last call wins)"]
-        p1["tool bins: bun, pnpm, cargo, …"]
-        p2["mamba"]
+    subgraph contract["path.contract phases"]
+        p1["HOME/bin"]
+        p2[".local/bin"]
         p3["mise shims"]
-        p4["~/bin"]
-        p5["~/.local/bin (highest)"]
+        p4[".cargo/bin"]
+        p5[".bun/bin"]
+        p6["OMARCHY_PATH/bin (environment)"]
     end
 
-    subgraph path_append["path_append (fallbacks)"]
-        a1["condabin"]
-        a2["/opt/rocm/bin"]
-    end
-
-    subgraph exports["exports"]
-        e1["PNPM_HOME"]
-        e2["PIP_CACHE_DIR, TMPDIR"]
-        e3["OMP/MKL threads, HSA_OVERRIDE"]
-        e4["SSH_AUTH_SOCK, GPG_TTY"]
+    subgraph append["append / local overlay"]
+        a1["mamba, toolchains (local)"]
+        a2["condabin, /opt/rocm/bin"]
     end
 
     subgraph loaders["post-PATH in env.sh"]
@@ -276,7 +273,7 @@ flowchart LR
         l3["local/overwrite.sh (optional)"]
     end
 
-    path_prepend --> path_append --> exports --> loaders
+    contract --> append --> loaders
 ```
 
 ### PATH contract (v2)
@@ -295,9 +292,8 @@ Forkable kernel PATH: [`core/path.contract`](../core/path.contract). Machine-spe
 | 2 | `$HOME/.local/bin` | core |
 | 3 | `$HOME/.local/share/mise/shims` | core |
 | 4 | `$HOME/.cargo/bin` | core |
-| 5 | `$PNPM_HOME` | core |
-| 6 | `$HOME/.bun/bin` | core |
-| 7 | `$OMARCHY_PATH/bin` | environment (omarchy preset) |
+| 5 | `$HOME/.bun/bin` | core |
+| 6 | `$OMARCHY_PATH/bin` | environment (omarchy preset) |
 | — | inherited system `PATH` | inherit |
 
 **Local overlay** (`local/path.contract` — your machine; see example):
@@ -658,7 +654,7 @@ flowchart LR
 - [x] **Omarchy envs not duplicated in zsh** — only via `env.sh`.
 - [x] **direnv hooked** in bash and zsh when installed.
 - [x] **migrate preserves modules** — won't overwrite existing `env.sh` / `aliases.sh` / `functions.sh`.
-- [x] **PATH centralized** — `path_prepend`/`path_append` in `env.sh`; login files delegate; last prepend wins; use `path_debug`.
+- [x] **PATH centralized** — `core/path.contract` (+ `local/path.contract`); `env.sh` applies via `path_contract_apply`; use `path_debug` / `path_check`.
 - [x] **secrets outside shell repo** — `~/.config/secrets/dev.env`; no `.envrc` in workspace.
 - [ ] **fish is partial** — requires bass plugin; no `ga`/`gd` (direnv, fzf, `functions.sh`, thefuck added).
 - [x] **migrate rc policy** — skips hand-edited rc files; refreshes managed ones; `--force-rc` to overwrite.
@@ -673,7 +669,7 @@ flowchart LR
 
 | Path | Purpose |
 |------|---------|
-| [README.md](../README.md) | Philosophy, switching shells, where to add aliases, maintenance |
+| [README.md](../README.md) | Intent-first overview, install, slim FAQ — detail lives in this doc |
 | [env.sh](../env.sh) | Portable environment |
 | [aliases.sh](../aliases.sh) | Shared aliases + `personal.sh` chain |
 | [personal.sh](../personal.sh) | Work-specific shortcuts |

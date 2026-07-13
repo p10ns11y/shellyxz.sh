@@ -1,89 +1,72 @@
 # ~/.config/shell/
 
-Clean, portable, and low-maintenance shell configuration that works across **bash**, **zsh**, and **fish**.
+Portable shell config for **bash**, **zsh**, and **fish** — built so humans can review agent work in a terminal cockpit without fighting `PATH`, rc files, or editor terminals.
 
-**Why:** Terminal-native agent verification (`ab` / `av`, tmux cockpits) — see [motivation.md](motivation.md).
+**Core intent:** a small **kernel** (`core/`) that always loads cleanly, plus an optional **verification plugin** (`ab` / `av` / `at` in tmux). Why this exists: [motivation.md](motivation.md).
+
+| Start here | What you get |
+|------------|----------------|
+| [PLUGIN.md](PLUGIN.md) | What must work without tmux/agents vs what the verification plugin may assume |
+| [arch-design/architecture.md](arch-design/architecture.md) | Current system map, scorecard, PATH layers |
+| [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) | `ab` / `av` cockpit workflow (`$TMUX` required; any terminal, including Cursor agent view) |
 
 ## Audience
 
-**This is for advanced users only.** You should already be comfortable fixing a broken shell environment and recovering a system when things go wrong.
+**Advanced users only.** This config owns `PATH`, login files, and tool hooks. A bad edit can make new terminals unusable — the usual fix tools (`git`, `nvim`, `mise`) may be missing in that session.
 
-Shell config touches `PATH`, login files, and tool initialization. A bad edit can leave new terminals unusable — wrong `PATH`, syntax errors on `source`, or broken hooks — so the very tools you normally use to fix things (`git`, `nvim`, `mise`, your editor, even `cd`) may not be available in that session.
+Know a recovery path that does **not** need a working interactive shell: root/rescue TTY, `bash --norc`, [`bin/recover-shell.sh`](bin/recover-shell.sh), another user, `backups/*/revert.sh`, or editing dotfiles from a GUI/SSH session that skips your broken rc.
 
-Before changing anything here, know how you would recover without relying on a working interactive shell: a root/rescue TTY, a minimal `bash --norc`, `~/.config/shell/bin/recover-shell.sh`, booting from another user, restoring from `backups/*/revert.sh`, or fixing dotfiles from a graphical file manager or SSH session that does not load your broken rc.
-
-If that sounds stressful, use a simpler, distribution-default setup instead.
+If that sounds stressful, keep a distribution-default shell setup instead.
 
 ## Getting started
 
-Use this path on a **new machine** or after cloning the repo. Existing setups can skip to [Maintenance](#maintenance).
+New machine or fresh clone. Existing installs: jump to [Maintenance](#maintenance).
 
 ### Prerequisites
 
 | Requirement | Why |
 |-------------|-----|
-| **Environment preset** (`environment` or `SHELL_ENVIRONMENT`) | `generic` for containers/VPS/CI; `omarchy` for Omarchy desktop (auto-detected when `~/.local/share/omarchy` exists) |
-| **direnv** (recommended) | Managed rc templates use direnv hooks |
-| **fish + bass** (fish only) | Fish loads portable modules via the bass plugin |
-| **paru** (Arch only, optional) | `bin/migrate.sh` tries `paru -S yazi thefuck procs difftastic` when missing; **other distros:** install manually |
+| **Environment preset** (`environment` or `SHELL_ENVIRONMENT`) | `generic` for containers/VPS/CI; `omarchy` when `~/.local/share/omarchy` exists (auto-detected) |
+| **direnv** (recommended) | Managed rc templates hook direnv |
+| **fish + bass** (fish only) | Fish loads portable modules via bass |
+| **paru** (Arch only, optional) | `migrate.sh` may install `yazi` / `thefuck` / `procs` / `difftastic`; other distros: install manually |
 
 ### First install
 
-**One-liner** (fetches the full config from GitHub, then migrates):
+**One-liner** (bootstrap from GitHub, then migrate):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master/bin/migrate.sh | bash
 ```
 
-The script detects `curl | bash`, downloads missing repo files (`lib.sh`, `env.sh`, `bin/check-shell.sh`, `bin/recover-shell.sh`, docs, …) from the same branch, then runs migration. Override source with `SHELL_CONFIG_RAW=...` for forks.
+Override source for forks: `SHELL_CONFIG_RAW=...`.
 
-**Or clone + run:**
+**Or clone + migrate:**
 
 ```bash
-# 1. Clone the repo
-git clone git@github.com:p10ns11y/shellyxz.sh.git ~/.config/shell
+git clone https://github.com/p10ns11y/shellyxz.sh.git ~/.config/shell
+# SSH: git@github.com:p10ns11y/shellyxz.sh.git
 
-# 2. Run migration (backs up dotfiles, generates rc + login templates)
 ~/.config/shell/bin/migrate.sh
 
-# 3. Optional: pin preset (default: auto-detect omarchy or generic)
+# Optional: pin preset (omit to auto-detect omarchy vs generic)
 cp ~/.config/shell/environment.example ~/.config/shell/environment
-# edit environment: SHELL_ENVIRONMENT=generic   # containers / CI
-# or:                SHELL_ENVIRONMENT=omarchy  # Omarchy desktop
+# SHELL_ENVIRONMENT=generic   # or omarchy
 
-# 4. Optional: secrets (local/personal.sh loads ~/.config/secrets/dev.env)
-mkdir -p ~/.config/secrets
-# add API keys to ~/.config/secrets/dev.env
+# Optional: secrets (loaded via local/personal.sh)
+mkdir -p ~/.config/secrets   # KEY=value in ~/.config/secrets/dev.env (mode 600)
 
-# 5. Reload and verify
-source ~/.zshrc                            # or: source ~/.bashrc
-git config --global include.path ~/.config/git/verification   # enable delta (lazygit + git pager)
+source ~/.zshrc              # or ~/.bashrc
 ~/.config/shell/bin/check-shell.sh
-
-# Verification aliases (after procs/difftastic installed): ps, gdf, gdfs — see arch-design/VERIFICATION.md
-# Starship: migrate copies starship.ex.toml → ~/.config/starship.toml when absent
-# Mamba/conda: env.sh sets CONDA_CHANGEPS1=false; Starship [conda] module shows (env) inline
 ```
 
-**What `bin/migrate.sh` does on first run:**
+`migrate.sh` already scaffolds `~/.config/git/verification` and sets `include.path` when missing. Only set it yourself if that step was skipped:
 
-- Bootstraps missing files from GitHub when piped or when `lib.sh` / helper scripts are absent (`--bootstrap` to retry fetch)
-- Backs up existing dotfiles to `backups/TIMESTAMP/` (gitignored) with `revert.sh`
-- Generates `env.sh`, `aliases.sh`, `functions.sh` only if still missing after bootstrap (preserves existing)
-- Regenerates managed `~/.zshrc`, `~/.bashrc`, fish config (skips hand-edited rc files)
-- Generates login dotfiles (`~/.zprofile`, `~/.zshenv`, `~/.profile`, `~/.bash_profile`) when missing or managed
-- Installs `~/.config/starship.toml` from `starship.ex.toml` when absent
-- Creates empty `completions/` placeholder directory
-- Bootstraps `starship.ex.toml` example in the repo
-- Runs `git init` + initial commit inside `~/.config/shell` if no `.git` exists
-- Does **not** create secrets (`~/.config/secrets/dev.env`)
+```bash
+git config --global include.path ~/.config/git/verification
+```
 
-## Philosophy
-
-- **Core + environments** — distro-agnostic `core/` with opt-in `environments/` (Omarchy, generic, custom)
-- **Single source of truth** — `templates/` for migrate; `core/` is canonical
-- **Easy to maintain** long-term
-- **Git tracked** for history and easy syncing across machines
+**What migrate does (short):** backs up dotfiles to `backups/TIMESTAMP/` + `revert.sh`; bootstraps missing repo files when piped; generates modules only if absent; refreshes **managed** rc/login/fish; scaffolds starship/tmux/yazi/git when absent. Full behavior: [bin/README.md](bin/README.md).
 
 ### Containers / VPS (no Omarchy)
 
@@ -94,340 +77,77 @@ source ~/.config/shell/env.sh
 
 Or set `SHELL_ENVIRONMENT=generic` in `~/.config/shell/environment`.
 
-## Directory Structure
+## Layout (kernel vs overlay)
 
 ```
 ~/.config/shell/
-├── plugins/              # Optional feature plugins (see PLUGIN.md)
-│   └── verification/     # ab/av/at cockpit — plugins/verification/README.md
-├── PLUGIN.md             # Kernel vs verification-plugin boundary
-├── arch-design/          # architecture.md (current state), coming-next (backlog), shell.md, …
-├── planned-features/     # done/ — shipped epics with diagrams + PR/commit evidence
-│   └── README.md         # Index of design docs
-├── environment.example   # Copy → environment (optional pin; omit for auto-detect)
-├── core/                 # Distro-agnostic (always loaded)
-│   ├── lib.sh            # source_environments, secrets, safety
-│   ├── path.sh           # path_prepend, path_append, path_drop
-│   ├── path.contract     # PATH build order (validated by check-shell.sh)
-│   ├── env.sh            # PATH manifest + environment loader
-│   ├── aliases.sh
-│   └── functions.sh
-├── environments/         # Opt-in per machine (see environments/README.md)
-│   ├── generic/          # No-op stubs (containers / VPS / CI)
-│   └── omarchy/          # Omarchy desktop integration
-├── local/
-│   ├── personal.sh       # Secrets + work aliases (local overlay)
-│   ├── path.contract     # Personal PATH overlay (optional; see path.contract.example)
-│   ├── path.contract.example
-│   └── overwrite.sh.example  # Rare PATH/export overrides (copy → overwrite.sh)
-├── templates/            # Canonical dotfiles for migrate.sh
-├── env.sh, lib.sh, …     # Thin shims → core/
-├── bin/
-│   ├── migrate.sh        # Orchestrator (~80 lines)
-│   ├── lib/, tasks/      # Modular migrate implementation
-│   ├── check-shell.sh
-│   ├── check-template-sync.sh
-│   ├── scaffold-environment.sh
-│   └── …
-└── backups/              # gitignored
+├── core/                 # Always loaded — PATH contract, lib, aliases, functions
+│   ├── path.contract     # PATH build order (edit here, not ad-hoc path_prepend)
+│   ├── path-resolve.sh   # Token → directory resolution
+│   ├── tool.contract     # Pinned system commands (shadow audit)
+│   ├── env.sh            # Applies contract + environments
+│   ├── lib.sh, aliases.sh, functions.sh
+├── environments/         # Opt-in presets (omarchy, generic) — environments/README.md
+├── local/                # Machine overlay (personal.sh, path.contract)
+├── plugins/verification/ # Optional ab/av/at — PLUGIN.md
+├── templates/            # Canonical copies for migrate / sync checks
+├── bin/                  # migrate, check-shell, recover, layout shims
+└── backups/              # gitignored; created by migrate
 ```
 
-`backups/` is empty in git; it appears after the first `bin/migrate.sh` run. Use `backups/<timestamp>/revert.sh` to roll back dotfiles.
+**Philosophy in one line:** distro-agnostic `core/` + opt-in `environments/` + git-tracked history; `templates/` stay in sync with `core/` (`bin/check-template-sync.sh`).
 
-## File Responsibilities
-
-| File            | Purpose                                      | Edit Frequency | Notes |
-|-----------------|----------------------------------------------|----------------|-------|
-| `core/env.sh`   | PATH, exports, environment loading          | Rarely         | Omarchy-agnostic |
-| `environments/*/` | OS / runtime overlays (desktop, container) | Per machine    | See `environments/README.md` |
-| `local/personal.sh` | Work aliases + secrets                   | Frequently     | Chained from `core/aliases.sh` |
-| `bin/migrate.sh`    | One-command setup / migration script         | Rarely         | Regenerates dotfiles; preserves existing modules |
-| `bin/check-shell.sh`| Load order, shellcheck, reserved names, zsh runtime checks | Never | `shellcheck` always; `--audit` adds secrets permissions |
-| `bin/recover-shell.sh` | Nuclear recovery when rc files break      | Never          | Works without sourcing broken rc files |
-
-### Shebang policy
-
-| File | Shebang | Why |
-|------|---------|-----|
-| `lib.sh`, `env.sh`, `personal.sh` | `sh` | POSIX-portable loaders; fish via bass |
-| `aliases.sh`, `functions.sh` | `bash` | `local`, `source`, `y()` need bash/zsh semantics |
-
-`check-shell.sh` runs `shellcheck -s sh` or `-s bash` per file accordingly.
-
-### `lib.sh` and secrets (summary)
-
-See [arch-design/shell.md — lib.sh helpers](arch-design/shell.md#libsh-helpers) for the full API.
-
-| Concern | Mechanism |
-|---------|-----------|
-| Omarchy paths | `source_omarchy`, `omarchy_file` — optional install, `OMARCHY_WARN=1` for missing modules |
-| External dotfiles | `source_if_safe` — ownership + not world-writable |
-| Secrets | `load_secrets_file` on `~/.config/secrets/dev.env` (mode **600**, `KEY=value` only) |
-| `$SHELL` accuracy | `shell_truth_seeker` in `env.sh` (default on); `SHELL_TRUTH_SEEKER=0` to keep inherited value |
-
-Deep dive on `$SHELL` inheritance vs truth seeker: [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md).
-
-## Shell files, switching, and workflow
-
-Your config lives in two tiers:
-
-| **Tier** | Where | What you edit day-to-day |
-|-------|--------|---------------------------|
-| **Portable modules** | `~/.config/shell/` (git) | `env.sh`, `aliases.sh`, `personal.sh`, `functions.sh` |
-| **Per-shell entrypoints** | `~/.zshrc`, `~/.bashrc`, fish config | Rarely — thin wrappers that `source` the modules |
-
-The rc/profile files in `$HOME` are **not** the source of truth. They only wire each shell into `~/.config/shell/`. See [arch-design/shell.md — Startup files](arch-design/shell.md#startup-files-what-rc-profile-mean) for the full load-order map.
-
-### Quick glossary
-
-| File | Shell | When it runs |
-|------|-------|--------------|
-| `~/.zshenv` | zsh | Every zsh (scripts too) — sets `$SHELL` only |
-| `~/.zprofile` | zsh | Login zsh only — sources `env.sh` |
-| `~/.zshrc` | zsh | Interactive zsh — full stack |
-| `~/.profile` | POSIX/bash | Login — GPG agent + `env.sh` |
-| `~/.bash_profile` | bash | Login bash — sources `~/.bashrc` |
-| `~/.bashrc` | bash | Interactive bash — full stack |
-| `~/.config/fish/config.fish` | fish | Interactive fish — single combined config |
-
-**Login** = you started a session as a login shell (TTY login, some terminal emulators, `zsh -l`, `bash -l`). **Interactive** = you have a prompt. A normal terminal tab is usually both.
-
-### How to switch shells
-
-**Change your default** (new terminals use this):
+## Day-to-day
 
 ```bash
-chsh -s /usr/bin/zsh    # or /usr/bin/bash, /usr/bin/fish
-```
-
-After `chsh`, **log out and back in** (or `exec /usr/bin/zsh -l` in the current tab). Ghostty uses your login shell from passwd; with `gtk-single-instance`, run `killall ghostty` after `chsh` so new windows pick it up (closing windows is not enough). Do not edit `~/.config/ghostty/config` for shell choice — Omarchy maintains it.
-
-**`$SHELL` before config loads** is often stale (inherited from when the terminal tab opened). After `source ~/.zshrc`, `shell_truth_seeker` in `env.sh` sets `$SHELL` to the live interpreter by default. Use `shell_debug`, `echo $0`, or `ps -p $$` when debugging — see [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md).
-
-**Try another shell temporarily** (leaves default unchanged):
-
-```bash
-exec zsh      # switch current session to zsh
-exec bash     # switch to bash
-exec fish     # switch to fish
-exit          # leave a subshell and return to the parent shell
-```
-
-**Run a one-off command in another shell:**
-
-```bash
-bash -lc 'echo $SHELL; alias ff'
-zsh -ic 'reload'   # or bash -ic 'reload' (now works in both)
-```
-
-Check what is actually running: `echo $0` or `ps -p $$ -o comm=`. `$SHELL` is only your *login default*, not the current process.
-
-### Day-to-day workflow
-
-```mermaid
-flowchart LR
-    edit["Edit ~/.config/shell/<br/>aliases.sh, personal.sh, …"] --> reload["source ~/.zshrc<br/>or open new terminal"]
-    reload --> check["bin/check-shell.sh"]
-    check --> done["Use shell normally"]
-    migrate["bin/migrate.sh"] -->|"refresh managed rc"| reload
-```
-
-1. **Change aliases, PATH, exports** → edit `~/.config/shell/`, not rc files.
-2. **Reload** → `reload` (works in both bash and zsh; sources the right rc file) or `source ~/.zshrc` / `source ~/.bashrc`, or open a new terminal.
-3. **Verify** → `~/.config/shell/bin/check-shell.sh`.
-4. **Re-apply rc templates** → `bin/migrate.sh` (only touches managed `~/.zshrc` / `~/.bashrc` / fish config).
-
-### When switching shells makes sense
-
-You do **not** need to switch often. Pick one default (zsh) and stay there unless the situation calls for another shell.
-
-| Situation | Shell | Why |
-|-----------|-------|-----|
-| Daily dev, local terminal | **zsh** (default) | Full tooling: thefuck, grok completions, modular Omarchy |
-| SSH to a server or container | **bash** | Usually the only installed shell; scripts assume it |
-| Running a third-party install script | **bash** | Many scripts hardcode `#!/bin/bash` or bash-isms |
-| Debugging "works in my terminal" issues | **bash -l** or **zsh -l** | Reproduce login vs non-login PATH differences |
-| Writing portable automation | **none / sh** | Scripts should not rely on your interactive rc |
-| Experimenting with fish UI | **fish** (temporary `exec fish`) | Optional; incomplete `ga`/`gd` parity |
-| CI, Docker, Makefile `SHELL=` | **bash** | Non-interactive; minimal env |
-
-**Rule of thumb:** interactive work → zsh; compatibility and servers → bash; scripts → explicit shebang, do not assume your dotfiles loaded.
-
-## Recommended Shell Usage
-
-### zsh (Recommended Daily Driver)
-
-**Use for:** Interactive development work, daily terminal use.
-
-**Why:**
-- Excellent balance of power and modernity
-- Native support for `starship`, `mise activate zsh`, `zoxide init zsh`, `fzf --zsh`
-- Fast startup with the current setup
-- Great plugin ecosystem (without needing Oh My Zsh)
-- Works very well with the current `env.sh` + `aliases.sh` + `personal.sh` structure
-
-**When to use:**
-- Most of your daily work
-- When you want beautiful prompt + smart completions + modern tools
-
-### bash
-
-**Use for:** Maximum compatibility, scripts, servers, CI/CD, containers.
-
-**Why:**
-- Ubiquitous — available on almost every Unix-like system
-- Required for many scripts and legacy tools
-- Shares the same `env.sh` and `aliases.sh` stack as zsh, with Omarchy loaded via `source_environment_shell bash` → `environments/omarchy/bash.sh`
-
-**When to use:**
-- Writing portable scripts
-- Working on remote servers or containers
-- Running third-party scripts that assume bash
-
-### fish
-
-**Use for:** Modern interactive experience (optional).
-
-**Why:**
-- Very user-friendly defaults (autosuggestions, syntax highlighting out of the box)
-- Clean syntax
-- Best-effort parity via `bass` for `env.sh`, Omarchy aliases, and `aliases.sh`
-
-**When to use:**
-- When you want a very polished interactive shell
-- Experimentation or personal preference
-- Not recommended as your only shell (due to compatibility)
-
-**Prerequisites:** Install the [bass](https://github.com/edc/bass) fish plugin. Without bass, `env.sh` / `aliases.sh` sourcing fails silently.
-
-**Limitations:** Omarchy worktree functions (`ga`, `gd`) need fish-native ports. Fish gets direnv, fzf, thefuck (native), and `functions.sh` via bass.
-
-## How Sourcing Works
-
-Load order is consistent across bash and zsh: environment preset hooks load **before** `aliases.sh` so Omarchy functions (like `ga`) are defined first; `aliases.sh` loads **after** so your overrides win.
-
-### zsh and bash
-
-1. `env.sh` — PATH, exports, `source_environments` (`environments/<preset>/env.sh`; `CONDA_CHANGEPS1=false` for Starship conda module)
-2. `direnv` hook — **requires direnv installed**; zsh template uses zsh/bash-aware hook when sourced from bash
-3. `source_environment_shell zsh|bash` — interactive preset hooks (`environments/omarchy/{zsh,bash}.sh` when `SHELL_ENVIRONMENT=omarchy`)
-4. `functions.sh` — your custom functions
-5. `aliases.sh` — generic aliases
-6. `local/personal.sh` — chained at the tail of `aliases.sh` (root `personal.sh` is a shim)
-7. Shell-native tool inits — **mamba** (when installed), then `mise`, `starship`, `zoxide`, etc.
-
-### fish (best-effort)
-
-1. `bass` → `env.sh`
-2. `direnv hook fish`
-3. `bass` → Omarchy aliases
-4. `bass` → `functions.sh`
-5. `bass` → `aliases.sh` (includes `personal.sh`)
-6. Native fish inits for `starship`, `zoxide`, `mamba`, `mise`, `fzf`, `thefuck`
-
-This order ensures:
-- Omarchy functions like `ga()` are never shadowed by a premature `alias ga=`
-- Your aliases (`ff`, `gs`, `top`, etc.) win over Omarchy when names overlap
-- Work shortcuts in `personal.sh` are available in bash, zsh, and fish
-
-## Reserved Names
-
-Do not alias these — Omarchy owns them as functions:
-
-| Name | Meaning |
-|------|---------|
-| `ga` | `git worktree add` helper |
-| `gd` | remove worktree + branch |
-| `n` | nvim wrapper (`n` with no args opens `.`) |
-
-`ff` is intentionally overridden to `fastfetch` in `aliases.sh` (Omarchy defines it as fzf). Use `fzf` or Omarchy's `eff` for file picking.
-
-## How to Add New Aliases
-
-### Generic / Commonly Useful
-→ Add to `~/.config/shell/aliases.sh`
-
-### Work / Personal Specific
-→ Add to `~/.config/shell/local/personal.sh`
-
-### API keys / secrets
-→ `~/.config/secrets/dev.env` (outside git; loaded via `load_secrets_file` in `lib.sh` / `personal.sh`)
-
-Keep `dev.env` mode **600**. Use `KEY=value` lines only — no `set -a`, no shell commands.
-
-Do **not** put `.envrc` in `~/.config/shell/` — Cursor uses that folder as workspace cwd, and direnv would fire on every prompt.
-
-### Custom Functions
-→ Add to `~/.config/shell/functions.sh`
-
-Example in `personal.sh`:
-
-```bash
-alias myproject="cd ~/Work/my-important-project"
-alias deploy="make deploy"
-```
-
-After editing, reload and verify:
-
-```bash
-source ~/.zshrc   # or: source ~/.bashrc
+# Edit portable modules under ~/.config/shell/ — not ~/.zshrc
+reload                                    # or: source ~/.zshrc
 ~/.config/shell/bin/check-shell.sh
+
+# Agent verification cockpit (requires tmux)
+t && av                                   # or attach tmux in Cursor agent terminal
 ```
+
+| Task | Where |
+|------|--------|
+| Aliases / PATH / functions / load order | [arch-design/shell.md](arch-design/shell.md) |
+| Shell switching, `$SHELL`, Ghostty after `chsh` | [arch-design/shell.md](arch-design/shell.md#switching-shells) · [SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md) |
+| `ab` / `av` / Prefix+V | [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) |
+| Scripts & flags | [bin/README.md](bin/README.md) |
 
 ## Maintenance
 
-- Shell naming for human debugging: [arch-design/shell-script-readability.md](arch-design/shell-script-readability.md) (always-on [`.cursor/rules/shell-readability.mdc`](.cursor/rules/shell-readability.mdc))
-- Run `~/.config/shell/bin/check-shell.sh` after edits — runs **shellcheck on all `*.sh`** plus load-order and reserved-name checks (`shellyhow` is a common alias for the same script)
-- Script reference: [bin/README.md](bin/README.md) — migrate, check-shell, recover, agent-verify-layout, fzf-preview
-- Add `--audit` for extra permission checks (`dev.env` mode 600, `recover-shell.sh` executable, `lib.sh` present)
-- Run `~/.config/shell/bin/migrate.sh` to refresh **managed** rc files (`~/.zshrc`, `~/.bashrc`, fish config)
-- Hand-edited rc files (no managed marker) are **skipped** — use `bin/migrate.sh --sync-rc` to refresh managed files, or `--force-rc` to overwrite hand-edited ones
-- `bin/migrate.sh` **preserves** existing `env.sh`, `aliases.sh`, and `functions.sh` — it only regenerates them on first setup
-- Each migrate run writes `backups/TIMESTAMP/` (gitignored) with `revert.sh` for dotfile rollback
-- **Portable modules** (`env.sh`, `aliases.sh`, `personal.sh`, `functions.sh`) live here and are git tracked; **login dotfiles**, Omarchy, `~/.config/secrets/`, and fish's bass plugin live outside this repo
-- See [PLUGIN.md](PLUGIN.md) for kernel vs verification-plugin boundary (what must work without tmux/agents)
-- See [plugins/verification/README.md](plugins/verification/README.md) for verification plugin layout, install paths, and headless `cockpit-mcp` verbs
-- See [arch-design/architecture.md](arch-design/architecture.md) for **current** system map, scorecard, and PATH layers
-- See [arch-design/coming-next.md](arch-design/coming-next.md) for backlog (next items + last 10 done)
-- See [planned-features/done/](planned-features/done/) for shipped sprint archives with diagrams and PR links
-- See [arch-design/README.md](arch-design/README.md) for the architecture & design doc index
-- See [arch-design/shell.md](arch-design/shell.md) for startup files, load order, login dotfile templates, lib.sh API, and remaining caveats
-- See [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) for agent workflow (`ab` build + `av` verify cockpit, `av --scan`, per-project layouts via distributable [.agents/skills/verification-cockpit](.agents/skills/verification-cockpit/SKILL.md), tmux Prefix+B/V, nvim Telescope keymaps, `gdf`/`gdfs`, delta via git include)
-- See [arch-design/human-in-the-loop-workflow.md](arch-design/human-in-the-loop-workflow.md) for repeatable rituals, cockpit tour, and messy agent-diff triage
-- See [arch-design/SHELL-env-var-behavior.md](arch-design/SHELL-env-var-behavior.md) for why `$SHELL` is stale before config load and how truth seeker corrects it
+- After edits: `bin/check-shell.sh` (shellcheck + load-order + reserved names; `--audit` for secrets perms). Alias often: `shellyhow`.
+- Refresh **managed** rc: `bin/migrate.sh` or `--sync-rc`. Hand-edited rc (no managed marker): `--force-rc` only.
+- Modules (`env.sh`, `aliases.sh`, `functions.sh`) are **preserved** across migrate; first install generates them if missing.
+- Naming for humans under stress: [shell-script-readability.md](arch-design/shell-script-readability.md).
+- Doc index: [arch-design/README.md](arch-design/README.md) · backlog: [coming-next.md](arch-design/coming-next.md) · shipped: [planned-features/done/](planned-features/done/).
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| `source ~/.zshrc` errors on direnv | direnv not installed | `pacman -S direnv` (or your package manager) |
-| Duplicate `(env)` on prompt | mamba changeps1 + Starship conda | `CONDA_CHANGEPS1=false` in env.sh; copy `starship.ex.toml`; `conda config --set changeps1 false` |
-| Still bash after `chsh` in Ghostty | gtk-single-instance stale process | `killall ghostty` then Super+Return (Omarchy owns ghostty config) |
-| `check-shell.sh` reports reserved-name violation | `alias ga=`, `alias gd=`, or `alias n=` added | Remove from `aliases.sh` / `personal.sh` |
-| Hand-edited rc not updating | migrate skips non-managed files | `bin/migrate.sh --sync-rc` or `--force-rc` |
-| Fish missing aliases/PATH | bass not installed | Install bass plugin; or use zsh/bash |
-| `ga`/`gd` missing | Omarchy not at `~/.local/share/omarchy` | Install/sync Omarchy |
-| PATH differs in `zsh` vs `zsh -l` | login dotfiles missing | Run `bin/migrate.sh` (generates `~/.zprofile` when absent) |
-| `path_debug` shows wrong order | prepend order in `env.sh` | Edit `env.sh`; last `path_prepend` wins |
-| All rc files broken | syntax error on every `source` | `bash --norc ~/.config/shell/bin/recover-shell.sh` then `revert.sh` or `migrate.sh --force-rc` |
-| `agent_verify` / `agent_build` refuses | not in tmux (`$TMUX` unset) | Start tmux (`t` or Super+Alt+Return), or attach in Cursor agent terminal; see [arch-design/VERIFICATION.md](arch-design/VERIFICATION.md) |
-| Plain git/lazygit diffs (no color) | `include.path` not set | `git config --global include.path ~/.config/git/verification` |
-| `gdf`/`gdfs` unknown | difftastic not on PATH | `paru -S difftastic` (Arch) or install `difft`; `source ~/.zshrc` |
+| Symptom | Fix |
+|---------|-----|
+| `source ~/.zshrc` fails on direnv | Install direnv |
+| Still bash after `chsh` in Ghostty | `killall ghostty`, then new window (Omarchy owns ghostty config) |
+| Reserved-name violation (`ga` / `gd` / `n`) | Remove those aliases from `aliases.sh` / `personal.sh` |
+| Hand-edited rc not updating | `bin/migrate.sh --force-rc` |
+| Fish missing PATH/aliases | Install [bass](https://github.com/edc/bass); or use zsh/bash |
+| `path_debug` / wrong PATH order | Edit `core/path.contract` or `local/path.contract`; `env.sh` only applies them (`path_check`) |
+| `ab` / `av` refuses | Start tmux first (`$TMUX` must be set) |
+| Broken everything | Nuclear recovery below |
 
-`.gitignore` excludes `backups/` and secret patterns (`*.key`, `secrets/`, `.envrc`) so backups and local secrets never enter git.
+More gotchas: [arch-design/shell.md — Gotchas](arch-design/shell.md#gotchas-checklist).
 
 ### Nuclear recovery
-
-When `source ~/.zshrc` fails and you cannot use git/nvim/mise:
 
 ```bash
 bash --norc ~/.config/shell/bin/recover-shell.sh
 ```
 
-This sets a minimal PATH and prints restore options (latest `backups/*/revert.sh`, `zsh -f`, edit `env.sh`, `migrate.sh --force-rc`).
+Minimal PATH + restore options (`backups/*/revert.sh`, `migrate.sh --force-rc`).
 
 ## Notes
 
-- This setup treats **Omarchy** as your personal foundation and layers modern tooling on top without fighting it.
-- The goal is **low cognitive load** — you should rarely need to edit `~/.zshrc` or `~/.bashrc` directly.
-- **PATH** is owned by `core/path.contract` + optional `local/path.contract` overlay + `core/path-resolve.sh` (`path_contract_apply` in `env.sh`). Runtime verify: `path_check` or `path_contract_verify`. Installer drift: `bin/capture-shell-init.sh --dry-run`. See [arch-design/shell.md](arch-design/shell.md#path-contract-v2) and [PLUGIN.md](PLUGIN.md).
+- Prefer editing git-tracked modules under `~/.config/shell/`; treat `$HOME` rc files as thin wiring.
+- **PATH** is owned by `core/path.contract` (+ optional `local/path.contract`) via `path_contract_apply` in `env.sh`. Debug: `path_debug` / `path_check`. Details: [shell.md — PATH contract](arch-design/shell.md#path-contract-v2), [PLUGIN.md](PLUGIN.md).
+- `.gitignore` excludes `backups/` and secret patterns so local backups and keys never enter git.
