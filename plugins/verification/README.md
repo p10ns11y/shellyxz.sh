@@ -4,6 +4,30 @@ Agent verification cockpit: `ab` / `av` / `at`, tmux layouts, headless `cockpit-
 
 **Kernel boundary:** [PLUGIN.md](../../PLUGIN.md) · **Workflow philosophy:** [arch-design/VERIFICATION.md](../../arch-design/VERIFICATION.md) · **Ontology:** [`.agents/ontology/INDEX.md`](../../.agents/ontology/INDEX.md)
 
+Requires **`$TMUX` set** — Ghostty, Cursor agent viewport, or any terminal works once you are inside tmux (`t` / Super+Alt+Return / attach).
+
+## In the cockpit
+
+Windows: `1: shell` · `2: build` (`ab`) · `3: verify` (`av`) · `4: test` (`at`).
+
+| Window | What you see |
+|--------|----------------|
+| **verify** | lazgit review + live gates (`check-template-sync`, shellcheck) |
+| **build** | Full-pane agent TUI (`SHELL_AGENT_BUILD_CMD`) |
+| **test** | Host monitor + project test runner / shellcheck |
+
+![verify window — lazygit + template sync + shellcheck](docs/cockpit-verify.jpg)
+
+![build window — agent TUI](docs/cockpit-build.jpg)
+
+![test window — monitor + verify_workflow_root / shellcheck](docs/cockpit-test.jpg)
+
+Docs and ontology follow the same rule — cockpit needs tmux, not a specific terminal app:
+
+![diff: $TMUX-only requirement in skill + ontology](docs/cockpit-tmux-ok-docs.jpg)
+
+![diff: Verification Plugin may_assume + skill Test section](docs/cockpit-guard-diff.jpg)
+
 ## Layout
 
 | Path | Role |

@@ -36,7 +36,7 @@ The kernel **must** remain usable if every agent/tmux feature is deleted.
 
 - `verify_workflow_root` / `bin/verify-workflow-root.sh` — git-aware project root
 - `SHELL_ROOT`, `SHELL_CONFIG_BIN` — paths to `~/.config/shell`
-- `detect_editor_terminal` / `SHELL_IN_EDITOR_TERMINAL` — skip broken integrated terminals
+- `detect_editor_terminal` / `SHELL_IN_EDITOR_TERMINAL` — skip mise hooks in editor shells (cockpit only requires `$TMUX`)
 
 ---
 
