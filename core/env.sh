@@ -29,7 +29,7 @@ fi
 _SHELL_ENV_SH_LOADED=1
 _SHELL_ENV_SH_LOADED_PID=$$
 
-export PNPM_HOME="$HOME/.local/share/pnpm"
+# export PNPM_HOME="$HOME/.local/share/pnpm"
 
 # Strip deny-list segments before building PATH from contract
 path_deny_sweep
