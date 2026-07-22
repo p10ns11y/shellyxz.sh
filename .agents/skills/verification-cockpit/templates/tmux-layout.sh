@@ -18,6 +18,7 @@ if [ -z "${TMUX:-}" ]; then
     exit 1
 fi
 
+# SN-4a: plugin lib (never ~/.config/shell/bin/lib — that path is obsolete).
 # shellcheck source=/dev/null
 source "${SHELL_VERIFICATION_LIB:-${HOME}/.config/shell/plugins/verification/lib}/verify-launch.sh"
 # shellcheck source=/dev/null
