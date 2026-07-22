@@ -18,7 +18,19 @@ from pathlib import Path
 
 FORBIDDEN_SUBSTRINGS = (";", "|", "`", "$(", ">", "<")
 ALLOWED_RUNNERS = frozenset(
-    {"pnpm", "npm", "cargo", "pytest", "python", "python3", "bash", "sh", "echo"}
+    {
+        "pnpm",
+        "npm",
+        "cargo",
+        "pytest",
+        "python",
+        "python3",
+        "bash",
+        "sh",
+        "echo",
+        "make",
+        "go",
+    }
 )
 
 
@@ -271,6 +283,7 @@ def run_plan(root: Path, *, run_all: bool = False) -> int:
     max_run = len(tests) if run_all else int(data["max_run"])
     total = len(tests)
     failures = 0
+    failed_ids: list[str] = []
 
     print(f"=== at: running top {max_run} test(s) (max_run={max_run}) ===")
 
@@ -283,6 +296,8 @@ def run_plan(root: Path, *, run_all: bool = False) -> int:
         print(f"    {label}")
         if run_manifest_command(cmd) != 0:
             failures += 1
+            failed_ids.append(tid or f"#{run}")
+            print(f"    FAIL {tid or f'#{run}'}", file=sys.stderr)
 
     if total > max_run and not run_all:
         print("\n=== at: also available (not run) ===")
@@ -300,6 +315,7 @@ def run_plan(root: Path, *, run_all: bool = False) -> int:
         print(f"=== at summary: {max_run} run, 0 failed ===")
     else:
         print(f"=== at summary: {max_run} run, {failures} failed ===")
+        print(f"=== at failed: {', '.join(failed_ids)} ===")
     return failures
 
 

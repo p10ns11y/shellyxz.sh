@@ -3,7 +3,7 @@
 # Contract: bin/test/parse-project-tests.test.sh
 
 # shellcheck disable=SC2034
-TEST_ALLOWLIST_RUNNERS='pnpm npm cargo pytest python python3 bash sh echo'
+TEST_ALLOWLIST_RUNNERS='pnpm npm cargo pytest python python3 bash sh echo make go'
 
 command_allowed() {
     local cmd="$1" first
