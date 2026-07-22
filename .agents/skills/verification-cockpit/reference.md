@@ -1,4 +1,74 @@
-# manifest.yaml schema
+# Cockpit / manifest schema
+
+Prefer **`cockpit.yaml`** (unified verify + test). Legacy `manifest.yaml` + `tests.yaml` remain valid.
+
+## Host lib path (SN-4a)
+
+Layouts and this skill assume:
+
+```bash
+${SHELL_VERIFICATION_LIB:-$HOME/.config/shell/plugins/verification/lib}/verify-layout.sh
+```
+
+Obsolete (do not use): `~/.config/shell/bin/lib/verify-*.sh`.
+
+## Flow map (what reads what)
+
+| Flow | Reads at runtime |
+|------|------------------|
+| `av` | `.agents/verification/tmux-layout.sh` |
+| `at` | `cockpit.yaml` → `cockpits.test` or `tests.yaml` |
+| `ab` | `cockpit.yaml` → `cockpits.build` then host `SHELL_AGENT_BUILD_*` |
+
+`cockpits.verify` / `manifest.yaml` panes are the **agent + human map** — keep them aligned with `tmux-layout.sh` commands.
+
+## cockpits.build
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `command` | no* | Launch on first `ab` (*or set host `SHELL_AGENT_BUILD_CMD`) |
+| `continue_command` | no | Launch on `ab -c`; if omitted and `command` is a single word, host uses `cmd -c` |
+
+Examples: `nvim .` (Neovim + avante/Grok), `grok`, `claude`, `cursor agent`.
+
+---
+
+# cockpit.yaml
+
+## Top-level
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `project` | yes | Short project name |
+| `risk_profile` | yes | `low` \| `medium` \| `high` |
+| `cockpits.verify` | yes* | Verify window pane map (*or use legacy `manifest.yaml`) |
+| `cockpits.test` | yes* | Test window runners (*or use legacy `tests.yaml`) |
+
+## cockpits.verify
+
+Same pane fields as legacy `manifest.yaml` (below), plus optional `layout`, `phi_major`, `phi_minor`.
+
+## cockpits.test
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `layout` | no | e.g. `btop-test` (host `at` layout) |
+| `max_run` | no | How many highest-priority tests `at` runs (default host behavior) |
+| `tests` | yes | Ordered list of runners |
+
+### Test entry fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | yes | Stable id |
+| `priority` | yes | Lower number = runs first when under `max_run` |
+| `command` | yes | One-shot shell command |
+| `watch_command` | no | Used with `at --watch` when present |
+| `label` | no | Human description |
+
+---
+
+# manifest.yaml (legacy verify map)
 
 ## Top-level fields
 
@@ -24,6 +94,7 @@
 | `cwd` | no | Relative cwd from repo root (default `.`) |
 | `command` | no | Shell command; omit for empty console |
 | `tool` | no | Binary guard (`lazygit`) — skip launch if missing |
+| `fallback_command` | no | Optional alternate command (documented; script may hardcode) |
 
 ## space_profile (pass 2)
 
@@ -37,7 +108,7 @@
 
 ## Golden grid (default template)
 
-After `verify_layout_build_golden_grid` (see `bin/lib/verify-layout.sh`):
+After `verify_layout_build_golden_grid` (see `plugins/verification/lib/verify-layout.sh`):
 
 | Index | Role | Approx area |
 |-------|------|-------------|
@@ -66,9 +137,9 @@ Reject any pane that does not surface a **concrete verification failure**. Commo
 - Duplicate watchers showing the same signal
 - Generic placeholder panes (`INSIGHT`, `VERIFY` titles) — recreate layout via `av`
 
-`agent-verify-layout.sh` resolves cwd via `verify_workflow_root` (layout → git → cwd). After `reload`, run `verify_workflow_root` from your shell workflow install (see overlay).
+`agent-verify-layout.sh` resolves cwd via `verify_workflow_root` (layout → git → cwd).
 
-## Example
+## Example (legacy manifest)
 
 ```yaml
 project: collab-finder
@@ -105,3 +176,5 @@ panes:
     command: cargo test
     value: Rust integration failures
 ```
+
+See [templates/cockpit.yaml](templates/cockpit.yaml) for the unified form.

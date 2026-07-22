@@ -13,7 +13,7 @@ Windows: `1: shell` · `2: build` (`ab`) · `3: verify` (`av`) · `4: test` (`at
 | Window | What you see |
 |--------|----------------|
 | **verify** | lazgit review + live gates (`check-template-sync`, shellcheck) |
-| **build** | Full-pane agent TUI (`SHELL_AGENT_BUILD_CMD`) |
+| **build** | Full-pane agent TUI / editor (`cockpits.build` in project cockpit.yaml, else `SHELL_AGENT_BUILD_CMD`) |
 | **test** | Host monitor + project test runner / shellcheck |
 
 ![verify window — lazygit + template sync + shellcheck](docs/cockpit-verify.jpg)

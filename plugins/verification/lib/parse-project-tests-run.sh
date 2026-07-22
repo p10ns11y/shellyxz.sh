@@ -61,14 +61,22 @@ fi
 
 echo "=== at: running top ${limit} test(s) (sh discovery) ==="
 failures=0
+failed_ids=""
 i=0
 while [ "$i" -lt "$limit" ]; do
     run=$((i + 1))
+    tid="${TEST_IDS[$i]}"
     echo ""
-    echo "── [$run/$limit] ${TEST_IDS[$i]} (priority $((i + 1))) ──"
+    echo "── [$run/$limit] ${tid} (priority $((i + 1))) ──"
     echo "    ${TEST_LABELS[$i]}"
     if ! run_allowlisted_command "${TEST_CMDS[$i]}"; then
         failures=$((failures + 1))
+        echo "    FAIL ${tid}" >&2
+        if [ -z "$failed_ids" ]; then
+            failed_ids="$tid"
+        else
+            failed_ids="${failed_ids}, ${tid}"
+        fi
     fi
     i=$((i + 1))
 done
@@ -78,5 +86,6 @@ if [ "$failures" -eq 0 ]; then
     echo "=== at summary: $limit run, 0 failed ==="
 else
     echo "=== at summary: $limit run, $failures failed ==="
+    echo "=== at failed: ${failed_ids} ==="
 fi
 exit "$failures"

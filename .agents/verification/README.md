@@ -28,12 +28,23 @@ Pane indices: `0=GIT` `1=SYNC` `2=CHECK:watch` `3=CMD` (tmux reindexes during sp
 
 **CHECK pane:** `check-shell-watch.sh` (same as `shellyhow`) runs once in full, then appends every 90s — **does not clear** like `watch(1)`. Scroll up (`Prefix` `[`) to read the first run including shellcheck errors.
 
+## Flows
+
+| Alias | Config here | Notes |
+|-------|-------------|-------|
+| `av` | `tmux-layout.sh` (+ `cockpit.yaml` verify map) | Host delegates when this file is executable |
+| `at` | `cockpit.yaml` → `cockpits.test` (legacy `tests.yaml` ok) | Priority runners |
+| `ab` | `cockpit.yaml` → `cockpits.build` (optional) | Else host `SHELL_AGENT_BUILD_CMD` |
+
 ## Commands
 
 ```bash
 av                  # this layout (delegates from agent-verify-layout.sh)
 av --scan           # + agent_scan in CMD
 av --generic        # skip this repo's layout; use generic 4-pane cockpit
+at                  # top max_run tests from cockpit.yaml
+at --watch          # same, every 60s
+ab                  # build window (host env)
 ```
 
 ## Regenerate
@@ -42,7 +53,7 @@ Re-run `verification-cockpit` skill when verify workflow changes. Reference: `.a
 
 ## at tests (priority cockpit)
 
-`tests.yaml` defines what `at` runs — top `max_run` by priority; the rest are listed as available.
+Prefer `cockpit.yaml` → `cockpits.test`. Legacy `tests.yaml` still works. Top `max_run` by priority; the rest are listed as available.
 
 | Prio | id | at runs | What |
 |------|-----|---------|------|
@@ -51,9 +62,8 @@ Re-run `verification-cockpit` skill when verify workflow changes. Reference: `.a
 | 3 | load-order | listed only | full `check-shell.sh` |
 
 ```bash
-at              # top 2 from tests.yaml
-at --watch      # same, every 60s
+at              # top 2 from cockpit.yaml
 bin/run-project-tests.sh   # without tmux
 ```
 
-Agents: edit `.agents/verification/tests.yaml` — mirror for other stacks (`package.json`, `Cargo.toml`, `pytest`).
+Agents: edit `.agents/verification/cockpit.yaml` — keep `tmux-layout.sh` commands in sync for `av`.
