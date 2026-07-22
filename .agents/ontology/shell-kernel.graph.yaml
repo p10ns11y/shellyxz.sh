@@ -73,7 +73,7 @@ nodes:
       - tmux session ($TMUX set)
       - Optional tools lazygit bat fzf yazi difftastic rg dust
       - Per-project cockpit manifests (.agents/verification/, cockpit.yaml)
-      - SHELL_AGENT_BUILD_CMD via env (not hardcoded in kernel)
+      - SHELL_AGENT_BUILD_CMD via env (host default; project cockpits.build overrides)
       - SHELL_AGENT_STRICT_PATH or ab --strict for core-only PATH
     must_not:
       - Change kernel load order without check-shell.sh update
@@ -363,11 +363,12 @@ nodes:
     type: Artifact
     name: cockpit.yaml
     path: .agents/verification/cockpit.yaml
-    role: Per-repo verify/test manifest (host-agnostic schema)
+    role: Per-repo verify/test/build manifest (host-agnostic schema; cockpits.build for ab)
     subgraph: verify
     source_refs:
       - arch-design/VERIFICATION.md
       - .agents/verification/cockpit.yaml
+      - plugins/verification/lib/project-build.sh
 
   - id: shellyxz:Artifact_plugins_verification
     type: Artifact
@@ -552,6 +553,7 @@ edges:
   - { from: shellyxz:VerificationBridge, to: shellyxz:Env_SHELL_VERIFICATION_ROOT, type: owns }
   - { from: shellyxz:VerificationBridge, to: shellyxz:Env_SHELL_VERIFICATION_BIN, type: owns }
   - { from: shellyxz:VerificationBridge, to: shellyxz:Env_SHELL_VERIFICATION_LIB, type: owns }
+  - { from: shellyxz:Fn_agent_build, to: shellyxz:Artifact_cockpit_yaml, type: documentedIn, note: cockpits.build then SHELL_AGENT_BUILD_CMD }
   - { from: shellyxz:Artifact_shim_agent_build, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
   - { from: shellyxz:Artifact_shim_agent_verify, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }
   - { from: shellyxz:Artifact_shim_agent_test, to: shellyxz:Artifact_plugins_verification, type: resolvesTo }

@@ -8,7 +8,7 @@ Golden-ratio mission control for post-agent verification. Every pane must answer
 |-------|--------|--------------------------|
 | `av` | verify | `tmux-layout.sh` (+ `cockpit.yaml` / `manifest.yaml` map) |
 | `at` | test | `cockpit.yaml` → `cockpits.test` (or `tests.yaml`) |
-| `ab` | build | Host `SHELL_AGENT_BUILD_CMD` (not here) |
+| `ab` | build | `cockpit.yaml` → `cockpits.build` (else host env) |
 
 ## Layout (φ 62% / 38%)
 
@@ -38,7 +38,7 @@ av --scan           # + agent_scan in CMD
 av --launch-mutate  # allow mutate-tier panes (if any)
 av --generic        # skip this layout; use generic cockpit
 at                  # priority tests from cockpit.yaml
-ab                  # build window (host SHELL_AGENT_BUILD_CMD)
+ab                  # build window (cockpits.build or host env)
 ```
 
 ## Regenerate

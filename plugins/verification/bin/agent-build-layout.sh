@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Agent build layout for tmux — one full-pane window for agent TUIs (SHELL_AGENT_BUILD_CMD).
+# Agent build layout for tmux — one full-pane window for agent TUIs / editors.
+# Resolves command: CLI args > project cockpit.yaml cockpits.build > SHELL_AGENT_BUILD_CMD.
 # Usage: agent-build-layout.sh [directory] [--continue|--no-launch] [-- command...]
 set -euo pipefail
 
@@ -59,6 +60,8 @@ fi
 verification_plugin_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 verification_plugin_root="$(cd "$verification_plugin_bin/.." && pwd)"
 source "$verification_plugin_root/lib/verify-launch.sh"
+# shellcheck source=/dev/null
+source "$verification_plugin_root/lib/project-build.sh"
 
 DIR="$(verify_workflow_root "$DIR")"
 SESSION="$(tmux display-message -p '#{session_name}')"
@@ -100,31 +103,11 @@ _resolve_build_cmd() {
         printf '%s' "$*"
         return 0
     fi
-    if [ -n "${SHELL_AGENT_BUILD_CMD:-}" ]; then
-        printf '%s' "$SHELL_AGENT_BUILD_CMD"
-        return 0
-    fi
-    echo "$SCRIPT_NAME: set SHELL_AGENT_BUILD_CMD (e.g. in local/personal.sh)" >&2
-    return 1
+    project_resolve_build_cmd "$DIR"
 }
 
 _resolve_continue_cmd() {
-    if [ -n "${SHELL_AGENT_BUILD_CONTINUE_CMD:-}" ]; then
-        printf '%s' "$SHELL_AGENT_BUILD_CONTINUE_CMD"
-        return 0
-    fi
-    if [ -n "${SHELL_AGENT_BUILD_CMD:-}" ]; then
-        case "$SHELL_AGENT_BUILD_CMD" in
-            *' '*)
-                echo "$SCRIPT_NAME: set SHELL_AGENT_BUILD_CONTINUE_CMD for multi-word SHELL_AGENT_BUILD_CMD" >&2
-                return 1
-                ;;
-        esac
-        printf '%s -c' "$SHELL_AGENT_BUILD_CMD"
-        return 0
-    fi
-    echo "$SCRIPT_NAME: set SHELL_AGENT_BUILD_CMD or SHELL_AGENT_BUILD_CONTINUE_CMD" >&2
-    return 1
+    project_resolve_build_continue_cmd "$DIR"
 }
 
 _launch_build_cmd() {

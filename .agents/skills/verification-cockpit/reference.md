@@ -18,9 +18,18 @@ Obsolete (do not use): `~/.config/shell/bin/lib/verify-*.sh`.
 |------|------------------|
 | `av` | `.agents/verification/tmux-layout.sh` |
 | `at` | `cockpit.yaml` → `cockpits.test` or `tests.yaml` |
-| `ab` | Host `SHELL_AGENT_BUILD_CMD` (not project YAML) |
+| `ab` | `cockpit.yaml` → `cockpits.build` then host `SHELL_AGENT_BUILD_*` |
 
 `cockpits.verify` / `manifest.yaml` panes are the **agent + human map** — keep them aligned with `tmux-layout.sh` commands.
+
+## cockpits.build
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `command` | no* | Launch on first `ab` (*or set host `SHELL_AGENT_BUILD_CMD`) |
+| `continue_command` | no | Launch on `ab -c`; if omitted and `command` is a single word, host uses `cmd -c` |
+
+Examples: `nvim .` (Neovim + avante/Grok), `grok`, `claude`, `cursor agent`.
 
 ---
 

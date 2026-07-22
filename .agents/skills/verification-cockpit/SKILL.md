@@ -19,7 +19,7 @@ description: >-
 |-------|--------|-------------------|-------------------------|
 | **av** | `verify` | **Project** `.agents/verification/` | Executable `tmux-layout.sh` (YAML panes are the agent map; script launches panes) |
 | **at** | `test` | **Project** `.agents/verification/` | `cockpit.yaml` → `cockpits.test` (or legacy `tests.yaml`) via `run-project-tests.sh` |
-| **ab** | `build` | **Host** personal env | `SHELL_AGENT_BUILD_CMD` / `SHELL_AGENT_BUILD_CONTINUE_CMD` — not project YAML yet |
+| **ab** | `build` | **Project** then host | `cockpit.yaml` → `cockpits.build.command` / `continue_command`; fallback `SHELL_AGENT_BUILD_CMD` / `SHELL_AGENT_BUILD_CONTINUE_CMD` |
 
 **Generic fallback:** if no project `tmux-layout.sh`, `av --generic` (or missing layout) uses the host golden empty grid and tells you to add a project layout via this skill.
 
@@ -208,7 +208,7 @@ av --scan           # + agent_scan in console
 av --launch-mutate  # allow mutate-tier confirms
 av --generic        # fallback to generic 4-pane cockpit
 at                  # priority tests from cockpit.yaml / tests.yaml
-ab                  # build window (requires SHELL_AGENT_BUILD_CMD on host)
+ab                  # build window (project cockpits.build, else SHELL_AGENT_BUILD_CMD)
 ```
 
 ## Reference

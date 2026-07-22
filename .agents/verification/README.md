@@ -34,7 +34,7 @@ Pane indices: `0=GIT` `1=SYNC` `2=CHECK:watch` `3=CMD` (tmux reindexes during sp
 |-------|-------------|-------|
 | `av` | `tmux-layout.sh` (+ `cockpit.yaml` verify map) | Host delegates when this file is executable |
 | `at` | `cockpit.yaml` → `cockpits.test` (legacy `tests.yaml` ok) | Priority runners |
-| `ab` | — | Host `SHELL_AGENT_BUILD_CMD` only |
+| `ab` | `cockpit.yaml` → `cockpits.build` (optional) | Else host `SHELL_AGENT_BUILD_CMD` |
 
 ## Commands
 

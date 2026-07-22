@@ -45,6 +45,11 @@ cockpits:
         command: pnpm test
         value: Full-suite confirm — replace with build/test/lint
 
+  # Preferred coding agent / editor for this repo (ab). Omit to use host SHELL_AGENT_BUILD_CMD.
+  build:
+    command: nvim .
+    continue_command: nvim .
+
   test:
     layout: btop-test
     max_run: 2
@@ -62,4 +67,3 @@ cockpits:
 
 # Add verify panes only when they surface failures (skill value audit).
 # Usually omit from verify window: FILES/yazi, SYS/btop
-# ab (build window) is host SHELL_AGENT_BUILD_CMD — not configured here.
