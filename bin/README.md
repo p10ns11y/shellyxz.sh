@@ -10,6 +10,7 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 
 | Script | When to run | Prerequisites | Exit code |
 |--------|-------------|---------------|-----------|
+| [sync-to-config.sh](#sync-to-configsh) | Checkout → `~/.config/shell` (on-demand) | python3 | 0 on success |
 | [migrate.sh](#migratesh) | First install, refresh managed rc, scaffold dotfiles | bash, curl (bootstrap), Omarchy recommended | 0 on success; `set -e` aborts on hard errors |
 | [check-shell.sh](#check-shellsh) | After edits or migrate | bash; optional `shellcheck` | 0 if no **errors** (warnings OK) |
 | [capture-shell-init.sh](#capture-shell-initsh) | After installer pollutes `~/.zshrc` | bash | 0 |
@@ -24,20 +25,28 @@ See also: [README.md](../README.md) (overview), [VERIFICATION.md](../arch-design
 
 ## Cold-start paths
 
-### Path A — git clone (full tree, recommended)
+Layout rule: clone **outside** `~/.config/shell`, sync on demand. See [arch-design/SHELL-LAYOUT.md](../arch-design/SHELL-LAYOUT.md).
+
+### Path A — checkout + sync (recommended)
 
 ```bash
-git clone https://github.com/p10ns11y/shellyxz.sh.git ~/.config/shell
+mkdir -p ~/dev/foundations-infra
+git clone https://github.com/p10ns11y/shellyxz.sh.git ~/dev/foundations-infra/shellyxz
 # SSH: git@github.com:p10ns11y/shellyxz.sh.git
+
+cd ~/dev/foundations-infra/shellyxz
+bin/sync-to-config.sh
 ~/.config/shell/bin/migrate.sh
 source ~/.zshrc    # or ~/.bashrc
 git config --global include.path ~/.config/git/verification   # only if migrate did not set it
 ~/.config/shell/bin/check-shell.sh
 ```
 
-Includes verification assets (`agent-build-layout.sh`, `agent-verify-layout.sh`, `fzf-preview.sh`, `arch-design/VERIFICATION.md`, example configs).
+Includes verification assets (`agent-build-layout.sh`, `agent-verify-layout.sh`, `fzf-preview.sh`, `arch-design/VERIFICATION.md`, example configs). Same flow on **box**, **mac-mini**, **laptop-1**, **laptop-2**.
 
-### Path B — curl one-liner (bootstrap)
+### Path B — curl one-liner (bootstrap fallback)
+
+Use only when a long-lived git checkout is not practical (containers, one-off VPS):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master/bin/migrate.sh | bash
@@ -54,6 +63,34 @@ Override source for forks:
 SHELL_CONFIG_RAW=https://raw.githubusercontent.com/you/shellyxz.sh/refs/heads/master \
   curl -fsSL "$SHELL_CONFIG_RAW/bin/migrate.sh" | bash
 ```
+
+---
+
+## sync-to-config.sh
+
+**Purpose:** On-demand sync from a shellyxz **git checkout** into `~/.config/shell`. Not a live rsync/watch — run it after `git pull` or when you want config to match the checkout.
+
+```bash
+bin/sync-to-config.sh
+# or from checkout root: make sync-to-config
+```
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `SHELLXZ_SRC` | Parent of `bin/` (repo root when run in-tree) | Source checkout |
+| `SHELLXZ_DST` | `~/.config/shell` | Runtime config directory |
+
+**Preserves:** `local/`, top-level `environment`, `backups/` (never deleted).
+
+**Does not:** refresh managed rc files — run `migrate.sh` or `--sync-rc` after sync when templates changed.
+
+**Related (different jobs):**
+
+| Script | Scope |
+|--------|--------|
+| `check-template-sync.sh` | `templates/` vs `core/` inside the repo |
+| `migrate.sh --sync-rc` | Managed `~/.zshrc` / login dotfiles |
+| `sync-tmux-verify.sh` | tmux verification keybinds |
 
 ---
 

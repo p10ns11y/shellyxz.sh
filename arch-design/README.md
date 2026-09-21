@@ -8,6 +8,7 @@
 | [coming-next.md](coming-next.md) | **Backlog** — next items + last 10 done (short) |
 | [../planned-features/](../planned-features/) | Shipped epics — full diagrams, PR links, commit SHAs |
 | [shell.md](shell.md) | Load order, PATH contract detail, migrate policy |
+| [SHELL-LAYOUT.md](SHELL-LAYOUT.md) | Checkout → config sync model, per-host aliases, tool glossary |
 | [VERIFICATION.md](VERIFICATION.md) | ab/av/at workflow philosophy, tmux rituals |
 | [../plugins/verification/README.md](../plugins/verification/README.md) | Verification plugin — file map, install, headless verbs |
 | [human-in-the-loop-workflow.md](human-in-the-loop-workflow.md) | Repeatable review rituals |
