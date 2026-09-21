@@ -20,7 +20,9 @@ If that sounds stressful, keep a distribution-default shell setup instead.
 
 ## Getting started
 
-New machine or fresh clone. Existing installs: jump to [Maintenance](#maintenance).
+New machine or fresh checkout. Existing installs: jump to [Maintenance](#maintenance).
+
+**Layout rule:** clone the repo **outside** `~/.config/shell` (e.g. `~/dev/foundations-infra/shellyxz`), then **sync on demand** into `~/.config/shell`. Machine-specific files live in `local/`, `environment`, and `backups/` — sync never deletes them. Full layout: [arch-design/SHELL-LAYOUT.md](arch-design/SHELL-LAYOUT.md).
 
 ### Prerequisites
 
@@ -31,22 +33,17 @@ New machine or fresh clone. Existing installs: jump to [Maintenance](#maintenanc
 | **fish + bass** (fish only) | Fish loads portable modules via bass |
 | **paru** (Arch only, optional) | `migrate.sh` may install `yazi` / `thefuck` / `procs` / `difftastic`; other distros: install manually |
 
-### First install
+### First install (recommended — checkout + sync)
 
-**One-liner** (bootstrap from GitHub, then migrate):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master/bin/migrate.sh | bash
-```
-
-Override source for forks: `SHELL_CONFIG_RAW=...`.
-
-**Or clone + migrate:**
+Clone **outside** system config, sync into `~/.config/shell`, then migrate:
 
 ```bash
-git clone https://github.com/p10ns11y/shellyxz.sh.git ~/.config/shell
+mkdir -p ~/dev/foundations-infra
+git clone https://github.com/p10ns11y/shellyxz.sh.git ~/dev/foundations-infra/shellyxz
 # SSH: git@github.com:p10ns11y/shellyxz.sh.git
 
+cd ~/dev/foundations-infra/shellyxz
+bin/sync-to-config.sh          # on-demand; preserves local/ environment backups/
 ~/.config/shell/bin/migrate.sh
 
 # Optional: pin preset (omit to auto-detect omarchy vs generic)
@@ -59,6 +56,18 @@ mkdir -p ~/.config/secrets   # KEY=value in ~/.config/secrets/dev.env (mode 600)
 source ~/.zshrc              # or ~/.bashrc
 ~/.config/shell/bin/check-shell.sh
 ```
+
+Same pattern on **box**, **mac-mini**, **laptop-1**, **laptop-2** — see [SHELL-LAYOUT.md](arch-design/SHELL-LAYOUT.md).
+
+### Bootstrap fallback (no git checkout)
+
+When you cannot keep a foundations-infra checkout (containers, one-off VPS), use the curl bootstrap — it installs directly into `~/.config/shell`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/p10ns11y/shellyxz.sh/refs/heads/master/bin/migrate.sh | bash
+```
+
+Override source for forks: `SHELL_CONFIG_RAW=...`. Prefer **clone + sync** when a long-lived checkout is available.
 
 `migrate.sh` already scaffolds `~/.config/git/verification` and sets `include.path` when missing. Only set it yourself if that step was skipped:
 
@@ -117,9 +126,11 @@ t && av                                   # or attach tmux in Cursor agent termi
 
 ## Maintenance
 
+- **Upstream updates:** `git pull` in your checkout, then `bin/sync-to-config.sh` (or `make sync-to-config`). Sync is **on-demand** — not a live rsync/watch daemon.
 - After edits: `bin/check-shell.sh` (shellcheck + load-order + reserved names; `--audit` for secrets perms). Alias often: `shellyhow`.
 - Refresh **managed** rc: `bin/migrate.sh` or `--sync-rc`. Hand-edited rc (no managed marker): `--force-rc` only.
 - Modules (`env.sh`, `aliases.sh`, `functions.sh`) are **preserved** across migrate; first install generates them if missing.
+- Sync glossary (`sync-to-config` vs `check-template-sync` vs `migrate --sync-rc`): [SHELL-LAYOUT.md](arch-design/SHELL-LAYOUT.md#related-tools-different-jobs).
 - Naming for humans under stress: [shell-script-readability.md](arch-design/shell-script-readability.md).
 - Doc index: [arch-design/README.md](arch-design/README.md) · backlog: [coming-next.md](arch-design/coming-next.md) · shipped: [planned-features/done/](planned-features/done/).
 
